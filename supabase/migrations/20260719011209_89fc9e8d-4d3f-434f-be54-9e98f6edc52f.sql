@@ -1,1 +1,0 @@
-ALTER TABLE public.meta_ad_accounts ADD COLUMN IF NOT EXISTS dashboard_enabled BOOLEAN NOT NULL DEFAULT true;

@@ -1,1 +1,0 @@
-ALTER TYPE public.ai_agent_module ADD VALUE IF NOT EXISTS 'social_media';

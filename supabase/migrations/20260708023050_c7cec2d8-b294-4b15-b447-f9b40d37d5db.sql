@@ -1,2 +1,0 @@
-CREATE INDEX IF NOT EXISTS idx_lead_activities_ws_type_occurred ON public.lead_activities (workspace_id, type, occurred_at DESC);
-CREATE INDEX IF NOT EXISTS idx_leads_ws_updated ON public.leads (workspace_id, updated_at DESC);

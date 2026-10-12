@@ -1,1 +1,0 @@
-UPDATE public.subscriptions SET plan_id = (SELECT id FROM public.plans WHERE code = 'enterprise'), status = 'active', trial_ends_at = NULL, current_period_end = now() + interval '100 years', updated_at = now() WHERE workspace_id = '198399f4-c5ae-4e70-ae76-3d7ab6091bac';
