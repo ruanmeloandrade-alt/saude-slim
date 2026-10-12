@@ -1,0 +1,1 @@
+ALTER TABLE public.meta_automation_rules DROP CONSTRAINT IF EXISTS meta_automation_rules_trigger_metric_check;

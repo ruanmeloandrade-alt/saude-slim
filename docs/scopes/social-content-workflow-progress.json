@@ -1,0 +1,12 @@
+{
+  "scope": "social-content-workflow",
+  "total_items": 3,
+  "implemented": 3,
+  "remaining_implementation": 0,
+  "validation_pending": true,
+  "items": [
+    { "id": 1, "name": "idea-media-to-scheduler", "status": "implemented" },
+    { "id": 2, "name": "campaign-carousel-language-and-count", "status": "implemented" },
+    { "id": 3, "name": "post-comment-automation", "status": "implemented" }
+  ]
+}

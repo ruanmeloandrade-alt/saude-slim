@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.leads_external_uniq;

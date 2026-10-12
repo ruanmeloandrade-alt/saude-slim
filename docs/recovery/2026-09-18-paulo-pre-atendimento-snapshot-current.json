@@ -1,0 +1,649 @@
+{
+  "snapshot_md5": "057ad852ae71ef178bfe19f2b1e87c9d",
+  "blocks": [
+    {
+      "config": {
+        "condicaoModo": "e",
+        "condicoes": [
+          {
+            "comparador": "entrada-manual",
+            "id": "c_ezo2mnl",
+            "operador": "contem",
+            "sujeito": "fonte-leads",
+            "valor": ""
+          }
+        ],
+        "isStartBlock": false,
+        "serial": 34
+      },
+      "created_at": "2026-09-18T17:23:19.213613+00:00",
+      "id": "62c4c1af-fc96-486f-9688-63d69ecdf6a3",
+      "local_id": "blk_0ilivdv",
+      "next_block_id": null,
+      "position_x": 4581,
+      "position_y": 207,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "condicao",
+      "updated_at": "2026-09-18T17:23:19.213613+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "isStartBlock": false,
+        "serial": 29,
+        "texto": "Me fala ai, qual seu nome e sua idade?"
+      },
+      "created_at": "2026-09-18T17:18:03.523479+00:00",
+      "id": "52cfb5a1-1c29-45ae-866b-8647a83dc946",
+      "local_id": "blk_0ojfet8",
+      "next_block_id": "d59531fd-5324-424e-9e4b-8bf77d279d16",
+      "position_x": 1917,
+      "position_y": 240,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "enviar-mensagem",
+      "updated_at": "2026-09-18T17:18:03.523479+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "condicoes": [],
+        "isStartBlock": false,
+        "pausaMin": 0,
+        "pausaSeg": 8,
+        "pausaTipo": "cronometro",
+        "pausas": [
+          {
+            "id": "p_ibr3qrn",
+            "min": 0,
+            "seg": 8,
+            "tipo": "cronometro"
+          }
+        ],
+        "roleta": [],
+        "serial": 32
+      },
+      "created_at": "2026-09-18T17:20:28.534144+00:00",
+      "id": "bf6bdff2-8cd5-4439-8863-a76251de49a9",
+      "local_id": "blk_a8t6ect",
+      "next_block_id": "1a8868c3-321a-46ff-a0bb-c291a6855aae",
+      "position_x": 3350,
+      "position_y": 436,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "pausar",
+      "updated_at": "2026-09-18T17:20:28.534144+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "condicoes": [],
+        "isStartBlock": false,
+        "pausaMin": 0,
+        "pausaSeg": 6,
+        "pausaTipo": "cronometro",
+        "pausas": [
+          {
+            "id": "p_gly7s0r",
+            "min": 0,
+            "seg": 6,
+            "tipo": "cronometro"
+          }
+        ],
+        "roleta": [],
+        "serial": 31
+      },
+      "created_at": "2026-09-18T17:20:00.668282+00:00",
+      "id": "bb4d08bf-e2c6-4b6c-89a5-373f260d4c36",
+      "local_id": "blk_feomiz8",
+      "next_block_id": "2a54123e-d1c4-4ec8-b522-55666d365aed",
+      "position_x": 2819,
+      "position_y": 576,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "pausar",
+      "updated_at": "2026-09-18T17:20:00.668282+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "condicoes": [],
+        "isStartBlock": false,
+        "pausaTipo": "msg-recebida",
+        "pausas": [
+          {
+            "id": "p_rkqndww",
+            "nextBlockId": "bb4d08bf-e2c6-4b6c-89a5-373f260d4c36",
+            "tipo": "msg-recebida"
+          },
+          {
+            "id": "p_tpeulcl",
+            "min": 25,
+            "nextBlockId": "2719cab9-1f19-423d-91c7-70062fc68db9",
+            "tipo": "cronometro"
+          }
+        ],
+        "roleta": [],
+        "serial": 30
+      },
+      "created_at": "2026-09-18T17:18:49.087348+00:00",
+      "id": "d59531fd-5324-424e-9e4b-8bf77d279d16",
+      "local_id": "blk_oq7gd44",
+      "next_block_id": null,
+      "position_x": 2350,
+      "position_y": 450,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "pausar",
+      "updated_at": "2026-09-18T17:18:49.087348+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoConfig": "Responsável: Paulo Mendes",
+        "acaoTipo": "mudar-responsavel",
+        "destinoResponsavelId": "34ce284c-8393-4565-94d7-a96f417c3f70",
+        "destinoResponsavelNome": "Paulo Mendes",
+        "isStartBlock": false,
+        "serial": 3
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "bf3e8ee3-1c80-4eb6-ba44-d0102206c5f2",
+      "local_id": "pre-assign-owner",
+      "next_block_id": "f5ccc778-968d-4826-acdb-2dac392762ed",
+      "position_x": 1034,
+      "position_y": -149,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "isStartBlock": false,
+        "serial": 18
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "d5abe54f-65d0-473d-addf-258901f011e7",
+      "local_id": "pre-human-end",
+      "next_block_id": null,
+      "position_x": 7300,
+      "position_y": -250,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "encerrar-bot",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoTipo": "definir-campo",
+        "campoId": "2ee1a26f-6b21-490c-8257-b03e1eecc4c1",
+        "campoNome": "Etapa Comercial Atual",
+        "campoValor": "Atendimento Humano",
+        "isStartBlock": false,
+        "serial": 14
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "624ba200-2b97-4fe2-959b-338f13b69b98",
+      "local_id": "pre-human-stage",
+      "next_block_id": "e02ae00e-2f76-40c8-8f0f-10bef204359c",
+      "position_x": 5500,
+      "position_y": -250,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoConfig": "Comercial/Qualificado, Comercial/Handoff-Humano",
+        "acaoTipo": "tags",
+        "isStartBlock": false,
+        "serial": 15,
+        "tagsModo": "adicionar"
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "e02ae00e-2f76-40c8-8f0f-10bef204359c",
+      "local_id": "pre-human-tag",
+      "next_block_id": "a5a48e08-b427-4764-b486-e300ff18e0f9",
+      "position_x": 5950,
+      "position_y": -250,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoTipo": "tarefa",
+        "isStartBlock": false,
+        "serial": 16,
+        "tarefaDuracaoMin": 30,
+        "tarefaOffsetMin": 0,
+        "tarefaTambemCalendario": true,
+        "tarefaTitulo": "Assumir lead qualificado — Paulo"
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "a5a48e08-b427-4764-b486-e300ff18e0f9",
+      "local_id": "pre-human-task",
+      "next_block_id": null,
+      "position_x": 6400,
+      "position_y": -250,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "isStartBlock": false,
+        "serial": 10,
+        "texto": "Hoje você é autônomo, trabalha de carteira assinada ou é aposentado?"
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "1a8868c3-321a-46ff-a0bb-c291a6855aae",
+      "local_id": "pre-msg-fgts",
+      "next_block_id": "47386947-49e5-441d-9fa5-52e36512eafa",
+      "position_x": 3700,
+      "position_y": 100,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "enviar-mensagem",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "isStartBlock": false,
+        "serial": 7,
+        "texto": "Perfeito. E qual é a renda familiar aproximada hoje? Pode ser uma estimativa mesmo."
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "2a54123e-d1c4-4ec8-b522-55666d365aed",
+      "local_id": "pre-msg-income",
+      "next_block_id": "e3e2bb6e-8eb9-4841-a064-e8e1ed0f4d5d",
+      "position_x": 2859,
+      "position_y": 190,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "enviar-mensagem",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "isStartBlock": false,
+        "serial": 4,
+        "texto": "Olá, tudo bom? Meu nome é *Paulo Mendes*, corretor da _Carvalho Imobiliária_"
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "f5ccc778-968d-4826-acdb-2dac392762ed",
+      "local_id": "pre-msg-region",
+      "next_block_id": "f5c0537b-be33-4672-8a80-69d0572a39f7",
+      "position_x": 1034,
+      "position_y": 59,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "enviar-mensagem",
+      "updated_at": "2026-09-16T16:07:01.955897+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "isStartBlock": false,
+        "serial": 23
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "48d139b9-748a-4a71-988c-263d8afa575f",
+      "local_id": "pre-out-end",
+      "next_block_id": null,
+      "position_x": 7300,
+      "position_y": 450,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "encerrar-bot",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoConfig": "Comercial/Handoff-Humano",
+        "acaoTipo": "tags",
+        "isStartBlock": false,
+        "serial": 20,
+        "tagsModo": "adicionar"
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "24f52fa0-d16e-46d9-8ca4-11e969746137",
+      "local_id": "pre-out-human-tag",
+      "next_block_id": "b0c9cdee-38d2-4bcb-8316-0ee103a82d04",
+      "position_x": 5950,
+      "position_y": 450,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoConfig": "Vendas → Atendimento Humano",
+        "acaoTipo": "mudar-status-lead",
+        "destinoEtapa": "Atendimento Humano",
+        "destinoPipelineId": "c3dc6440-3509-4f74-a034-b6aa8f88b517",
+        "destinoPipelineNome": "Vendas",
+        "destinoStageId": "1523704b-998c-42a6-8d7e-c80dbbc31dc0",
+        "destinoStageNome": "Atendimento Humano",
+        "isStartBlock": false,
+        "serial": 21
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "b0c9cdee-38d2-4bcb-8316-0ee103a82d04",
+      "local_id": "pre-out-move",
+      "next_block_id": "723f8b22-5e7e-48a4-9e2b-4b913a79e51b",
+      "position_x": 6400,
+      "position_y": 450,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoConfig": "Comercial/Qualificado",
+        "acaoTipo": "tags",
+        "isStartBlock": false,
+        "serial": 19,
+        "tagsModo": "adicionar"
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "9dd4612f-22ed-42be-a51e-8f7ef909b043",
+      "local_id": "pre-out-tag",
+      "next_block_id": "24f52fa0-d16e-46d9-8ca4-11e969746137",
+      "position_x": 5500,
+      "position_y": 450,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoTipo": "tarefa",
+        "isStartBlock": false,
+        "serial": 22,
+        "tarefaDuracaoMin": 30,
+        "tarefaOffsetMin": 0,
+        "tarefaTambemCalendario": true,
+        "tarefaTitulo": "Retomar atendimento fora do expediente"
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "723f8b22-5e7e-48a4-9e2b-4b913a79e51b",
+      "local_id": "pre-out-task",
+      "next_block_id": "48d139b9-748a-4a71-988c-263d8afa575f",
+      "position_x": 6850,
+      "position_y": 450,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "condicoes": [],
+        "isStartBlock": false,
+        "pausas": [
+          {
+            "id": "reply",
+            "nextBlockId": "62c4c1af-fc96-486f-9688-63d69ecdf6a3",
+            "tipo": "msg-recebida"
+          },
+          {
+            "id": "timeout",
+            "min": 25,
+            "nextBlockId": "2719cab9-1f19-423d-91c7-70062fc68db9",
+            "tipo": "cronometro"
+          }
+        ],
+        "roleta": [],
+        "serial": 11
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "47386947-49e5-441d-9fa5-52e36512eafa",
+      "local_id": "pre-pause-fgts",
+      "next_block_id": null,
+      "position_x": 4150,
+      "position_y": 100,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "pausar",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "isStartBlock": false,
+        "pausaMin": 0,
+        "pausaSeg": 6,
+        "pausaTipo": "cronometro",
+        "pausas": [
+          {
+            "id": "timeout",
+            "min": 0,
+            "nextBlockId": "2719cab9-1f19-423d-91c7-70062fc68db9",
+            "seg": 6,
+            "tipo": "cronometro"
+          }
+        ],
+        "serial": 5
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "f5c0537b-be33-4672-8a80-69d0572a39f7",
+      "local_id": "pre-pause-region",
+      "next_block_id": "52cfb5a1-1c29-45ae-866b-8647a83dc946",
+      "position_x": 1450,
+      "position_y": 100,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "pausar",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoConfig": "Profissão = ",
+        "acaoTipo": "definir-campo",
+        "campoId": "8da3c790-778e-4711-9ade-af9189678ff7",
+        "campoNome": "Profissão",
+        "campoOrigem": "mensagem",
+        "campoOrigemLabel": "Mensagem do cliente",
+        "campoValor": "",
+        "isStartBlock": false,
+        "serial": 12
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "0724d87f-5c0f-4aa3-827d-1d0404462c9a",
+      "local_id": "pre-set-fgts",
+      "next_block_id": null,
+      "position_x": 2800,
+      "position_y": -815,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoTipo": "definir-campo",
+        "campoId": "dc8c2727-50c7-4cd0-96a7-3ce328b3f254",
+        "campoNome": "Renda Familiar",
+        "campoOrigem": "mensagem",
+        "campoOrigemLabel": "Mensagem do cliente",
+        "isStartBlock": false,
+        "serial": 9
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "e3e2bb6e-8eb9-4841-a064-e8e1ed0f4d5d",
+      "local_id": "pre-set-income",
+      "next_block_id": "bf6bdff2-8cd5-4439-8863-a76251de49a9",
+      "position_x": 3250,
+      "position_y": 100,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoTipo": "definir-campo",
+        "campoId": "2ee1a26f-6b21-490c-8257-b03e1eecc4c1",
+        "campoNome": "Etapa Comercial Atual",
+        "campoValor": "Pré-atendimento Qualificatório",
+        "isStartBlock": true,
+        "serial": 1
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "886ea11d-b1f3-4d34-91a1-875140ef285e",
+      "local_id": "pre-stage",
+      "next_block_id": "ecfc32d4-0035-4412-bfae-acd2a9d041e4",
+      "position_x": 100,
+      "position_y": 100,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoConfig": "Comercial/Pré-atendimento",
+        "acaoTipo": "tags",
+        "isStartBlock": false,
+        "serial": 2,
+        "tagsModo": "adicionar"
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "ecfc32d4-0035-4412-bfae-acd2a9d041e4",
+      "local_id": "pre-tag",
+      "next_block_id": "bf3e8ee3-1c80-4eb6-ba44-d0102206c5f2",
+      "position_x": 581,
+      "position_y": -95,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoTipo": "definir-campo",
+        "campoId": "6f61ba92-c48f-4761-b48f-472c5b82d6f7",
+        "campoNome": "Data Entrada Pré-Follow",
+        "campoValor": "{{agora}}",
+        "isStartBlock": false,
+        "serial": 25
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "1916885a-fe21-4e70-a7f4-8d8289cfa4b1",
+      "local_id": "pre-timeout-date",
+      "next_block_id": "b60aa2f7-839d-420e-95fa-45fdf09aacde",
+      "position_x": 3085,
+      "position_y": 1296,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "isStartBlock": false,
+        "serial": 28
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "cf4e2722-23f5-47a4-b1ea-308681c2cec4",
+      "local_id": "pre-timeout-end",
+      "next_block_id": null,
+      "position_x": 4498,
+      "position_y": 1296,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "encerrar-bot",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoConfig": "Vendas → Pré-Follow",
+        "acaoTipo": "mudar-status-lead",
+        "destinoEtapa": "Pré-Follow",
+        "destinoPipelineId": "c3dc6440-3509-4f74-a034-b6aa8f88b517",
+        "destinoPipelineNome": "Vendas",
+        "destinoStageId": "ea584a22-3652-4ad2-b914-946276e5fe39",
+        "destinoStageNome": "Pré-Follow",
+        "isStartBlock": false,
+        "serial": 27
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "6279dfe5-f69a-4279-9e74-5d228ff15aa0",
+      "local_id": "pre-timeout-move",
+      "next_block_id": "cf4e2722-23f5-47a4-b1ea-308681c2cec4",
+      "position_x": 4048,
+      "position_y": 1296,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoTipo": "definir-campo",
+        "campoId": "0e343878-d12d-4a09-a1f1-3499c4f2009f",
+        "campoNome": "Origem Pré-Follow",
+        "campoValor": "Pré-atendimento",
+        "isStartBlock": false,
+        "serial": 24
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "2719cab9-1f19-423d-91c7-70062fc68db9",
+      "local_id": "pre-timeout-origin",
+      "next_block_id": "1916885a-fe21-4e70-a7f4-8d8289cfa4b1",
+      "position_x": 2635,
+      "position_y": 1296,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    },
+    {
+      "config": {
+        "acaoTipo": "definir-campo",
+        "campoId": "2ee1a26f-6b21-490c-8257-b03e1eecc4c1",
+        "campoNome": "Etapa Comercial Atual",
+        "campoValor": "Pré-Follow",
+        "isStartBlock": false,
+        "serial": 26
+      },
+      "created_at": "2026-09-16T14:53:33.621693+00:00",
+      "id": "b60aa2f7-839d-420e-95fa-45fdf09aacde",
+      "local_id": "pre-timeout-stage",
+      "next_block_id": "6279dfe5-f69a-4279-9e74-5d228ff15aa0",
+      "position_x": 3598,
+      "position_y": 1296,
+      "salesbot_id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+      "type": "acao",
+      "updated_at": "2026-09-16T14:53:33.621693+00:00",
+      "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+    }
+  ],
+  "captured_at": "2026-09-18T18:23:24.698725+00:00",
+  "salesbot": {
+    "created_at": "2026-09-16T14:53:33.621693+00:00",
+    "gatilhos": [
+      {
+        "canal": "whatsapp",
+        "id": "gt_first_whatsapp",
+        "kind": "primeira-mensagem",
+        "pipelineId": "c3dc6440-3509-4f74-a034-b6aa8f88b517",
+        "stageId": "90fc2645-c082-465d-9333-7b7e303b9229"
+      }
+    ],
+    "id": "5bb19dfa-6d5a-4b3f-964d-c0fa0aa34bb7",
+    "is_active": true,
+    "local_id": "comercial-pre-atendimento-qualificatorio",
+    "name": "Comercial · Pré-atendimento Qualificatório",
+    "scope": "individual",
+    "settings": {
+      "purpose": "qualificação curta Paulo; abandono 25min → Pré-Follow; expediente e fora de expediente → humano"
+    },
+    "trigger": null,
+    "updated_at": "2026-09-18T17:23:26.829472+00:00",
+    "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+  },
+  "workspace_id": "52bd93fb-abae-4ddc-961e-cc3d7f8980c0"
+}

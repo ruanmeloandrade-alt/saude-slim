@@ -1,0 +1,2 @@
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS ai_paused boolean NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS idx_leads_ai_paused ON public.leads(workspace_id, ai_paused) WHERE ai_paused = true;

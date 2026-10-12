@@ -1,0 +1,2 @@
+GRANT EXECUTE ON FUNCTION public.set_integration_secret(uuid, text, jsonb, text, jsonb, text) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_integration_secret(uuid, text, text) TO authenticated;

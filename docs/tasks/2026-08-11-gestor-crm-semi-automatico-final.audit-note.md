@@ -1,0 +1,1 @@
+Escopo criado antes da implementação conforme AGENTS.md. A implementação deve seguir em branch própria criada da main após este commit; este arquivo será removido/absorvido no fechamento da task.

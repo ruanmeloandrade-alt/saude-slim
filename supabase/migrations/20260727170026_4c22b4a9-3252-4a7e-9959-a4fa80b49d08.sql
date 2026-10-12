@@ -1,0 +1,2 @@
+ALTER TABLE public.external_automations DROP CONSTRAINT IF EXISTS external_automations_provider_check;
+ALTER TABLE public.external_automations ADD CONSTRAINT external_automations_provider_check CHECK (provider IN ('n8n','make','zapier','custom'));

@@ -1,0 +1,1 @@
+ALTER TABLE public.leads ADD CONSTRAINT leads_crm_source_external_id_key UNIQUE (crm_source_id, external_id);

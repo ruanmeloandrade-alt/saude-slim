@@ -1,0 +1,2 @@
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS conversation_status text NOT NULL DEFAULT 'aberta' CHECK (conversation_status IN ('aberta','lida','fechada'));
+CREATE INDEX IF NOT EXISTS leads_ws_conv_status_idx ON public.leads(workspace_id, conversation_status);
