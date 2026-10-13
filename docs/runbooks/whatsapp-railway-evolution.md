@@ -1,3 +1,41 @@
+# Saúde Slim | Retomada Evolution na Railway (2026-10-13)
+
+**Escopo fechado:** a Railway hospeda SOMENTE o runtime WhatsApp Evolution (API, Postgres, Redis e volume de sessões), não a aplicação Saúde Slim. Repositório próprio: `ruanmeloandrade-alt/saude-slim`, branch `main`. Supabase exclusivo: `vyzvfcgpjjzvcjegzzza`. NÃO usar banco, credenciais ou serviços MKTon.
+
+## Checkpoint confirmado
+
+- Railway havia implantado indevidamente a **aplicação** via GitHub em um serviço chamado `saude-slim`; deploy concluído, porém isso NÃO criou a Evolution. Não há permissão/autenticação Railway diretamente neste agente para excluir o serviço. A exclusão é passo manual do owner no painel Railway.
+- Projeto Railway existente: `ae81dbf0-2b77-4729-9055-c25ec98d6117`. **Excluir somente o serviço de aplicação `saude-slim`, jamais o projeto inteiro.**
+- Interface WhatsApp Web e polling do QR já implementados em `EvolutionConnectPanel.tsx`; criação de instância/QR/status em `evolution.functions.ts`; webhook em `src/routes/api/public/evolution/webhook.$secret.ts`.
+- Migrations próprias já aplicadas no Supabase exclusivo: `saude_slim_evolution_whatsapp_core` e `saude_slim_evolution_message_session_idx`. Tabelas `whatsapp_web_sessions` e `whatsapp_web_messages`, RPCs `set_evolution_credentials`, `get_evolution_credentials`, `get_evolution_session_by_secret`, `whatsapp_number_limit`, `count_active_whatsapp_sessions` existem. Chave Evolution cifrada; RLS habilitada; permissionamento da função webhook exclusivo do serviço administrativo. Security Advisor: 0 alertas.
+- Ainda faltam **Railway Evolution real**, variável do backend `EVOLUTION_BASE_URL`, chaves exclusivamente da Saúde Slim, `INTEGRATION_ENCRYPTION_KEY` estável, um `PUBLIC_APP_URL` que aceite webhooks, login/workspace e E2E.
+- Sem backend público da aplicação em execução, o QR da UI e o webhook não funcionam. **GitHub armazena o código; sozinho não executa o backend SSR/TanStack.** Escolher outra hospedagem do app, sem reutilizar a Railway, ou manter temporariamente um backend acessível até migrá-lo (somente com autorização).
+- Nenhum DNS final do site deve ser apontado até validar aplicação.
+
+## Sequência exata na Railway
+
+1. Abra o projeto Railway existente e exclua apenas o serviço de aplicação `saude-slim` em Project Settings → Danger → Delete Service. Não apague o projeto e não use `railway delete` (esse comando apaga o projeto inteiro).
+2. Use um template Railway **Evolution API + PostgreSQL + Redis**: `https://railway.com/deploy/evolution-api-railway-template--evolution-api-railway-template`. Escolha implantar no projeto Saúde Slim existente se a UI apresentar essa opção.
+3. Confirme três serviços separados: `evolution-api`, `Postgres`, `Redis`. Monte volume persistente somente na Evolution em `/evolution/instances`.
+4. Gere domínio público HTTPS apenas para a Evolution, porta `8080`. Postgres e Redis devem permanecer privados.
+5. Revise as variáveis abaixo no serviço Evolution; segredo global fica exclusivamente no gerenciador de segredos Railway. Não envie chaves ao chat e não use `.env` antigo.
+6. Teste acesso à Evolution pela URL pública e obtenção do Manager. Gere um QR pelo Manager primeiro, com número de teste, sem precisar de webhook/app. Depois teste integração na UI Saúde Slim, com backend da aplicação disponível.
+7. Ao concluir o teste da API, configurar no servidor da aplicação (fora da Railway) `EVOLUTION_BASE_URL` e `EVOLUTION_GLOBAL_API_KEY`, mais `INTEGRATION_ENCRYPTION_KEY` e `PUBLIC_APP_URL`; testar webhook `/api/public/evolution/webhook/<webhook_secret>`. Não configurar `PUBLIC_APP_URL` apontando para o domínio da Evolution.
+
+## Mapa dos erros conhecidos
+
+| Sintoma | Causa provável | Checagem/correção |
+|---|---|---|
+| `DATABASE_PROVIDER invalid` | `DATABASE_PROVIDER` vazio/incorreto | `postgresql` e `DATABASE_CONNECTION_URI` referenciando Postgres interno |
+| Evolution responde, QR vazio `count:0` | sessão Baileys/versão/cache/volume | revisar `SERVER_URL`, `QRCODE_LIMIT`, versão da Evolution, Redis, volume; recuperar/recriar a instância na interface |
+| QR aparece, escaneamento falha | handshake Baileys/session | revisar logs de conexão, versão WhatsApp e cache; só depois recriar instância |
+| QR conecta mas logo cai | volume/sessão não persistente | volume montado em `/evolution/instances`, `DEL_INSTANCE=false` |
+| Instância conecta mas Inbox vazia | webhook da aplicação não acessível ou tabelas/credenciais | validar `PUBLIC_APP_URL`, secret por sessão, `get_evolution_session_by_secret`, `whatsapp_web_messages` e leads/workspace |
+| Login/integração falha antes do QR | app sem servidor ou env Supabase/WhatsApp ausente | não confundir código GitHub com runtime público; validar Auth e variáveis no backend da aplicação |
+| Mensagem chega mas automação falha | dependências adicionais do SalesBot não migradas | tratar somente depois do QR, webhook e Inbox básicos |
+
+---
+
 # WhatsApp Evolution no Railway
 
 ## Objetivo
