@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "prebuild": "bun run check:routes",
+    "prebuild": "node scripts/check-route-tree-parity.mjs",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
@@ -15,7 +15,8 @@
     "audit:saude-slim:env": "node scripts/audit-saude-slim-backend-env.mjs",
     "audit:saude-slim:origins": "node scripts/audit-saude-slim-hardcoded-origins.mjs",
     "check:routes": "node scripts/check-route-tree-parity.mjs",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "start": "node .output/server/index.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.1",
@@ -126,5 +127,8 @@
     "typescript-eslint": "^8.56.1",
     "vite": "^8.0.16",
     "vitest": "^4.1.10"
+  },
+  "engines": {
+    "node": ">=22.12 <25"
   }
 }
