@@ -27,6 +27,9 @@ const salesbotSaveFeedbackPlugin = {
 const mcpPlugins = process.platform === "win32" ? [] : [mcpPlugin()];
 
 export default defineConfig({
+  // Saúde Slim: gerar servidor Node executável em hospedagem externa.
+  // Github é a fonte do código; Nitro executa SSR/rotas/API no runtime Node.
+  nitro: { preset: "node-server" },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
