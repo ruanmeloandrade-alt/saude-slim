@@ -15,8 +15,8 @@
 ## Sequência exata na Railway
 
 1. Abra o projeto Railway existente e exclua apenas o serviço de aplicação `saude-slim` em Project Settings → Danger → Delete Service. Não apague o projeto e não use `railway delete` (esse comando apaga o projeto inteiro).
-2. Use um template Railway **Evolution API + PostgreSQL + Redis**: `https://railway.com/deploy/evolution-api-railway-template--evolution-api-railway-template`. Escolha implantar no projeto Saúde Slim existente se a UI apresentar essa opção.
-3. Confirme três serviços separados: `evolution-api`, `Postgres`, `Redis`. Monte volume persistente somente na Evolution em `/evolution/instances`.
+2. No mesmo projeto Railway, use **+ New → Database → PostgreSQL** e depois **+ New → Database → Redis**. São os serviços do próprio Railway, sem template de terceiros.
+3. Use **+ New → Docker Image** e informe a imagem oficial publicada pelo projeto Evolution: `evoapicloud/evolution-api:v2.3.7` (fixe a versão, em vez de `latest`). Confirme os serviços separados `evolution-api`, `Postgres`, `Redis` e monte volume persistente somente na Evolution em `/evolution/instances`.
 4. Gere domínio público HTTPS apenas para a Evolution, porta `8080`. Postgres e Redis devem permanecer privados.
 5. Revise as variáveis abaixo no serviço Evolution; segredo global fica exclusivamente no gerenciador de segredos Railway. Não envie chaves ao chat e não use `.env` antigo.
 6. Teste acesso à Evolution pela URL pública e obtenção do Manager. Gere um QR pelo Manager primeiro, com número de teste, sem precisar de webhook/app. Depois teste integração na UI Saúde Slim, com backend da aplicação disponível.
