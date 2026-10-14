@@ -32,7 +32,10 @@ const mcpPlugins = isGithubPagesBuild || process.platform === "win32" ? [] : [mc
 export default defineConfig({
   // Saúde Slim: gerar servidor Node executável em hospedagem externa.
   // Github é a fonte do código; Nitro executa SSR/rotas/API no runtime Node.
-  nitro: { preset: "node-server" },
+  // O plugin SPA do TanStack espera o build Vite nativo em dist/server.
+  // Nitro grava em .output/server e quebra o prerender: ERR_MODULE_NOT_FOUND.
+  // Desativar Nitro APENAS para o build Pages (build Node permanece intacto).
+  nitro: isGithubPagesBuild ? false : { preset: "node-server" },
   tanstackStart: {
     ...(isGithubPagesBuild
       ? {
