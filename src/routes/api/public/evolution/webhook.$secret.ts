@@ -476,18 +476,35 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
               if (!isGroup && !unresolvedLid) {
                 const { data: leadMatch } = await supabaseAdmin
                   .from("leads")
-                  .select("id, name, source, status, custom_data, pipeline_id, stage_id")
+                  .select("id, name, source, status, phone_normalized, custom_data, pipeline_id, stage_id")
                   .eq("workspace_id", sess.workspace_id)
                   .eq("phone_normalized", phone)
+                  .is("merged_into_id", null)
                   .in("status", ["active", "won", "lost"])
-                  .order("status", { ascending: true }) // active vem antes de lost/won se ordenado asc? a < l < w. Sim.
+                  .order("status", { ascending: true })
                   .limit(1)
                   .maybeSingle();
+                // Compatibilidade com leads importados antes de normalizar telefone.
+                // Em especial, preserva o lead original ao receber novas mensagens.
+                if (!leadMatch) {
+                  const fallback = await supabaseAdmin
+                    .from("leads")
+                    .select("id, name, source, status, phone_normalized, custom_data, pipeline_id, stage_id")
+                    .eq("workspace_id", sess.workspace_id)
+                    .eq("phone", `+${phone}`)
+                    .is("merged_into_id", null)
+                    .in("status", ["active", "won", "lost"])
+                    .order("created_at", { ascending: true })
+                    .limit(1)
+                    .maybeSingle();
+                  leadMatch = fallback.data;
+                }
                 const match = leadMatch as {
                   id: string;
                   name?: string | null;
                   source?: string | null;
                   status: string;
+                  phone_normalized?: string | null;
                   custom_data?: Record<string, unknown> | null;
                   pipeline_id?: string | null;
                   stage_id?: string | null;
@@ -521,6 +538,11 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
                   const leadPatch: Record<string, unknown> = {
                     custom_data: { ...currentCustom, whatsapp_session_id: sess.session_id },
                   };
+                  // Persistir a identidade usada na busca. Evita múltiplas conversas
+                  // do mesmo WhatsApp e permite que o índice único evite races.
+                  if (match.source === "whatsapp" && match.phone_normalized !== phone) {
+                    leadPatch.phone_normalized = phone;
+                  }
                   if (canEnrichWhatsappName) {
                     leadPatch.name = inboundPushName;
                     leadPatch.custom_data = {
@@ -532,6 +554,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
 
                   if (
                     canEnrichWhatsappName ||
+                    leadPatch.phone_normalized !== undefined ||
                     currentCustom.whatsapp_session_id !== sess.session_id ||
                     currentCustom !== match.custom_data
                   ) {
@@ -601,6 +624,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
                         stage_id: stageId,
                         name: displayName,
                         phone: `+${phone}`,
+                        phone_normalized: phone,
                         status: "active",
                         tags: [],
                         source: "whatsapp",
@@ -642,6 +666,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
                         .select("id")
                         .eq("workspace_id", sess.workspace_id)
                         .eq("phone_normalized", phone)
+                        .is("merged_into_id", null)
                         .in("status", ["active", "won", "lost"])
                         .limit(1)
                         .maybeSingle();
