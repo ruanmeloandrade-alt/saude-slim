@@ -5,6 +5,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { resolvePublicAppUrl } from "@/integrations/supabase/saude-slim-env";
 
 type AnySb = { from: (t: string) => any };
@@ -376,7 +377,7 @@ function randomId(): string {
 
 /** Upload do logo do formulário (autenticado). Aceita imagens. */
 export const uploadFormLogo = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
     contentType: z.string().min(3).max(120),
     base64: z.string().min(1),
@@ -453,7 +454,7 @@ export const uploadFormSubmissionFile = createServerFn({ method: "POST" })
 /* ---------- Autenticado: listar / salvar / apagar ---------- */
 
 export const listForms = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = context.supabase as unknown as AnySb;
     const wsId = await activeWorkspace(sb, context.userId);
@@ -504,7 +505,7 @@ const BrandingSchema = z.object({
 }).partial();
 
 export const upsertForm = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
     id: z.string().uuid().nullable().optional(),
     nome: z.string().min(1).max(120),
@@ -585,7 +586,7 @@ export const upsertForm = createServerFn({ method: "POST" })
 
 /** Gera uma nova chave de integração para o formulário (invalida a anterior). */
 export const rotateFormIngestToken = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -604,7 +605,7 @@ export const rotateFormIngestToken = createServerFn({ method: "POST" })
 
 
 export const deleteForm = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -615,7 +616,7 @@ export const deleteForm = createServerFn({ method: "POST" })
   });
 
 export const getFormById = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
