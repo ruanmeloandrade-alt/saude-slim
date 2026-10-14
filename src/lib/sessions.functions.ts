@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestIP, getRequestHeader } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 type AnySb = { from: (t: string) => any };
 
@@ -27,7 +28,7 @@ async function isWorkspaceAdmin(sb: AnySb, userId: string, wsId: string): Promis
 /* ---------- Heartbeat ---------- */
 
 export const touchSession = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -110,7 +111,7 @@ export const touchSession = createServerFn({ method: "POST" })
 /* ---------- Listagem ---------- */
 
 export const listSessions = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = context.supabase as unknown as AnySb;
     const userId = context.userId;
@@ -154,7 +155,7 @@ export const listSessions = createServerFn({ method: "GET" })
 /* ---------- Encerrar ---------- */
 
 export const revokeSession = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -183,7 +184,7 @@ export const revokeSession = createServerFn({ method: "POST" })
   });
 
 export const revokeAllMySessions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ keep_device_key: z.string().optional() }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
