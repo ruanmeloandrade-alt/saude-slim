@@ -1,16 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, CheckCircle2, Package, RefreshCw, Search, ShoppingCart, Truck, type LucideIcon } from "lucide-react";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { listProductCatalogs, type DbProduct } from "@/lib/products.functions";
+import type { DbProduct } from "@/lib/products.functions";
+import { listSaudeSlimCatalogs } from "@/lib/saude-slim-orders-client";
 import { formatBRL } from "@/lib/crm-mock";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/crm/estoque")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Estoque · Saúde Slim" },
@@ -23,12 +24,11 @@ export const Route = createFileRoute("/crm/estoque")({
 type StockProduct = DbProduct & { catalogName: string };
 
 function EstoquePage() {
-  const loadCatalogs = useServerFn(listProductCatalogs);
   const [query, setQuery] = useState("");
 
   const catalogsQuery = useQuery({
     queryKey: ["saude-slim", "estoque", "catalogs"],
-    queryFn: () => loadCatalogs(),
+    queryFn: listSaudeSlimCatalogs,
     retry: 1,
     staleTime: 30_000,
   });
