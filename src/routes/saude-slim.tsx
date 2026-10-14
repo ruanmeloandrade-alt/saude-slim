@@ -1,25 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { BarChart3, ClipboardList, Eye, Search } from "lucide-react";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getDashboardData } from "@/lib/dashboard.functions";
-import { getDashboardV4ProductSales } from "@/lib/dashboard-v4-product-sales.functions";
+import { getSaudeSlimSalesHistory, getSaudeSlimSalesProducts } from "@/lib/saude-slim-sales-client";
 import type { DrilldownLead } from "@/lib/mock-dashboard";
 
 type FilterOption = { value: string; label: string };
 
 export const Route = createFileRoute("/saude-slim")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Histórico de Vendas · Saúde Slim" }, { name: "description", content: "Lista de vendas e pedidos da Saúde Slim." }] }),
   component: SalesHistoryPage,
 });
 
 function SalesHistoryPage() {
-  const loadDashboard = useServerFn(getDashboardData);
-  const loadProductSales = useServerFn(getDashboardV4ProductSales);
   const [query, setQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("all");
@@ -30,13 +27,13 @@ function SalesHistoryPage() {
 
   const dashboardQ = useQuery({
     queryKey: ["saude-slim", "sales-history"],
-    queryFn: () => loadDashboard({ data: { period_label: "Saúde Slim" } }),
+    queryFn: getSaudeSlimSalesHistory,
     retry: 1,
     staleTime: 30_000,
   });
   const productSalesQ = useQuery({
     queryKey: ["saude-slim", "sales-history-products"],
-    queryFn: () => loadProductSales({ data: {} }),
+    queryFn: getSaudeSlimSalesProducts,
     retry: 1,
     staleTime: 30_000,
   });
