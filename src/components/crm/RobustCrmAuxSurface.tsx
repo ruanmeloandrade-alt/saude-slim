@@ -33,7 +33,7 @@ export function RobustCrmAuxSurface({ variant, children }: { variant: Variant; c
           "[&>div>main>div_.bg-card.p-4]:transition-colors",
           "[&>div>main>div_.bg-card.p-4:hover]:border-primary/35",
           "[&>div>main>header_button]:h-9",
-          "[&>div>main>header_button:first-of-type]:bg-background",
+          "[&>div>main>header_button:first-of-type]:shadow-sm",
           "[&>div>main>header_button:last-of-type]:shadow-sm",
           "[&>div>main>div_input.max-w-sm]:max-w-md",
           "[&>div>main>div_input.max-w-sm]:bg-background",
