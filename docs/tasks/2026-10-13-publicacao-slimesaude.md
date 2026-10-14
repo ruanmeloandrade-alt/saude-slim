@@ -53,3 +53,11 @@
 
 **Plano de validação:** teste de build pela Actions nesta branch; observar logs; integração na main só após build mínimo; tentar deploy Pages no workflow apenas na main; smoke real HTTP e /auth, sem Evolution.
 **Status:** 🟡 em implementação, sem build ou publicação comprovados.
+
+## Evidência do build na branch (2026-10-14T00:27:30.441Z)
+
+- Ajuste técnico: o prerender automático SPA do TanStack Start falhou com `ERR_MODULE_NOT_FOUND: dist/server/server.js` quando Nitro emitiu `.output/server/index.mjs`. Retornamos ao build Node existente e capturamos o HTML legítimo de `/auth` executando temporariamente o servidor **somente no runner de build do GitHub Actions**. Não há novo host.
+- GitHub Actions execução [38490152515](https://github.com/ruanmeloandrade-alt/saude-slim/actions/runs/38490152515): **build SUCCESS**; Bun install, route parity, build Vite, teste HTTP local de `/auth` e criação de index/404 HTML e assets: PASS.
+- Nenhuma etapa do WhatsApp/Evolution executada.
+- Ainda falta publicação no GitHub Pages (main, deploy) e smoke do domínio final. O backend Node compilado permanece **somente artefato do runner**, não está hospedado no Pages.
+- Interface estática parcial: preservar o alerta sobre rotas de servidor e `useServerFn` que não serão executadas pelo Pages.
