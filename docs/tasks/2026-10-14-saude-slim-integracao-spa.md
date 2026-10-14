@@ -154,3 +154,11 @@ ainda não homologados. Não declarar entrega pronta.**
   segregada enquanto o build e os módulos dependentes do backend não passarem
   por homologação.
 
+
+## Correção final de bloqueios npm/security (14/10)
+
+- Dependências fixadas em `package.json`: `@tanstack/react-start@1.168.60`, `@tanstack/react-router@1.170.41`, `@tanstack/start-server-core@1.169.39` e override do server-core contra resolução transitiva vulnerável (CVE-2026-102989).
+- O antigo `bun.lock`, ainda com dependências vulneráveis, foi excluído da branch para evitar instalações com versões obsoletas. Padronizado `npm@10.9.2`. O `package-lock.json` deve ser gerado pelo npm após instalar dependências em ambiente com acesso ao registro; **não simular sua geração**.
+- `prebuild` agora executa `preflight:slim` e `check:routes` antes de qualquer `npm run build`. Preflight falha com versões vulneráveis ou lock Bun legado.
+- Conferida novamente a árvore GitHub: **147 imports de rota, zero arquivos ausentes**. Confirmado que `main` continua intacta.
+- Execução real de `npm install`, `npm run build` e testes em navegador **ainda pendente** por indisponibilidade de acesso ao npm/GitHub no shell desta sessão; não declarar release como aprovado.
