@@ -4,7 +4,7 @@
 // O idioma continua sendo preferência individual; o fuso armazenado em localStorage é
 // apenas um espelho do fuso persistido da conta ativa para os formatadores client-side.
 
-import { getWorkspaceRegionalSettings } from "@/lib/workspace-currency.functions";
+import { supabase } from "@/integrations/supabase/client";
 
 const CURRENCY_STORAGE_KEY = "mkton:workspace_currency";
 const PREFERENCES_STORAGE_KEY = "mkton:preferences";
@@ -57,9 +57,15 @@ export async function syncWorkspaceRegionalCache(): Promise<WorkspaceRegionalCac
   if (inFlightRegional) return inFlightRegional;
 
   inFlightRegional = (async () => {
-    const res = await getWorkspaceRegionalSettings({ data: {} });
-    const currency = res.currency || "BRL";
-    const timezone = res.timezone || "America/Sao_Paulo";
+    // Regionalização da Saúde Slim: leitura direta do perfil protegido por RLS.
+    // Moeda inicial BRL; não acessar endpoints legados de outro projeto.
+    const { data: auth, error: authError } = await supabase.auth.getUser();
+    if (authError || !auth.user) throw new Error("Usuário não autenticado.");
+    const { data: profile, error } = await supabase
+      .from("profiles").select("timezone").eq("id", auth.user.id).maybeSingle();
+    if (error) throw new Error(error.message);
+    const currency = "BRL";
+    const timezone = profile?.timezone || "America/Sao_Paulo";
     writeRegionalCache(currency, timezone);
     return { currency, timezone };
   })();
