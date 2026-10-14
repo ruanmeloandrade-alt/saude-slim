@@ -36,6 +36,19 @@ const engines = packageJson.engines?.node ?? "";
 if (!packageJson.scripts?.build || !packageJson.scripts?.["check:routes"])
   errors.push("package.json precisa de build e check:routes");
 if (!/^>=22/.test(engines)) warnings.push("Conferir engines.node: " + engines);
+const versionParts = (version) => String(version || "").replace(/^[^\d]*/, "").split(".").map(Number);
+const atLeast = (version, major, minor, patch) => {
+  const [m, n, p] = versionParts(version);
+  return Number.isFinite(m) && (
+    m > major || (m === major && (n > minor || (n === minor && p >= patch)))
+  );
+};
+if (!atLeast(packageJson.dependencies?.["@tanstack/react-start"], 1, 168, 60))
+  errors.push("TanStack React Start abaixo de 1.168.60: CVE-2026-102989.");
+if (!atLeast(packageJson.dependencies?.["@tanstack/start-server-core"], 1, 169, 39))
+  errors.push("TanStack server-core abaixo de 1.169.39: CVE-2026-102989.");
+if (has("bun.lock"))
+  errors.push("Lockfile Bun legado ainda presente: remova e gere npm package-lock com dependências corrigidas.");
 if (process.versions.node.split(".").map(Number)[0] < 22) errors.push("Node >=22 é obrigatório.");
 
 const gen = read("src/routeTree.gen.ts");
@@ -82,12 +95,6 @@ for (const file of localSources) {
   }
 }
 
-if (has("bun.lock")) {
-  const lock = read("bun.lock");
-  const privateCacheCount = (lock.match(/europe-west[14]-npm\.pkg\.dev\/lovable-core-prod\/sandbox-npm-cache/g) || []).length;
-  if (privateCacheCount)
-    errors.push("bun.lock tem " + privateCacheCount + " URLs privadas Lovable; use registry npm.");
-}
 
 if (has("index.html")) {
   warnings.push("Há um index.html na raiz; conferir se é o app completo e não a landing temporária.");
