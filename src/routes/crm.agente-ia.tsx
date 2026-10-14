@@ -24,6 +24,8 @@ export const Route = createFileRoute("/crm/agente-ia")({
 function BrainPage() {
   const [workspaceId, setWorkspaceId] = useState<string | null>(null);
   const [sources, setSources] = useState<Source[]>([]);
+  const [blockedTerms, setBlockedTerms] = useState<Array<{id:string;term:string}>>([]);
+  const [newBlockedTerm, setNewBlockedTerm] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [url, setUrl] = useState("");
@@ -39,6 +41,9 @@ function BrainPage() {
       .eq("workspace_id", wid).order("created_at", { ascending: false });
     if (err) throw err;
     setSources((data ?? []) as Source[]);
+    const { data: terms, error: termsError } = await supabase.from("ai_brain_blocked_terms").select("id,term").eq("workspace_id",wid).order("term");
+    if (termsError) throw termsError;
+    setBlockedTerms(terms ?? []);
   }
 
   useEffect(() => {
@@ -57,6 +62,22 @@ function BrainPage() {
     })().catch(e => { if (active) setError(e.message ?? "Não foi possível carregar a base."); });
     return () => { active = false; };
   }, []);
+
+  async function addBlockedTerm() {
+    if (!workspaceId || !newBlockedTerm.trim()) return;
+    setError("");
+    const term = newBlockedTerm.trim().toLocaleLowerCase("pt-BR");
+    const { error: err } = await supabase.from("ai_brain_blocked_terms").insert({workspace_id:workspaceId,term});
+    if (err) return setError(err.message);
+    setNewBlockedTerm("");
+    await reload(workspaceId);
+  }
+  async function removeBlockedTerm(id: string) {
+    if (!workspaceId) return;
+    const { error: err } = await supabase.from("ai_brain_blocked_terms").delete().eq("id",id).eq("workspace_id",workspaceId);
+    if (err) return setError(err.message);
+    await reload(workspaceId);
+  }
 
   async function addSource() {
     if (!workspaceId || !title.trim()) return setError("Informe o título da fonte.");
@@ -132,6 +153,15 @@ function BrainPage() {
           <button type="button" disabled={busy || !workspaceId} onClick={addSource} className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"><Plus size={16} /> {busy ? "Salvando..." : "Adicionar fonte"}</button>
           {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
           {notice && <p className="mt-3 text-sm text-muted-foreground">{notice}</p>}
+        </section>
+        <section className="max-w-4xl rounded-lg border bg-card p-5">
+          <h2 className="mb-2 font-semibold">Palavras proibidas</h2>
+          <p className="mb-3 text-xs text-muted-foreground">Termos que os agentes devem evitar. O filtro de saída ainda precisa ser conectado ao envio de mensagens.</p>
+          <div className="flex gap-2">
+            <input aria-label="Nova palavra proibida" className="min-w-0 flex-1 rounded-md border bg-background p-2 text-sm" placeholder="Digite uma palavra ou expressão" value={newBlockedTerm} onChange={e=>setNewBlockedTerm(e.target.value)}/>
+            <button type="button" onClick={addBlockedTerm} className="rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground">Adicionar</button>
+          </div>
+          <ul className="mt-3 space-y-2">{blockedTerms.map(item=><li key={item.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"><span>{item.term}</span><button type="button" aria-label={`Remover ${item.term}`} onClick={()=>removeBlockedTerm(item.id)}><Trash2 size={15}/></button></li>)}</ul>
         </section>
         <section className="max-w-4xl rounded-lg border bg-card p-5">
           <h2 className="mb-2 font-semibold">Fontes cadastradas ({sources.length})</h2>
