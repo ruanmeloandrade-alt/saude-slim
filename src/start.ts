@@ -22,7 +22,9 @@ const errorMiddleware = createMiddleware().server(async ({ next, request }) => {
   }
 });
 
+// Modo cliente alinhado ao padrão SPA da Hárpia; não substitui API/Edge Functions.
 export const startInstance = createStart(() => ({
+  defaultSsr: false,
   functionMiddleware: [attachSupabaseAuth],
   requestMiddleware: [errorMiddleware],
 }));
