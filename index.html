@@ -155,7 +155,7 @@
     function show(){if(!state.session){app.innerHTML=authMarkup();return}if(!state.workspace||!state.data){app.innerHTML='<div class="loading">Carregando sua operação...</div>'+alertHtml();return}app.innerHTML=dashboardMarkup()}
     function friendly(e){return String(e&&e.message||e||"Falha inesperada.")}
     async function attempt(fn){if(state.busy)return;state.busy=true;state.error="";state.notice="";show();try{await fn()}catch(e){state.error=friendly(e)}finally{state.busy=false;show()}}
-    async function authSubmit(form){var fields=new FormData(form),email=String(fields.get("email")||"").trim().toLowerCase(),password=String(fields.get("password")||""),name=String(fields.get("name")||"").trim();
+    async function authSubmit(form){var fields=form,email=String(fields.get("email")||"").trim().toLowerCase(),password=String(fields.get("password")||""),name=String(fields.get("name")||"").trim();
       if(state.mode==="forgot"){await http(BASE+"/auth/v1/recover",{method:"POST",headers:publicHeaders(),body:JSON.stringify({email:email})});state.notice="Se este endereço estiver cadastrado, você receberá as instruções por e-mail.";return}
       if(state.mode==="signup"){
         if(name.length<3)throw new Error("Informe o nome do responsável.");
@@ -168,7 +168,7 @@
       }
       await loadWorkspace();history.replaceState(null,"","/");state.notice="Acesso autorizado à Saúde Slim.";
     }
-    async function insertLead(form){if(!state.workspace)return;var f=new FormData(form),name=String(f.get("name")||"").trim();if(name.length<2)throw new Error("Informe o nome do cliente.");
+    async function insertLead(form){if(!state.workspace)return;var f=form,name=String(f.get("name")||"").trim();if(name.length<2)throw new Error("Informe o nome do cliente.");
       var pipeline=state.data.pipelines[0],stage=state.data.stages.find(function(s){return pipeline&&s.pipeline_id===pipeline.id});
       await db("leads","POST","select=id",{
         workspace_id:state.workspace.id,name:name.slice(0,150),
@@ -177,7 +177,7 @@
         status:"active",source:"saude_slim"
       });state.newForm="";state.notice="Pedido salvo com sucesso.";await loadData()
     }
-    async function insertProduct(form){if(!state.workspace)return;var f=new FormData(form),catalog=state.data.catalogs[0];if(!catalog)throw new Error("Nenhum catálogo disponível. Contate o administrador.");
+    async function insertProduct(form){if(!state.workspace)return;var f=form,catalog=state.data.catalogs[0];if(!catalog)throw new Error("Nenhum catálogo disponível. Contate o administrador.");
       var name=String(f.get("name")||"").trim();if(name.length<2)throw new Error("Informe o produto.");
       await db("products","POST","select=id",{
         workspace_id:state.workspace.id,catalog_id:catalog.id,name:name.slice(0,150),sku:String(f.get("sku")||"").trim(),
@@ -191,9 +191,9 @@
     async function updateStock(id,delta){var p=state.data.products.find(function(x){return x.id===id});if(!p)throw new Error("Produto não encontrado.");var n=Math.max(0,Number(p.stock)+delta);
       await db("products","PATCH","workspace_id=eq."+qs(state.workspace.id)+"&id=eq."+qs(id),{stock:n});state.notice="Estoque atualizado.";await loadData()
     }
-    app.addEventListener("submit",function(event){event.preventDefault();var form=event.target;if(form.id==="auth-form"){var data=new FormData(form);void attempt(function(){return authSubmit({entries:function(){return data.entries()}})});return}
-      if(form.id==="lead-form"){var d=new FormData(form);void attempt(function(){return insertLead({entries:function(){return d.entries()}})});return}
-      if(form.id==="product-form"){var d2=new FormData(form);void attempt(function(){return insertProduct({entries:function(){return d2.entries()}})});return}
+    app.addEventListener("submit",function(event){event.preventDefault();var form=event.target;if(form.id==="auth-form"){var data=new FormData(form);void attempt(function(){return authSubmit(data)});return}
+      if(form.id==="lead-form"){var d=new FormData(form);void attempt(function(){return insertLead(d)});return}
+      if(form.id==="product-form"){var d2=new FormData(form);void attempt(function(){return insertProduct(d2)});return}
     });
     app.addEventListener("click",function(event){var target=event.target.closest("[data-mode],[data-view],[data-action]");if(!target)return;
       if(target.dataset.mode){state.mode=target.dataset.mode;state.notice="";state.error="";show();return}
