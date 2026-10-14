@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Loader2, Users, Mail, Phone, Instagram, X, Check } from "lucide-react";
 import {
@@ -8,10 +7,8 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  findDuplicateLeads, dismissDuplicateGroup, mergeLeads,
-  type DuplicateGroup, type DuplicateLead,
-} from "@/lib/leads-dedupe.functions";
+import type { DuplicateGroup, DuplicateLead } from "@/lib/leads-dedupe.functions";
+import { findSlimDuplicateLeads, dismissSlimDuplicateGroup, mergeSlimLeads } from "@/lib/saude-slim-dedupe-client";
 import { formatBRL, timeAgo } from "@/lib/crm-mock";
 
 export function DuplicatesPanel({
@@ -21,9 +18,9 @@ export function DuplicatesPanel({
   onOpenChange: (o: boolean) => void;
   onMerged: () => void;
 }) {
-  const load = useServerFn(findDuplicateLeads);
-  const dismiss = useServerFn(dismissDuplicateGroup);
-  const merge = useServerFn(mergeLeads);
+  const load = findSlimDuplicateLeads;
+  const dismiss = dismissSlimDuplicateGroup;
+  const merge = mergeSlimLeads;
   const [busySig, setBusySig] = useState<string | null>(null);
 
   const q = useQuery({
