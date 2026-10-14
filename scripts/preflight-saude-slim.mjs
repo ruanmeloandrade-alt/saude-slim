@@ -25,7 +25,11 @@ const required = [
   "src/integrations/supabase/saude-slim-env.ts",
 ];
 for (const file of required) if (!has(file)) errors.push("Arquivo obrigatório ausente: " + file);
-if (errors.length) finish();
+if (errors.length) {
+  console.error("[Saúde Slim] Arquivos necessários para o preflight não encontrados:");
+  for (const err of errors) console.error("ERRO: " + err);
+  process.exit(1);
+}
 
 const packageJson = JSON.parse(read("package.json"));
 const engines = packageJson.engines?.node ?? "";
