@@ -389,6 +389,8 @@ export function InboxPage({ channel, selectedId }: InboxPageProps) {
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: channel === "leads" && conversationCacheReady && Boolean(cacheScope),
     staleTime: 2 * 60_000,
+    // Eventos são imediatos; polling restaura a lista quando o websocket cai.
+    refetchInterval: 8_000,
     gcTime: 15 * 60_000,
     refetchOnWindowFocus: "always",
     refetchOnReconnect: "always",
@@ -407,6 +409,8 @@ export function InboxPage({ channel, selectedId }: InboxPageProps) {
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     enabled: channel === "leads" && conversationCacheReady && Boolean(cacheScope),
     staleTime: 2 * 60_000,
+    // Eventos são imediatos; polling restaura a lista quando o websocket cai.
+    refetchInterval: 8_000,
     gcTime: 15 * 60_000,
     refetchOnWindowFocus: "always",
     refetchOnReconnect: "always",
@@ -2395,6 +2399,9 @@ function ChatThread({
     },
     enabled: isLead && activityCacheReady && Boolean(cacheScope),
     staleTime: 10_000,
+    // Evita F5 ao alternar entre conversas ou perder o canal Realtime.
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: true,
   });
 
   const groupMessagesQ = useQuery({
@@ -2442,6 +2449,8 @@ function ChatThread({
     },
     enabled: isGroupThread && groupCacheReady && Boolean(cacheScope),
     staleTime: 10_000,
+    refetchInterval: 7_000,
+    refetchIntervalInBackground: true,
   });
 
   const effectiveActivityPage = activitiesQ.data ?? cachedActivityPage;
@@ -3022,8 +3031,17 @@ function ChatThread({
       });
     },
     onSuccess: () => {
-      // O servidor persiste a mensagem antes de responder e o Realtime acima a
-      // aplica incrementalmente. Não roda sync global nem invalida a lista inteira.
+      // Após o servidor salvar, exibir a resposta sem depender de eventos externos.
+      if (isGroupThread) {
+        void queryClient.invalidateQueries({
+          queryKey: ["inbox", "group-messages", conversation.id],
+        });
+      } else {
+        void queryClient.invalidateQueries({
+          queryKey: ["inbox", "activities", conversation.id],
+        });
+      }
+      void queryClient.invalidateQueries({ queryKey: ["inbox", "lead-conversations"] });
     },
     onSettled: () => {
       sendingTextRef.current = false;
