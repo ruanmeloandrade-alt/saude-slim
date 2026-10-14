@@ -277,8 +277,8 @@ function AuthPage() {
 
     if (mode === "signup") {
       if (cleanName.length < 3) return setError("Informe o nome do responsável pela conta.");
-      if (cleanWhatsapp.length < 12) return setError("Informe um WhatsApp válido com DDD.");
-      if (!cleanInstagram || cleanInstagram.length < 3) return setError("Informe o Instagram da empresa ou do responsável.");
+      if (cleanWhatsapp && cleanWhatsapp.length < 12) return setError("Informe um WhatsApp válido com DDD.");
+      if (cleanInstagram && cleanInstagram.length < 3) return setError("Informe um Instagram válido.");
       if (password.length < 6) return setError("A senha deve ter ao menos 6 caracteres.");
     }
 
@@ -301,7 +301,7 @@ function AuthPage() {
               responsible_name: cleanName,
               whatsapp: cleanWhatsapp,
               instagram: cleanInstagram,
-              signup_source: "mkton_public_signup",
+              signup_source: "saude_slim_internal_signup",
             },
           },
         });
@@ -425,7 +425,7 @@ function AuthPage() {
           <h2 className="mt-6 text-[clamp(2.8rem,4.3vw,5.3rem)] font-semibold leading-[.98] tracking-tight">Sua rotina comercial em forma de cuidado.</h2>
           <p className="mt-6 max-w-lg text-base leading-8 text-emerald-50/75">Acompanhe pedidos, estoque, clientes e recuperação de vendas em um ambiente interno feito para a operação da Saúde Slim.</p>
           <div className="mt-9 grid gap-3 sm:grid-cols-2">
-            {[["Histórico de vendas", "Pedidos e clientes sempre fáceis de consultar"], ["Estoque saudável", "Produtos e fornecedores com mais controle"], ["Atendimento ativo", "Inbox, automações e recuperação em um fluxo só"], ["Acesso seguro", "Entrada restrita ao time autorizado"]].map(([title, text]) => (
+            {[["Histórico de vendas", "Pedidos e clientes sempre fáceis de consultar"], ["Estoque saudável", "Produtos e fornecedores com mais controle"], ["Gestão integrada", "Vendas, pedidos e produtos no mesmo painel"], ["Acesso seguro", "Entrada restrita ao time autorizado"]].map(([title, text]) => (
               <div key={title} className="rounded-2xl border border-emerald-200/15 bg-white/[.07] p-4 backdrop-blur-sm"><div className="flex items-center gap-2 text-xs font-bold"><CheckCircle2 className="h-4 w-4 text-emerald-300" />{title}</div><p className="mt-2 text-[11px] leading-5 text-emerald-50/65">{text}</p></div>
             ))}
           </div>
@@ -470,10 +470,10 @@ function AuthPage() {
                 <form className="mt-7 space-y-4" onSubmit={submit}>
                   {mode === "signup" && (
                     <>
-                      <FieldShell icon={<UserRound className="h-4 w-4" />} label="Nome do responsável"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="Ex.: Ruan Medeiros" value={responsibleName} onChange={(e) => setResponsibleName(e.target.value)} required autoComplete="name" /></FieldShell>
+                      <FieldShell icon={<UserRound className="h-4 w-4" />} label="Nome do responsável"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="Nome do responsável" value={responsibleName} onChange={(e) => setResponsibleName(e.target.value)} required autoComplete="name" /></FieldShell>
                       <div className="grid gap-4 sm:grid-cols-2">
-                        <FieldShell icon={<Phone className="h-4 w-4" />} label="WhatsApp"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" type="tel" inputMode="tel" placeholder="(22) 99999-9999" value={whatsapp} onChange={(e) => setWhatsapp(formatWhatsApp(e.target.value))} required autoComplete="tel" /></FieldShell>
-                        <FieldShell icon={<Instagram className="h-4 w-4" />} label="Instagram"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="@seuperfil" value={instagram} onChange={(e) => setInstagram(e.target.value)} required autoComplete="off" /></FieldShell>
+                        <FieldShell icon={<Phone className="h-4 w-4" />} label="WhatsApp (opcional)"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" type="tel" inputMode="tel" placeholder="(22) 99999-9999" value={whatsapp} onChange={(e) => setWhatsapp(formatWhatsApp(e.target.value))} autoComplete="tel" /></FieldShell>
+                        <FieldShell icon={<Instagram className="h-4 w-4" />} label="Instagram (opcional)"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="@seuperfil" value={instagram} onChange={(e) => setInstagram(e.target.value)} autoComplete="off" /></FieldShell>
                       </div>
                     </>
                   )}
