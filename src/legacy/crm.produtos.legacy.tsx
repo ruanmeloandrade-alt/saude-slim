@@ -1,18 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { toast as sonnerToast } from "sonner";
+import type { DbCatalog } from "@/lib/products.functions";
 import {
-  listProductCatalogs,
-  saveProductCatalog,
-  deleteProductCatalog,
-  saveProduct as saveProductSrv,
-  deleteProduct as deleteProductSrv,
-  bulkUpsertProducts,
-  renameProductCategory,
-  type DbCatalog,
-} from "@/lib/products.functions";
+  fetchSlimProductCatalogs,
+  saveSlimCatalog,
+  removeSlimCatalog,
+  saveSlimProduct,
+  removeSlimProduct,
+  importSlimProducts,
+  renameSlimCategory,
+} from "@/lib/saude-slim-products-client";
 
 import { parseCatalogFile, CATALOG_TEMPLATE_CSV } from "@/lib/catalog-import";
 import {
@@ -102,13 +101,13 @@ const EMPTY_PRODUCT: Product = {
 
 function CrmProdutosPage() {
   const qc = useQueryClient();
-  const loadCatalogsFn = useServerFn(listProductCatalogs);
-  const saveCatalogFn = useServerFn(saveProductCatalog);
-  const deleteCatalogFn = useServerFn(deleteProductCatalog);
-  const saveProductFn = useServerFn(saveProductSrv);
-  const deleteProductFn = useServerFn(deleteProductSrv);
-  const bulkFn = useServerFn(bulkUpsertProducts);
-  const renameCategoryFn = useServerFn(renameProductCategory);
+  const loadCatalogsFn = fetchSlimProductCatalogs;
+  const saveCatalogFn = saveSlimCatalog;
+  const deleteCatalogFn = removeSlimCatalog;
+  const saveProductFn = saveSlimProduct;
+  const deleteProductFn = removeSlimProduct;
+  const bulkFn = importSlimProducts;
+  const renameCategoryFn = renameSlimCategory;
 
 
   const catalogsQ = useQuery({
