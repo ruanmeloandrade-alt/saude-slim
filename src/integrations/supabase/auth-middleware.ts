@@ -60,7 +60,20 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
   };
 }
 
-export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
+export const requireSupabaseAuth = createMiddleware({ type: 'function' })
+  .client(async ({ next }) => {
+    // TanStack server functions do not automatically forward the Supabase
+    // browser session. Attach the user's verified session token to each call.
+    const { supabase } = await import('./client')
+    const { data, error } = await supabase.auth.getSession()
+    if (error || !data.session?.access_token) {
+      throw new Error('Sessão expirada. Faça login novamente para salvar ou ativar.')
+    }
+    return next({
+      headers: { Authorization: `Bearer ${data.session.access_token}` },
+    })
+  })
+  .server(
   async ({ next }) => {
     const { url: SUPABASE_URL, publishableKey: SUPABASE_PUBLISHABLE_KEY } = resolveServerSupabaseEnv();
 
