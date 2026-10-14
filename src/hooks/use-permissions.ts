@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
-import { getMyPermissions } from "@/lib/permissions-core.functions";
+import { getSaudeSlimPermissions } from "@/lib/saude-slim-permissions-client";
 import {
   can as canCore,
   scopeOf as scopeCore,
@@ -18,10 +17,9 @@ import type { CrudAction } from "@/lib/permissions-catalog";
 const EMPTY: EffectivePermissions = { role: "member", full: false, permissions: null };
 
 export function usePermissions() {
-  const fn = useServerFn(getMyPermissions);
   const q = useQuery({
     queryKey: ["my-permissions"],
-    queryFn: () => fn(),
+    queryFn: getSaudeSlimPermissions,
     staleTime: 60_000,
     gcTime: 5 * 60_000,
   });
