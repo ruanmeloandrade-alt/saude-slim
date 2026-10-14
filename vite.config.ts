@@ -24,13 +24,27 @@ const salesbotSaveFeedbackPlugin = {
   },
 };
 
-const mcpPlugins = process.platform === "win32" ? [] : [mcpPlugin()];
+// Pages is static-only. This flag is set exclusively in the GitHub Actions build;
+// development and server builds keep their existing Node configuration.
+const isGithubPagesBuild = process.env.GITHUB_PAGES_BUILD === "1";
+const mcpPlugins = isGithubPagesBuild || process.platform === "win32" ? [] : [mcpPlugin()];
 
 export default defineConfig({
   // Saúde Slim: gerar servidor Node executável em hospedagem externa.
   // Github é a fonte do código; Nitro executa SSR/rotas/API no runtime Node.
   nitro: { preset: "node-server" },
   tanstackStart: {
+    ...(isGithubPagesBuild
+      ? {
+          spa: {
+            enabled: true,
+            prerender: {
+              outputPath: "/index.html",
+              crawlLinks: false,
+            },
+          },
+        }
+      : {}),
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
