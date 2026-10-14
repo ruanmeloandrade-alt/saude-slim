@@ -77,7 +77,7 @@ function FormulariosPage() {
  const wsSlug = wsQ.data?.slug ?? "";
 
  const [editing, setEditing] = useState<FormRecord | null>(null);
- const [creating, setCreating] = useState(false);
+ const [createError, setCreateError] = useState<string | null>(null);
  const [query, setQuery] = useState("");
 
  const filtered = useMemo(
@@ -86,10 +86,23 @@ function FormulariosPage() {
  );
 
  const createMut = useMutation({
-  mutationFn: () => save({ data: { nome: "Novo formulário", campos: [{ id: `c${Date.now()}`, label: "Nome", kind: "text", required: true }], branding: {} } }),
-  onSuccess: async () => {
-   await qc.invalidateQueries({ queryKey: ["forms-list"] });
-   setCreating(false);
+  mutationFn: () => save({
+   data: {
+    nome: "Novo formulário",
+    campos: [{ id: `c${Date.now()}`, label: "Nome", kind: "text", required: true }],
+    branding: {},
+   },
+  }),
+  onSuccess: async (created) => {
+   // Abrir o editor do formulário efetivamente salvo, sem clique extra.
+   const refreshed = await list({}) as FormRecord[];
+   qc.setQueryData(["forms-list"], refreshed);
+   const newForm = refreshed.find((form) => form.id === created.id);
+   if (newForm) setEditing(newForm);
+   else setCreateError("Formulário criado. Atualize a lista para editar.");
+  },
+  onError: (err) => {
+   setCreateError(err instanceof Error ? err.message : "Não foi possível criar o formulário.");
   },
  });
 
@@ -114,10 +127,17 @@ function FormulariosPage() {
        </a>
       </p>
      </div>
-     <div className="flex items-center gap-2">
-      <Button onClick={() => { setCreating(true); createMut.mutate(); }} size="sm" disabled={createMut.isPending}>
+     <div className="flex flex-col items-end gap-1.5">
+      <Button
+       type="button"
+       size="sm"
+       className="relative z-10 shrink-0 !bg-zinc-900 !text-white shadow-md hover:!bg-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-500 dark:!bg-white dark:!text-zinc-950 dark:hover:!bg-zinc-200"
+       onClick={() => { setCreateError(null); createMut.mutate(); }}
+       disabled={createMut.isPending}
+      >
        {createMut.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />} Novo formulário
       </Button>
+      {createError && <p role="alert" className="max-w-xs text-right text-xs text-destructive">{createError}</p>}
      </div>
     </header>
     <div className="p-6 space-y-4 overflow-y-auto">
