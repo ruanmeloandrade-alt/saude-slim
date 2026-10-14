@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Fragment } from "react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { listSlimSources, listSlimFunnels, listSlimUsers, moveSlimLead, updateSlimStage, createSlimStage, renameSlimPipeline } from "@/lib/saude-slim-funnel-client";
+import { listSlimSources, listSlimFunnels, listSlimUsers, moveSlimLead, updateSlimStage, createSlimStage, renameSlimPipeline, createSlimLead, createSlimFunnel, setDefaultSlimSource } from "@/lib/saude-slim-funnel-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
  Search,
@@ -205,8 +205,8 @@ function CrmFunisPage() {
   const listSources = listSlimSources;
   const listFunnelsServer = listSlimFunnels;
   const moveLeadServer = moveSlimLead;
-  const createFunnelServer = useServerFn(createFunnelServerFn);
-  const setDefaultCrmSourceServer = useServerFn(setDefaultCrmSource);
+  const createFunnelServer = createSlimFunnel;
+  const setDefaultCrmSourceServer = setDefaultSlimSource;
   const updateStageServer = updateSlimStage;
   const reorderStagesServer = useServerFn(reorderPipelineStages);
   const renamePipelineServer = renameSlimPipeline;
@@ -1049,7 +1049,7 @@ function CrmFunisPage() {
 
 
    // ---- Novo Lead (dialog) ----
-   const createLeadServer = useServerFn(createLeadServerFn);
+   const createLeadServer = createSlimLead;
 
   const [newLeadOpen, setNewLeadOpen] = useState(false);
   const [newLeadForm, setNewLeadForm] = useState({ name: "", phone: "", email: "", value: "", stageId: "" });
@@ -1088,7 +1088,7 @@ function CrmFunisPage() {
       })) as { id?: string; leadId?: string; lead?: { id?: string } } | undefined;
       const createdId = created?.id ?? created?.leadId ?? created?.lead?.id;
       if (createdId) {
-        // Gatilhos de "lead criado" são disparados no servidor por createLead.
+        // Gatilhos precisam do runtime de automações e não são executados aqui.
       }
       setNewLeadOpen(false);
       await reloadFunnels(crmSourceId);
