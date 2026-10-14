@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Fragment } from "react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import { listSlimSources, listSlimFunnels, listSlimUsers, moveSlimLead } from "@/lib/saude-slim-funnel-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
  Search,
@@ -128,7 +129,7 @@ import { AdminOnlyDot } from "@/components/AdminOnlyDot";
 
 
 
-type CrmSource = { id: string; provider: "mkton"; display_name: string; is_default: boolean };
+type CrmSource = { id: string; provider: "manual" | "mkton"; display_name: string; is_default: boolean };
 
 export const Route = createFileRoute("/crm/funis-de-venda")({
  validateSearch: (search: Record<string, unknown>): { funnelId?: string; novo?: string } => ({
@@ -197,13 +198,13 @@ function CrmFunisPage() {
    const [workspaceUsers, setWorkspaceUsers] = useState<Array<{ id: string; name: string }>>([]);
 
    const duplicatePipeFn = useServerFn(duplicatePipelineServer);
-    const listUsersFn = useServerFn(listWorkspaceUsers);
+    const listUsersFn = listSlimUsers;
     const bulkMoveLeadsFn = useServerFn(bulkMoveLeads);
     const backfillFn = useServerFn(backfillAutomationAction);
 
-  const listSources = useServerFn(listCrmSources);
-  const listFunnelsServer = useServerFn(listFunnels);
-  const moveLeadServer = useServerFn(moveLeadServerFn);
+  const listSources = listSlimSources;
+  const listFunnelsServer = listSlimFunnels;
+  const moveLeadServer = moveSlimLead;
   const createFunnelServer = useServerFn(createFunnelServerFn);
   const setDefaultCrmSourceServer = useServerFn(setDefaultCrmSource);
   const updateStageServer = useServerFn(updatePipelineStage);
@@ -266,9 +267,8 @@ function CrmFunisPage() {
  try {
    const r = await listSources();
    setSources(r.sources as CrmSource[]);
-   // MarketOn (Saúde Slim) é sempre o CRM principal quando presente.
-    const saudeSlim = r.sources.find((s) => s.provider === "mkton");
-    const initial = saudeSlim ?? r.sources[0];
+   // Fonte principal definida exclusivamente no workspace Saúde Slim.
+    const initial = r.sources.find((s) => s.is_default) ?? r.sources[0];
   if (initial) {
    setPrimarySourceId(initial.id);
     try { localStorage.setItem("saude-slim.primaryCrmSourceId", initial.id); } catch { /* noop */ }
