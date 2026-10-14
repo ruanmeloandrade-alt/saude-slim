@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0c2725">
+  <meta name="description" content="Saúde Slim: gestão de vendas, pedidos, clientes, funil e estoque.">
+  <title>Saúde Slim | Sistema de Gestão</title>
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    :root{color-scheme:light;--navy:#101c2e;--green:#0c9f77;--green-dark:#067455;--ink:#122036;--muted:#627187;--border:#e2e8f0;--bg:#f5f8fa;--radius:16px}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select{font:inherit}
+    button{cursor:pointer}button:disabled{cursor:wait;opacity:.55}
+    input,select{width:100%;border:1px solid #d7e0ea;background:#fff;border-radius:10px;padding:11px 12px;color:var(--ink);outline:none;min-height:43px}
+    input:focus,select:focus{border-color:var(--green);box-shadow:0 0 0 3px #0c9f771a}
+    label{display:grid;gap:5px;color:#516176;font-weight:650;font-size:12px}
+    h1,h2,h3,p{margin:0}h1{font-size:clamp(25px,3vw,34px);line-height:1.12;letter-spacing:-.035em}h2{font-size:19px;letter-spacing:-.02em}
+    .brand{display:flex;gap:11px;align-items:center;font-size:19px;font-weight:850;letter-spacing:-.03em}.mark{display:inline-grid;place-items:center;width:42px;height:42px;border-radius:13px;background:#60e2b2;color:#083c31;font-size:25px;font-weight:950}
+    .auth-screen{min-height:100svh;display:grid;grid-template-columns:minmax(0,.9fr) minmax(420px,1.1fr)}
+    .auth-art{padding:50px clamp(28px,5vw,86px);display:flex;flex-direction:column;justify-content:space-between;gap:40px;background:linear-gradient(125deg,#073a31,#08221f 72%);color:white}
+    .auth-art .mark{background:#dbfff0}.auth-art h1{font-size:clamp(36px,4vw,65px);line-height:1.03;max-width:660px}.auth-art p{max-width:520px;color:#c2e7d7;font-size:16px;line-height:1.8;margin-top:22px}
+    .pill{display:inline-block;border:1px solid #447c6a;background:#25544682;color:#cff6e5;border-radius:100px;padding:6px 13px;font-size:11px;font-weight:800;letter-spacing:.07em;margin-bottom:24px}
+    .bullets{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:35px}.bullets span{border:1px solid #55806c52;border-radius:14px;padding:16px;background:#ffffff08;color:#dcfff0;font-weight:700}
+    .auth-side{padding:42px 25px;display:grid;place-items:center}.auth-card{background:#fff;border:1px solid #e4ebe9;border-radius:22px;box-shadow:0 24px 80px #1029230e;padding:clamp(26px,4vw,45px);width:min(100%,560px)}
+    .auth-card h1{margin-top:12px;margin-bottom:13px}.muted{color:var(--muted)}.auth-card .desc{margin-bottom:29px;line-height:1.7}
+    .form-fields{display:grid;gap:16px}.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:10px 16px;border-radius:10px;border:1px solid var(--border);font-weight:750;background:white;color:var(--ink);min-height:42px}
+    .btn.primary{border-color:var(--green);background:var(--green);color:white}.btn.primary:hover{background:var(--green-dark)}.btn.ghost{background:transparent}.btn.tiny{padding:7px 10px;min-height:32px}
+    .auth-action{margin-top:6px;width:100%;padding:14px}.text-link{border:0;background:transparent;color:var(--green-dark);font-weight:750;padding:6px 1px}.form-foot{margin-top:17px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .alert{padding:13px 15px;border:1px solid #f7c3bd;border-radius:11px;background:#fff2f0;color:#a52319;margin:0 0 16px}.alert.good{border-color:#9ee5c7;background:#edfff5;color:#07754f}
+    .shell{min-height:100svh;display:grid;grid-template-columns:245px minmax(0,1fr)}.sidebar{background:var(--navy);color:white;min-height:100svh;padding:23px 15px;display:flex;flex-direction:column;gap:27px}.sidebar .brand{padding:0 9px;font-size:17px}
+    .navtitle{padding:0 14px;color:#89a3b6;text-transform:uppercase;letter-spacing:.1em;font-size:10px;font-weight:850;margin-bottom:10px}
+    .nav{display:grid;gap:7px}.nav button{border:0;background:transparent;color:#c5d3df;text-align:left;padding:13px 15px;border-radius:11px;font-weight:700;display:flex;align-items:center;gap:9px;width:100%}
+    .nav button:hover{background:#ffffff0d}.nav button.active{background:#45d6a1;color:#07352b}
+    .sidebar-foot{margin-top:auto;padding:12px;background:#ffffff0b;border-radius:13px}.sidebar-foot p{font-size:11px;color:#b6cbd6;margin-bottom:11px}
+    main.main{padding:36px clamp(18px,3vw,48px);max-width:1600px;min-width:0;width:100%}
+    .header{display:flex;justify-content:space-between;align-items:start;gap:15px;flex-wrap:wrap}.eyebrow{font-size:11px;letter-spacing:.12em;color:var(--green-dark);font-weight:850;text-transform:uppercase;margin-bottom:9px}
+    .header p{margin-top:11px;max-width:650px}.actions{display:flex;gap:9px;flex-wrap:wrap}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:13px;margin-top:28px}.kpi{padding:21px 20px;background:white;border:1px solid var(--border);border-radius:14px;box-shadow:0 6px 30px #14213504}.kpi small{display:block;color:#627187;text-transform:uppercase;letter-spacing:.05em;font-size:10px;font-weight:850}.kpi strong{display:block;font-size:26px;margin-top:8px;letter-spacing:-.03em}
+    .panel{margin-top:22px;background:white;border:1px solid var(--border);border-radius:15px;box-shadow:0 6px 24px #14213504;overflow:hidden}
+    .panel-top{padding:21px 23px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .panel-top p{margin-top:3px;font-size:12px;color:var(--muted)}.toolbar{padding:16px 23px;border-bottom:1px solid var(--border)}.search{max-width:450px}
+    .table-wrap{width:100%;overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:680px;text-align:left}th{padding:14px 20px;background:#f8fafc;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.07em;white-space:nowrap}td{padding:14px 20px;border-top:1px solid #eff3f6}td strong{font-size:13px}td small{display:block;color:#64748b}.right{text-align:right}.empty{text-align:center;padding:45px 20px;color:#667789}
+    .form-grid{padding:23px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;background:#f7fdfa;border-bottom:1px solid var(--border)}.form-grid button{align-self:end}
+    .stage{display:inline-flex;padding:5px 10px;border-radius:20px;background:#e6f9f1;color:#04734f;font-size:11px;font-weight:800}
+    .columns{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:13px;padding:20px}.column{padding:22px;border-radius:14px;border:1px solid #e2ebe7;background:#f8fbfa}.column strong{display:block;font-size:29px;color:#087c59;margin:12px 0}.column p{font-size:12px;color:#627187}
+    .stock{display:inline-flex;align-items:center;gap:10px}.stock span{min-width:25px;text-align:center}.stock button{border:1px solid var(--border);border-radius:7px;background:#fff;padding:3px 9px;font-weight:850}
+    .banner{padding:15px 18px;border-radius:12px;margin-top:18px;background:#e8f8f0;color:#11624b;border:1px solid #b8ebd0}.banner.error{background:#fff2f0;color:#9d251c;border-color:#f5d0c9}.loading{padding:70px 20px;text-align:center;color:#4c6476}.mobile-top{display:none}
+    @media(max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.auth-screen{grid-template-columns:1fr}.auth-art{display:none}.shell{grid-template-columns:210px minmax(0,1fr)}}
+    @media(max-width:680px){.shell{display:block}.sidebar{min-height:auto;padding:15px}.sidebar .brand{display:none}.sidebar-foot{display:none}.nav{display:flex;overflow:auto;white-space:nowrap}.navtitle{display:none}.nav button{width:auto;flex-shrink:0}.main{padding:20px 15px!important}.header{display:block}.actions{margin-top:15px}.kpis{grid-template-columns:repeat(2,1fr);gap:9px}.kpi{padding:16px}.kpi strong{font-size:22px}.panel-top{padding:17px}.form-grid{grid-template-columns:1fr}.mobile-top{display:flex;align-items:center;justify-content:space-between;background:#0d2e29;color:white;padding:12px 19px}.auth-side{padding:18px}.auth-card{padding:27px 20px}}
+    @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
+  </style>
+</head>
+<body>
+  <div id="app"><div class="loading">Carregando Saúde Slim...</div></div>
+  <script>
+  (function(){
+    "use strict";
+    var BASE="https://vyzvfcgpjjzvcjegzzza.supabase.co";
+    var KEY="sb_publishable_2CtVgMTogdtGT_hpxFs-ZQ_Wyul6NVX";
+    var AUTH_KEY="saude-slim.auth.v1";
+    var state={session:null,user:null,workspace:null,data:null,view:"vendas",newForm:"",search:"",busy:false,notice:"",error:"",mode:"login"};
+    var app=document.getElementById("app");
+    function esc(v){return String(v===null||v===undefined?"":v).replace(/[&<>"']/g,function(s){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s]})}
+    function money(v){return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(v)||0)}
+    function fmtDate(s){if(!s)return "—";var d=new Date(s);return isNaN(d.getTime())?"—":d.toLocaleDateString("pt-BR")}
+    function hasWon(stage){return /ganh|vendid|conclu/i.test(String(stage&&stage.name||""))}
+    function hasLost(stage){return /perdid|cancel/i.test(String(stage&&stage.name||""))}
+    function stagesFor(pipeline){return (state.data.stages||[]).filter(function(s){return s.pipeline_id===pipeline})}
+    function won(lead){return lead.status==="won"||hasWon(state.data.stages.find(function(s){return s.id===lead.stage_id}))}
+    function saveSession(s){state.session=s;try{if(s)localStorage.setItem(AUTH_KEY,JSON.stringify(s));else localStorage.removeItem(AUTH_KEY)}catch(e){}}
+    function readSession(){try{return JSON.parse(localStorage.getItem(AUTH_KEY)||"null")}catch(e){return null}}
+    async function http(url,options){var res=await fetch(url,options);var body=await res.text();var data={};try{data=body?JSON.parse(body):{}}catch(e){data={message:body.slice(0,180)}}if(!res.ok)throw new Error(data.msg||data.error_description||data.message||data.error||"Erro de conexão ("+res.status+")");return data}
+    function publicHeaders(){return {"apikey":KEY,"Content-Type":"application/json"}}
+    async function refresh(){if(!state.session||!state.session.refresh_token)throw new Error("Sessão expirada");var r=await http(BASE+"/auth/v1/token?grant_type=refresh_token",{method:"POST",headers:publicHeaders(),body:JSON.stringify({refresh_token:state.session.refresh_token})});saveSession(r);return r}
+    async function token(){if(!state.session)throw new Error("Faça login para continuar.");if(state.session.expires_at&&state.session.expires_at*1000<Date.now()+45000)await refresh();return state.session.access_token}
+    async function db(table,method,query,body){var auth=await token();var headers=publicHeaders();headers.Authorization="Bearer "+auth;if(method!=="GET")headers.Prefer="return=representation";var url=BASE+"/rest/v1/"+table+"?"+query;return http(url,{method:method,headers:headers,body:body?JSON.stringify(body):undefined})}
+    function qs(v){return encodeURIComponent(String(v))}
+    async function loadData(){var ws=state.workspace.id;var q="workspace_id=eq."+qs(ws);
+      var results=await Promise.all([
+        db("leads","GET",q+"&select=id,name,phone,email,value,status,stage_id,pipeline_id,created_at,updated_at&order=created_at.desc&limit=500"),
+        db("products","GET",q+"&select=id,name,sku,price,promo_price,stock,active,catalog_id&order=created_at.desc&limit=500"),
+        db("pipeline_stages","GET",q+"&select=id,name,pipeline_id,position&order=position.asc&limit=300"),
+        db("pipelines","GET",q+"&select=id,name,position&order=position.asc&limit=100"),
+        db("product_catalogs","GET",q+"&select=id,name&limit=50")
+      ]);
+      state.data={leads:results[0],products:results[1],stages:results[2],pipelines:results[3],catalogs:results[4]};
+    }
+    async function loadWorkspace(){var user=await http(BASE+"/auth/v1/user",{headers:{"apikey":KEY,Authorization:"Bearer "+await token()}});state.user=user;
+      var profiles=await db("profiles","GET","id=eq."+qs(user.id)+"&select=current_workspace_id&limit=1");
+      if(!profiles[0]||!profiles[0].current_workspace_id)throw new Error("Seu espaço de trabalho ainda não está disponível. Entre novamente em alguns instantes.");
+      var wsId=profiles[0].current_workspace_id;
+      var memberships=await db("workspace_members","GET","workspace_id=eq."+qs(wsId)+"&user_id=eq."+qs(user.id)+"&select=id&limit=1");
+      if(!memberships[0])throw new Error("Usuário sem autorização para acessar a empresa.");
+      var workspaces=await db("workspaces","GET","id=eq."+qs(wsId)+"&select=id,name&limit=1");
+      if(!workspaces[0])throw new Error("Empresa não encontrada.");
+      state.workspace=workspaces[0];
+      await loadData();
+    }
+    function alertHtml(){var h="";if(state.error)h+='<div role="alert" class="banner error">'+esc(state.error)+'</div>';if(state.notice)h+='<div role="status" class="banner">'+esc(state.notice)+'</div>';return h}
+    function authMarkup(){var signup=state.mode==="signup",forgot=state.mode==="forgot";return '<div class="auth-screen"><aside class="auth-art"><div class="brand"><span class="mark">S</span> Saúde Slim</div>'+
+       '<div><span class="pill">PLATAFORMA DE GESTÃO</span><h1>Mais organização para vender melhor.</h1><p>Pedidos, clientes, estoque e histórico comercial em um só lugar, com acesso seguro e dados exclusivos da sua empresa.</p>'+
+       '<div class="bullets"><span>✓ Pedidos e clientes</span><span>✓ Controle de produtos</span><span>✓ Histórico de vendas</span><span>✓ Funil comercial</span></div></div>'+
+       '<div style="font-size:12px;color:#b6ddcc">Sistema interno Saúde Slim</div></aside>'+
+       '<div class="auth-side"><section class="auth-card"><div class="brand"><span class="mark">S</span> Saúde Slim</div><p class="eyebrow" style="margin-top:32px">'+(forgot?"REDEFINIR SENHA":signup?"CRIAR ACESSO":"ÁREA RESTRITA")+'</p>'+
+       '<h1>'+(forgot?"Recupere seu acesso":signup?"Crie sua conta":"Bem-vindo à Saúde Slim")+'</h1>'+
+       '<p class="desc muted">'+(forgot?"Enviaremos um link de redefinição para seu e-mail.":signup?"Cadastre o responsável para começar a operar.":"Acesse o sistema de vendas, pedidos e estoque.")+'</p>'+
+       '<form id="auth-form" class="form-fields">'+
+       (signup?'<label>Nome do responsável<input name="name" minlength="3" required autocomplete="name" placeholder="Nome completo"></label>':"")+
+       '<label>E-mail<input name="email" type="email" required autocomplete="email" placeholder="seu@email.com"></label>'+
+       (forgot?"":'<label>Senha<input name="password" type="password" minlength="6" required autocomplete="'+(signup?"new-password":"current-password")+'" placeholder="Digite sua senha"></label>')+
+       '<button class="btn primary auth-action" type="submit" '+(state.busy?"disabled":"")+'>'+(state.busy?"Aguarde...":forgot?"Enviar link":signup?"Criar conta":"Entrar no sistema")+' →</button></form>'+
+       alertHtml()+'<div class="form-foot">'+
+       (forgot?'<button class="text-link" data-mode="login">Voltar ao login</button>':signup?'<button class="text-link" data-mode="login">Já tenho conta</button>':'<button class="text-link" data-mode="forgot">Esqueci minha senha</button><button class="text-link" data-mode="signup">Criar acesso</button>')+
+       '</div></section></div></div>'}
+    function navButton(id,name){return '<button class="'+(state.view===id?"active":"")+'" data-view="'+id+'">'+name+'</button>'}
+    function dashboardMarkup(){var d=state.data,leads=d.leads||[],sales=leads.filter(won),rev=sales.reduce(function(n,l){return n+(Number(l.value)||0)},0);
+      var title={vendas:"Histórico de vendas",pedidos:"Pedidos e clientes",produtos:"Produtos e estoque",funil:"Funil de vendas"}[state.view];
+      return '<div class="mobile-top"><strong>Saúde Slim</strong><button class="btn tiny" data-action="logout">Sair</button></div>'+
+      '<div class="shell"><aside class="sidebar"><div class="brand"><span class="mark">S</span> Saúde Slim</div><div><div class="navtitle">Operação</div><nav class="nav">'+navButton("vendas","▦ Histórico de vendas")+navButton("pedidos","▤ Pedidos e clientes")+navButton("produtos","◈ Produtos e estoque")+navButton("funil","▥ Funil de vendas")+'</nav></div>'+
+      '<div class="sidebar-foot"><p>'+esc(state.workspace.name)+'</p><button class="btn tiny" data-action="logout">Sair da conta</button></div></aside>'+
+      '<main class="main"><div class="header"><div><div class="eyebrow">PAINEL OPERACIONAL</div><h1>Gestão Saúde Slim</h1><p class="muted">Vendas, pedidos, produtos e clientes em dados reais do Supabase.</p></div>'+
+      '<div class="actions"><button class="btn" data-action="refresh">↻ Atualizar</button><button class="btn primary" data-action="new-'+(state.view==="produtos"?"product":"lead")+'">+ '+(state.view==="produtos"?"Novo produto":"Novo pedido")+'</button></div></div>'+
+      alertHtml()+'<div class="kpis"><div class="kpi"><small>Clientes e pedidos</small><strong>'+leads.length+'</strong></div>'+
+      '<div class="kpi"><small>Vendas concluídas</small><strong>'+sales.length+'</strong></div>'+
+      '<div class="kpi"><small>Receita registrada</small><strong>'+esc(money(rev))+'</strong></div>'+
+      '<div class="kpi"><small>Produtos cadastrados</small><strong>'+d.products.length+'</strong></div></div>'+
+      '<section class="panel"><div class="panel-top"><div><h2>'+title+'</h2><p>Registros da empresa '+esc(state.workspace.name)+'.</p></div><div style="font-size:11px;color:#718096">Dados protegidos por autenticação e RLS</div></div>'+
+      (state.newForm==="lead"?leadForm():state.newForm==="product"?productForm():"")+
+      (state.view==="produtos"?productsTable():state.view==="funil"?funilPanel():leadsTable())+
+      '</section><p class="muted" style="font-size:11px;margin-top:15px">Ambiente Saúde Slim. Integração WhatsApp não acionada nesta área. Alguns módulos avançados continuam em homologação.</p></main></div>'}
+    function leadForm(){return '<form class="form-grid" id="lead-form">'+
+      '<label>Nome do cliente<input required minlength="2" name="name" placeholder="Nome completo"></label>'+
+      '<label>Telefone / WhatsApp<input name="phone" placeholder="(00) 00000-0000" type="tel"></label>'+
+      '<label>E-mail<input name="email" type="email" placeholder="cliente@email.com"></label>'+
+      '<label>Valor estimado (R$)<input name="value" type="number" min="0" step="0.01" placeholder="0,00"></label>'+
+      '<button type="submit" class="btn primary" '+(state.busy?"disabled":"")+'>Salvar pedido</button><button type="button" class="btn" data-action="cancel-form">Cancelar</button></form>'}
+    function productForm(){return '<form class="form-grid" id="product-form">'+
+      '<label>Nome do produto<input required minlength="2" name="name" placeholder="Nome do produto"></label>'+
+      '<label>Código / SKU<input name="sku" placeholder="Código de referência"></label>'+
+      '<label>Preço (R$)<input required name="price" type="number" min="0" step="0.01" placeholder="0,00"></label>'+
+      '<label>Estoque inicial<input name="stock" type="number" min="0" step="1" value="0"></label>'+
+      '<button type="submit" class="btn primary" '+(state.busy?"disabled":"")+'>Salvar produto</button><button type="button" class="btn" data-action="cancel-form">Cancelar</button></form>'}
+    function leadsTable(){var arr=state.view==="vendas"?state.data.leads.filter(won):state.data.leads;var search=state.search.toLocaleLowerCase("pt-BR");
+      if(search)arr=arr.filter(function(l){return [l.name,l.phone,l.email].some(function(v){return String(v||"").toLocaleLowerCase("pt-BR").includes(search)})});
+      var out='<div class="toolbar"><input id="search" class="search" placeholder="Pesquisar por cliente, telefone ou e-mail..." value="'+esc(state.search)+'" aria-label="Pesquisar clientes"></div><div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Data</th><th>Valor</th><th>Etapa comercial</th></tr></thead><tbody>';
+      arr.forEach(function(l){var stages=stagesFor(l.pipeline_id||state.data.pipelines[0]?.id);var chosen=state.data.stages.find(function(x){return x.id===l.stage_id});out+='<tr><td><strong>'+esc(l.name)+'</strong><small>'+esc(l.phone||l.email||"Contato não informado")+'</small></td><td>'+esc(fmtDate(l.created_at))+'</td><td><strong>'+esc(money(l.value))+'</strong></td><td><select aria-label="Etapa comercial" data-stage="'+esc(l.id)+'" '+(state.busy?"disabled":"")+'>'+
+      '<option value="">'+(chosen?"Alterar etapa":"Sem etapa")+'</option>'+
+      stages.map(function(s){return '<option value="'+esc(s.id)+'" '+(s.id===l.stage_id?"selected":"")+'>'+esc(s.name)+'</option>'}).join("")+
+      '</select></td></tr>'});
+      out+='</tbody></table></div>';if(!arr.length)out+='<div class="empty">Nenhum registro encontrado. Use “Novo pedido” para começar.</div>';if(state.data.leads.length>=500)out+='<p class="muted" style="padding:12px 20px">Exibindo até 500 registros recentes.</p>';return out}
+    function productsTable(){var out='<div class="table-wrap"><table><thead><tr><th>Produto</th><th>SKU</th><th>Preço</th><th>Estoque</th><th>Situação</th></tr></thead><tbody>';
+      state.data.products.forEach(function(p){out+='<tr><td><strong>'+esc(p.name)+'</strong></td><td>'+esc(p.sku||"—")+'</td><td>'+esc(money(p.promo_price??p.price))+'</td><td><div class="stock"><button data-action="stock" data-id="'+esc(p.id)+'" data-delta="-1" '+(state.busy||p.stock<=0?"disabled":"")+'>−</button><span>'+esc(p.stock)+'</span><button data-action="stock" data-id="'+esc(p.id)+'" data-delta="1" '+(state.busy?"disabled":"")+'>+</button></div></td><td><span class="stage">'+(p.active?"Ativo":"Inativo")+'</span></td></tr>'});
+      out+='</tbody></table></div>';if(!state.data.products.length)out+='<div class="empty">Sem produtos cadastrados. Use “Novo produto” para cadastrar o primeiro.</div>';return out}
+    function funilPanel(){var arr=state.data.stages;var out='<div class="columns">';arr.forEach(function(s){var count=state.data.leads.filter(function(l){return l.stage_id===s.id}).length;out+='<div class="column"><h3>'+esc(s.name)+'</h3><strong>'+count+'</strong><p>Pedidos nesta etapa</p><button style="margin-top:12px" class="text-link" data-view="pedidos">Ver pedidos →</button></div>'});out+='</div>';if(!arr.length)out+='<div class="empty">Nenhuma etapa configurada para este workspace.</div>';return out}
+    function show(){if(!state.session){app.innerHTML=authMarkup();return}if(!state.workspace||!state.data){app.innerHTML='<div class="loading">Carregando sua operação...</div>'+alertHtml();return}app.innerHTML=dashboardMarkup()}
+    function friendly(e){return String(e&&e.message||e||"Falha inesperada.")}
+    async function attempt(fn){if(state.busy)return;state.busy=true;state.error="";state.notice="";show();try{await fn()}catch(e){state.error=friendly(e)}finally{state.busy=false;show()}}
+    async function authSubmit(form){var fields=new FormData(form),email=String(fields.get("email")||"").trim().toLowerCase(),password=String(fields.get("password")||""),name=String(fields.get("name")||"").trim();
+      if(state.mode==="forgot"){await http(BASE+"/auth/v1/recover",{method:"POST",headers:publicHeaders(),body:JSON.stringify({email:email})});state.notice="Se este endereço estiver cadastrado, você receberá as instruções por e-mail.";return}
+      if(state.mode==="signup"){
+        if(name.length<3)throw new Error("Informe o nome do responsável.");
+        var reg=await http(BASE+"/auth/v1/signup",{method:"POST",headers:publicHeaders(),body:JSON.stringify({email:email,password:password,data:{full_name:name,signup_source:"saude_slim"}})});
+        if(!reg.access_token){state.notice="Cadastro recebido. Se necessário, confirme seu e-mail antes de entrar.";state.mode="login";return}
+        saveSession(reg);
+      }else{
+        var session=await http(BASE+"/auth/v1/token?grant_type=password",{method:"POST",headers:publicHeaders(),body:JSON.stringify({email:email,password:password})});
+        saveSession(session);
+      }
+      await loadWorkspace();history.replaceState(null,"","/");state.notice="Acesso autorizado à Saúde Slim.";
+    }
+    async function insertLead(form){if(!state.workspace)return;var f=new FormData(form),name=String(f.get("name")||"").trim();if(name.length<2)throw new Error("Informe o nome do cliente.");
+      var pipeline=state.data.pipelines[0],stage=state.data.stages.find(function(s){return pipeline&&s.pipeline_id===pipeline.id});
+      await db("leads","POST","select=id",{
+        workspace_id:state.workspace.id,name:name.slice(0,150),
+        phone:String(f.get("phone")||"").trim()||null,email:String(f.get("email")||"").trim()||null,
+        value:Number(f.get("value")||0),pipeline_id:pipeline?.id||null,stage_id:stage?.id||null,
+        status:"active",source:"saude_slim"
+      });state.newForm="";state.notice="Pedido salvo com sucesso.";await loadData()
+    }
+    async function insertProduct(form){if(!state.workspace)return;var f=new FormData(form),catalog=state.data.catalogs[0];if(!catalog)throw new Error("Nenhum catálogo disponível. Contate o administrador.");
+      var name=String(f.get("name")||"").trim();if(name.length<2)throw new Error("Informe o produto.");
+      await db("products","POST","select=id",{
+        workspace_id:state.workspace.id,catalog_id:catalog.id,name:name.slice(0,150),sku:String(f.get("sku")||"").trim(),
+        price:Number(f.get("price")||0),stock:Math.max(0,Number(f.get("stock")||0))
+      });state.newForm="";state.notice="Produto salvo com sucesso.";await loadData()
+    }
+    async function updateStage(leadId,stageId){var lead=state.data.leads.find(function(l){return l.id===leadId}),s=state.data.stages.find(function(t){return t.id===stageId});if(!lead||!s)throw new Error("Etapa inválida.");
+      await db("leads","PATCH","workspace_id=eq."+qs(state.workspace.id)+"&id=eq."+qs(leadId),{stage_id:s.id,pipeline_id:s.pipeline_id,status:hasWon(s)?"won":hasLost(s)?"lost":"active"});
+      state.notice="Etapa comercial atualizada.";await loadData()
+    }
+    async function updateStock(id,delta){var p=state.data.products.find(function(x){return x.id===id});if(!p)throw new Error("Produto não encontrado.");var n=Math.max(0,Number(p.stock)+delta);
+      await db("products","PATCH","workspace_id=eq."+qs(state.workspace.id)+"&id=eq."+qs(id),{stock:n});state.notice="Estoque atualizado.";await loadData()
+    }
+    app.addEventListener("submit",function(event){event.preventDefault();var form=event.target;if(form.id==="auth-form"){var data=new FormData(form);void attempt(function(){return authSubmit({entries:function(){return data.entries()}})});return}
+      if(form.id==="lead-form"){var d=new FormData(form);void attempt(function(){return insertLead({entries:function(){return d.entries()}})});return}
+      if(form.id==="product-form"){var d2=new FormData(form);void attempt(function(){return insertProduct({entries:function(){return d2.entries()}})});return}
+    });
+    app.addEventListener("click",function(event){var target=event.target.closest("[data-mode],[data-view],[data-action]");if(!target)return;
+      if(target.dataset.mode){state.mode=target.dataset.mode;state.notice="";state.error="";show();return}
+      if(target.dataset.view){state.view=target.dataset.view;state.search="";state.newForm="";state.notice="";show();return}
+      var action=target.dataset.action;
+      if(action==="cancel-form"){state.newForm="";state.error="";show()}
+      if(action==="new-lead"){state.newForm=state.newForm==="lead"?"":"lead";show()}
+      if(action==="new-product"){state.newForm=state.newForm==="product"?"":"product";show()}
+      if(action==="refresh")void attempt(async function(){await loadData();state.notice="Dados atualizados."});
+      if(action==="logout")void attempt(async function(){if(state.session){try{await http(BASE+"/auth/v1/logout",{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+await token()}})}catch(e){}}saveSession(null);state.user=null;state.workspace=null;state.data=null;state.mode="login";history.replaceState(null,"","/");});
+      if(action==="stock")void attempt(function(){return updateStock(target.dataset.id,Number(target.dataset.delta)||0)});
+    });
+    app.addEventListener("change",function(event){var t=event.target;if(t.dataset.stage&&t.value)void attempt(function(){return updateStage(t.dataset.stage,t.value)})});
+    app.addEventListener("input",function(event){if(event.target.id==="search"){state.search=event.target.value;var cursor=event.target.selectionStart;show();var next=document.getElementById("search");if(next){next.focus();next.setSelectionRange(cursor,cursor)}}});
+    (async function(){try{saveSession(readSession());if(!state.session){show();return}await loadWorkspace();show()}catch(e){state.error=friendly(e);if(/invalid|expired|token|JWT|unauthorized|session/i.test(state.error)){saveSession(null);state.workspace=null;state.data=null;state.mode="login";state.error="Sessão expirada. Entre novamente."}show()}})();
+  })();
+  </script>
+</body>
+</html>
