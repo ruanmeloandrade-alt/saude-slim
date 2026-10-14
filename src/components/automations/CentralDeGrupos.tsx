@@ -235,7 +235,7 @@ export function CentralDeGrupos() {
         <TabButton active={tab === "grupos"} onClick={() => setTab("grupos")} icon={Users} label="Grupos" />
         <TabButton active={tab === "regras"} onClick={() => setTab("regras")} icon={Shield} label="Regras" />
         <TabButton active={tab === "bots"} onClick={() => setTab("bots")} icon={MessageSquare} label="Salesbots de grupo" />
-        <TabButton active={tab === "agentes"} onClick={() => setTab("agentes")} icon={Sparkles} label="Agentes IA de grupo" />
+
       </div>
 
       {syncMut.isError && (
@@ -274,14 +274,7 @@ export function CentralDeGrupos() {
         {tab === "bots" && (
           <BotsGrupoTab bots={botsQ.data ?? []} loading={botsQ.isLoading} onChange={() => botsQ.refetch()} />
         )}
-        {tab === "agentes" && (
-          <AgentesGrupoTab
-            workspaceId={workspaceId}
-            agents={agentsQ.data ?? []}
-            loading={agentsQ.isLoading}
-            onChange={() => qc.invalidateQueries({ queryKey: ["group-agents"] })}
-          />
-        )}
+
       </div>
     </div>
   );
