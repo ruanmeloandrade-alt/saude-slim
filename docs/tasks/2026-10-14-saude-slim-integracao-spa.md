@@ -34,6 +34,14 @@ ser utilizado. Não usar GitHub Actions para validar essa frente.
   herdados da MktOn; nos caminhos migrados, não inicializar componentes
   adicionais que ainda tentam executar endpoints SSR.
 - `src/components/dashboard/AppSidebar.tsx`: acesso ao CRM/Clientes.
+- `src/components/leads/DuplicatesPanel.tsx` e
+  `src/lib/saude-slim-dedupe-client.ts`: busca e descarte de duplicidades,
+  mesclagem transacional via RPC Supabase.
+- `supabase/migrations/20261014090000_saude_slim_dedupe_permissions_merge.sql`:
+  tabela `lead_dedupe_dismissals` com RLS e função
+  `saude_slim_merge_leads` com autorização owner/admin e segurança invoker.
+- `src/components/dashboard/DashboardV4ConnectedBoard.tsx`: identificação
+  do workspace do dashboard sem `getActiveWorkspace` SSR.
 - `src/components/dashboard/DashboardV4ConnectedBoard.tsx`: identifica o
   workspace com Auth + associação à empresa, sem chamadas serverFn.
 
@@ -50,6 +58,9 @@ ser utilizado. Não usar GitHub Actions para validar essa frente.
   `qa_rollback` / `QA-TEMP`.
 - Testada inclusão de vínculo entre cliente e produto `kind='comprou'`
   em transação revertida por ROLLBACK.
+- Mesclagem de dois leads de teste por `saude_slim_merge_leads` executada
+  sob papel `authenticated`: retorno `ok:true, mergedCount:1`, transação
+  revertida por ROLLBACK. Não foram criados leads permanentes.
 - Arquivos alterados e paths de import verificados na árvore do GitHub.
 - Nenhum GitHub Actions foi acionado manualmente nesta frente.
 
