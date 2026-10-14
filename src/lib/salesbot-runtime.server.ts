@@ -2030,6 +2030,27 @@ async function runAiAgentTurn(
           runVars,
         );
       }
+      // Aplicação obrigatória das regras do Cérebro IA antes da saída do agente.
+      // Falhar fechado: se o banco estiver indisponível, não enviar resposta.
+      const { data: terms, error: termsError } = await supabaseAdmin
+        .from("ai_brain_blocked_terms").select("term")
+        .eq("workspace_id", workspaceId).eq("enabled", true);
+      if (termsError) return { reply: "", handoff, error: "Não foi possível verificar palavras proibidas." };
+      const fold = (value: string) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLocaleLowerCase("pt-BR");
+      const normalizedReply = fold(replyOut);
+      if ((terms ?? []).some((row: { term: string }) => normalizedReply.includes(fold(row.term)))) {
+        return { reply: "", handoff, error: "Resposta da IA bloqueada por palavra proibida." };
+      }
+      const matches = [...replyOut.matchAll(/https?:\\/\\/[^\\s<>"'()]+/gi)].map(m => m[0].replace(/[.,;!?]+$/, ""));
+      if (matches.length) {
+        const { data: approved, error: linksError } = await supabaseAdmin.from("ai_brain_sources")
+          .select("url").eq("workspace_id", workspaceId).eq("source_type", "url").eq("enabled", true);
+        if (linksError) return { reply: "", handoff, error: "Não foi possível validar links autorizados." };
+        const urls = new Set((approved ?? []).map((r: { url: string | null }) => (r.url ?? "").replace(/\\/$/, "")));
+        if (matches.some(link => !urls.has(link.replace(/\\/$/, "")))) {
+          return { reply: "", handoff, error: "Resposta da IA bloqueada por link não autorizado." };
+        }
+      }
       const s = await sendWhatsappText(supabaseAdmin, workspaceId, routedPhone, replyOut, routedSessionId);
       if (!s.ok) return { reply, handoff, error: s.error };
       // Persiste imediatamente a resposta do agente. Não dependemos do callback
