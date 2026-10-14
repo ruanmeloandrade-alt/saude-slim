@@ -67,6 +67,8 @@ export async function loadSlimLeadDetail({data}:{data:{leadId:string}}):Promise<
     .select("id,type,payload,occurred_at")
     .eq("workspace_id",ws).eq("lead_id",r.id).order("occurred_at",{ascending:false}).limit(100);
   if(actError)throw new Error(actError.message);
+  const phoneDigits = (r.phone ?? "").replace(/\D/g, "");
+  const whatsappUrl = phoneDigits.length >= 8 ? "https://wa.me/" + phoneDigits : null;
   const custom=r.custom_data && typeof r.custom_data==="object" && !Array.isArray(r.custom_data)
     ? Object.entries(r.custom_data as Record<string,unknown>).map(([id,value])=>({
         id,name:id,type:"text",displayValue:typeof value==="string"?value:JSON.stringify(value??"")
@@ -80,7 +82,7 @@ export async function loadSlimLeadDetail({data}:{data:{leadId:string}}):Promise<
       sourceId:r.crm_source_id,sourceProvider:r.crm_sources?.provider??"manual",
       sourceDisplayName:r.crm_sources?.display_name??"Saúde Slim",
       externalId:r.external_id,externalUrl:null,
-      whatsappUrl:r.phone?.replace(/\D/g,"").length>=8?"https://wa.me/"+r.phone.replace(/\D/g,""):null,
+      whatsappUrl,
       tags:Array.isArray(r.tags)?r.tags.filter((v):v is string=>typeof v==="string"):[],
       customFields:custom,createdAt:r.created_at,updatedAt:r.updated_at,keepFiles:!!r.keep_files
     },
