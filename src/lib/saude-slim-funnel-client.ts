@@ -96,3 +96,50 @@ export async function moveSlimLead({data}:{data:{leadId:string;toStageId:string}
     backendPending:true,
   };
 }
+
+export async function updateSlimStage({data}:{
+ data:{stageId:string;name?:string;color?:string|null;description?:string|null}
+}) {
+ const {ws,role}=await ctx();requiresEditor(role);
+ const patch:Record<string,unknown>={};
+ if(data.name!==undefined) {
+   if(!data.name.trim())throw new Error("Informe o nome da etapa.");
+   patch.name=data.name.trim();
+ }
+ if(data.color!==undefined) patch.color=data.color;
+ if(data.description!==undefined) patch.description=data.description;
+ if(Object.keys(patch).length===0)return {ok:true};
+ const {data:updated,error}=await sb.from("pipeline_stages").update(patch)
+   .eq("workspace_id",ws).eq("id",data.stageId).select("id").maybeSingle();
+ if(error)throw new Error(error.message);
+ if(!updated)throw new Error("Etapa não encontrada.");
+ return {ok:true};
+}
+export async function createSlimStage({data}:{
+ data:{pipelineId:string;name:string;color?:string|null}
+}) {
+ const {ws,role}=await ctx();requiresEditor(role);
+ const {data:pipe,error:pe}=await sb.from("pipelines").select("id")
+   .eq("workspace_id",ws).eq("id",data.pipelineId).maybeSingle();
+ if(pe||!pipe)throw new Error("Funil não encontrado.");
+ const {data:stages,error:se}=await sb.from("pipeline_stages").select("position")
+   .eq("workspace_id",ws).eq("pipeline_id",data.pipelineId);
+ if(se)throw new Error(se.message);
+ const position=Math.max(0,...(stages??[]).map((s:any)=>Number(s.position??0)))+1;
+ const {data:created,error}=await sb.from("pipeline_stages").insert({
+   workspace_id:ws,pipeline_id:data.pipelineId,name:data.name.trim(),
+   position,color:data.color??"#3b82f6",
+ }).select("id").single();
+ if(error)throw new Error(error.message);
+ return {stageId:created.id};
+}
+export async function renameSlimPipeline({data}:{data:{pipelineId:string;name:string}}) {
+ const {ws,role}=await ctx();requiresEditor(role);
+ if(!data.name.trim())throw new Error("Informe o nome do funil.");
+ const {data:updated,error}=await sb.from("pipelines").update({
+   name:data.name.trim(),updated_at:new Date().toISOString(),
+ }).eq("workspace_id",ws).eq("id",data.pipelineId).select("id").maybeSingle();
+ if(error)throw new Error(error.message);
+ if(!updated)throw new Error("Funil não encontrado.");
+ return {ok:true};
+}
