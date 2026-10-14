@@ -1,27 +1,35 @@
-# Saúde Slim
+# Saúde Slim | Recuperação da aplicação original
 
-Sistema próprio da Saúde Slim, com código exclusivo neste repositório.
+Repositório exclusivo da Saúde Slim. **Não confundir o aplicativo completo com o `index.html` reduzido que foi publicado anteriormente.**
 
-**Site:** https://slimesaude.com
+## Estado desta branch
 
-## Infraestrutura
+- A interface original TanStack Start continua no projeto, com seus componentes, páginas, estilos e navegação.
+- As páginas originais de **Histórico de vendas** (`src/routes/saude-slim.tsx`) e **Pedidos** (`src/routes/pedidos.tsx`) foram adaptadas para obter e salvar dados diretamente no Supabase exclusivo, preservando o layout React. Consultas e operações usam a sessão autenticada, associação ao workspace e RLS.
+- Essas duas páginas **ainda não foram homologadas em navegador com uma compilação desta branch**.
+- Outros módulos legados, automações, Inbox e integrações utilizam `createServerFn` ou rotas de API e **continuam dependendo do servidor ou de uma adaptação para Supabase Edge Functions**.
+- O Supabase exclusivo é o projeto `vyzvfcgpjjzvcjegzzza`; o banco contém apenas parte das tabelas esperadas pelo sistema original.
+- Esta branch **não está publicada em** `slimesaude.com`. A publicação atual na branch `main` continua sendo a interface estática simplificada.
 
-- **GitHub Pages:** publica a interface web a partir do arquivo `index.html` da branch `main`. O site não deve mostrar este README como página inicial.
-- **Supabase exclusivo:** autenticação, dados e Row Level Security (RLS), projeto `vyzvfcgpjjzvcjegzzza`. Edge Function `saude-slim-core` publicada para consultas autenticadas.
-- **Railway:** reservado ao conector Evolution/WhatsApp e seus serviços próprios. Não recebe o sistema web nem deve ser alterado pela publicação do site.
-- **Hostinger:** gerencia apenas o domínio e DNS já cadastrados.
+## Arquitetura acordada
 
-## Núcleo web publicado
+- **GitHub:** repositório do código e hospedagem estática da interface via Pages. O GitHub Pages **não executa processos Node.js persistentes nem funções TanStack Start**.
+- **Supabase:** Auth, banco de dados, RLS e Edge Functions quando necessário.
+- **Railway:** exclusivamente Evolution/WhatsApp e seus próprios PostgreSQL e Redis, sem deploy do aplicativo.
+- **Hostinger:** DNS já configurado; não alterar.
 
-A entrada do GitHub Pages é o `index.html` e seus acessos de compatibilidade são `/auth/` e `/saude-slim/`. Essa interface usa diretamente o Supabase com autenticação, RLS e os cadastros de clientes/pedidos, histórico de vendas, funil, produtos e estoque.
+O projeto Node original já possui `npm start` usando `node .output/server/index.mjs` e Nitro `node-server`. Esses arquivos **não colocam um servidor Node no ar sozinhos**. Para publicar todas as funcionalidades sem nova hospedagem Node, é preciso converter as chamadas de servidor a Supabase (consultas diretas autenticadas ou Edge Functions para lógica sensível), criar estruturas de banco que faltam e validar cada módulo.
 
-O repositório **também contém o aplicativo TanStack Start legado**, com mais funcionalidades e chamadas `createServerFn`. Esse código não é executado pelo GitHub Pages: módulos avançados e integrações legadas não devem ser anunciados como homologados.
+## Segurança
 
-## Segurança e entrega
+Nunca enviar ao cliente ou fazer commit de `SUPABASE_SERVICE_ROLE_KEY`, credenciais Evolution, tokens de IA ou dados de outros projetos. Nunca expor chaves privilegiadas em JavaScript do navegador.
 
-- Nunca publicar secrets nem a `SUPABASE_SERVICE_ROLE_KEY` no JavaScript cliente ou nos commits.
-- O banco, o domínio, o código e o WhatsApp permanecem exclusivos da Saúde Slim.
-- A interface está preparada para cadastramento e utilização, mas **a validação ponta a ponta de login e operações com uma conta real permanece pendente**.
-- Não afirmar que o WhatsApp está conectado. O teste da Evolution ocorrerá somente quando autorizado.
+## Validação antes da entrega
 
-Para manutenção, edite a aplicação da Saúde Slim neste repositório. Não importar credenciais ou informações da MktOn e de outros projetos.
+1. Build da aplicação original, sem erros; revisão de `check:routes`.
+2. Login autenticado com workspace real, permissões RLS e uso de dados isolados.
+3. Operação de histórico de vendas, pedidos, produtos, CRM e módulos relevantes.
+4. Endpoints, permissões, automações e integrações em condições reais.
+5. Publicação HTTPS do conjunto completo, não só de HTML estático.
+
+**Status real: em recuperação e migração, não homologado e não entregue.**
