@@ -1028,6 +1028,7 @@ function CrmFunisPage() {
     // Os gatilhos são enfileirados e executados no servidor — funcionam mesmo
     // com o navegador fechado. Aqui só mostramos o retorno da execução imediata.
     const results = moveResult?.automations ?? [];
+    if ((moveResult as { backendPending?: boolean })?.backendPending) toast.info("Etapa salva. Gatilhos automáticos ainda dependem da integração de execução.");
     if (results.length > 0) {
      const failed = results.filter((r) => !r.ok && !r.skipped);
      if (failed.length > 0) {
