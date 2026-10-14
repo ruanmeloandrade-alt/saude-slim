@@ -162,12 +162,20 @@ function CheckoutCompatibilityGuard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+const SAUDE_SLIM_MIGRATED_PATHS = new Set([
+  "/auth", "/saude-slim", "/pedidos", "/crm/estoque", "/crm/produtos", "/crm/leads",
+]);
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const path = useRouterState({ select: (state) => state.location.pathname });
+  const migratedRoute = SAUDE_SLIM_MIGRATED_PATHS.has(path);
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider><CustomKpisProvider><ComparisonWidgetsProvider><KpiRulesProvider>
-        <IdleLogoutGuard /><DeviceApprovalGate /><ConditionalSupportRobot /><WorkflowSalesbotBillingEnhancer />
+        <IdleLogoutGuard />
+        {!migratedRoute && <DeviceApprovalGate />}
+        {!migratedRoute && <ConditionalSupportRobot />}
+        {!migratedRoute && <WorkflowSalesbotBillingEnhancer />}
         <CheckoutCompatibilityGuard><AuthGate><Outlet /><HomepageResourceLinks /></AuthGate></CheckoutCompatibilityGuard>
       </KpiRulesProvider></ComparisonWidgetsProvider></CustomKpisProvider></ThemeProvider>
     </QueryClientProvider>
