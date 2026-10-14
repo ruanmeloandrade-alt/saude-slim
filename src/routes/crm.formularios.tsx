@@ -7,7 +7,7 @@ const LegacyFormComponent = LegacyFormRoute.options.component as ComponentType |
 
 export const Route = createFileRoute("/crm/formularios")({
   head: () => ({ meta: [
-    { title: "Formulários · CRM · MKTOn" },
+    { title: "Formulários · CRM · Saúde Slim" },
     { name: "description", content: "Central de formulários do CRM: crie, personalize e distribua formulários para seus leads." },
   ] }),
   component: FormulariosPage,
