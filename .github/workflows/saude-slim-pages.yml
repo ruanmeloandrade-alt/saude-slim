@@ -109,3 +109,26 @@ jobs:
       - name: Publicar interface
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verificar site publicado em slimesaude.com
+        shell: bash
+        run: |
+          set -euo pipefail
+          OK=0
+          for attempt in $(seq 1 15); do
+            if curl --fail --location --silent --show-error --max-time 15 \
+              "https://slimesaude.com/?_check=${{ github.sha }}" -o /tmp/saude-slim-live.html; then
+              if grep -qi 'Saúde Slim' /tmp/saude-slim-live.html \
+                && grep -Eqi '/assets/|/_build/|\\.js' /tmp/saude-slim-live.html; then
+                OK=1
+                break
+              fi
+            fi
+            sleep 5
+          done
+          if [ "$OK" -ne 1 ]; then
+            echo "::error::GitHub Pages confirmou deploy, mas o domínio não retornou a interface real."
+            head -c 1500 /tmp/saude-slim-live.html || true
+            exit 1
+          fi
+          echo "HTTPS no domínio e shell real da Saúde Slim confirmados (HTTP 200)."
