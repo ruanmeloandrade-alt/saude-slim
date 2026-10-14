@@ -89,6 +89,13 @@ async function syncSignupCrm(input: {
   leadId?: string;
   profile?: SignupProfile;
 }) {
+  // Saúde Slim independente: não encaminhar cadastro para a plataforma MktOn.
+  // Este endpoint legado não existe no GitHub Pages e causava erro no signup.
+  if (typeof window !== "undefined" && (
+    window.location.hostname === "slimesaude.com" ||
+    window.location.hostname === "www.slimesaude.com" ||
+    window.location.hostname === "ruanmeloandrade-alt.github.io"
+  )) return;
   const response = await fetch("/api/mkton-signup-attribution", {
     method: "POST",
     headers: {
