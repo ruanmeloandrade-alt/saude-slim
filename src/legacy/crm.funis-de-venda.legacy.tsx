@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Fragment } from "react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { listSlimSources, listSlimFunnels, listSlimUsers, moveSlimLead, updateSlimStage, createSlimStage, renameSlimPipeline, createSlimLead, createSlimFunnel, setDefaultSlimSource } from "@/lib/saude-slim-funnel-client";
+import { listSlimSources, listSlimFunnels, listSlimUsers, moveSlimLead, updateSlimStage, createSlimStage, renameSlimPipeline, createSlimLead, createSlimFunnel, setDefaultSlimSource, reorderSlimStages } from "@/lib/saude-slim-funnel-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
  Search,
@@ -208,7 +208,7 @@ function CrmFunisPage() {
   const createFunnelServer = createSlimFunnel;
   const setDefaultCrmSourceServer = setDefaultSlimSource;
   const updateStageServer = updateSlimStage;
-  const reorderStagesServer = useServerFn(reorderPipelineStages);
+  const reorderStagesServer = reorderSlimStages;
   const renamePipelineServer = renameSlimPipeline;
   const reorderFunnelsServer = useServerFn(reorderFunnels);
   const deletePipelineServer = useServerFn(deletePipelineServerFn);
