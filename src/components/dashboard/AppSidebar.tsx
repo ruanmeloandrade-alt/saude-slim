@@ -83,7 +83,7 @@ const CRM_GROUP: NavGroup = {
     { label: "Clientes", icon: Users, to: "/crm/leads", activeWhen: (path) => path.startsWith("/crm/leads") },
     { label: "Inbox", icon: Inbox, to: "/inbox/leads", activeWhen: (path) => path.startsWith("/inbox") },
     { label: "Automações", icon: RotateCcw, to: "/crm/automacoes", activeWhen: (path) => path.startsWith("/crm/automacoes") },
-    { label: "Agentes IA", icon: Bot, to: "/crm/agente-ia", activeWhen: (path) => path.startsWith("/crm/agente-ia") },
+    { label: "Cérebro IA", icon: Bot, to: "/crm/agente-ia", activeWhen: (path) => path.startsWith("/crm/agente-ia") },
     { label: "Públicos", icon: Users, to: "/crm/publicos", activeWhen: (path) => path.startsWith("/crm/publicos") },
   ],
 };
