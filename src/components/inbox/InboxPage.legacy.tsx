@@ -2367,39 +2367,26 @@ function ChatThread({
     queryFn: async (): Promise<LeadActivityPage> => {
       const previous =
         queryClient.getQueryData<LeadActivityPage>(activityQueryKey) ?? cachedActivityPage;
-      const checkpoint = latestInboxCheckpoint(previous?.activities ?? []);
-      if (!checkpoint) {
-        return loadActivities({ data: { leadId: conversation.id, limit: 50 } });
-      }
-
-      const after = deltaCursorWithOverlap(checkpoint);
-      if (!after) {
-        return loadActivities({ data: { leadId: conversation.id, limit: 50 } });
-      }
-      const delta = await loadActivities({
-        data: { leadId: conversation.id, after, limit: 200 },
+      // Reconciliar a janela mais recente, não só um delta por timestamp.
+      // Um evento atrasado pode ter ocorrido antes de "conversation_read" e
+      // seria descartado se o cursor tivesse avançado além dele.
+      const head = await loadActivities({
+        data: { leadId: conversation.id, limit: 50 },
       });
-      // Se o delta saturar, não avance o checkpoint por timestamp: uma rajada com
-      // empates poderia deixar itens para trás. Reancora na cabeça e deixa o
-      // aquecimento por cursor composto recompor a janela quente em background.
-      if (delta.hasMore || delta.activities.length >= 200) {
-        return loadActivities({ data: { leadId: conversation.id, limit: 50 } });
-      }
-      const activities = mergeInboxHotItems(previous?.activities ?? [], delta.activities);
+      const activities = mergeInboxHotItems(previous?.activities ?? [], head.activities);
       const oldest = activities[0] ?? null;
+      const hasMore = Boolean(previous?.hasMore || head.hasMore);
       return {
         activities,
-        hasMore: previous?.hasMore ?? delta.hasMore,
-        earliestAt: oldest?.occurredAt ?? previous?.earliestAt ?? delta.earliestAt,
-        nextCursor:
-          (previous?.hasMore ?? delta.hasMore) && oldest
-            ? { occurredAt: oldest.occurredAt, id: oldest.id }
-            : null,
+        hasMore,
+        earliestAt: oldest?.occurredAt ?? head.earliestAt,
+        nextCursor: hasMore && oldest
+          ? { occurredAt: oldest.occurredAt, id: oldest.id }
+          : null,
       };
     },
     enabled: isLead && activityCacheReady && Boolean(cacheScope),
     staleTime: 10_000,
-    // Evita F5 ao alternar entre conversas ou perder o canal Realtime.
     refetchInterval: 5_000,
     refetchIntervalInBackground: true,
   });
