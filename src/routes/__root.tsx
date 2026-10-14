@@ -16,13 +16,10 @@ import { THEME_BOOTSTRAP_SCRIPT, ThemeProvider } from "../lib/theme";
 import { CustomKpisProvider } from "../lib/custom-kpis";
 import { ComparisonWidgetsProvider } from "../lib/comparison-widgets";
 import { KpiRulesProvider } from "../lib/kpi-rules";
-import { MktonPixel } from "../components/MktonPixel";
 import { IdleLogoutGuard } from "../components/IdleLogoutGuard";
 import { DeviceApprovalGate } from "../components/DeviceApprovalGate";
 import { SupportRobot } from "../components/SupportRobot";
 import { WorkflowSalesbotBillingEnhancer } from "../components/system/WorkflowSalesbotBillingEnhancer";
-import { provisionMktonLeadEntry } from "../lib/mkton-admin-provision.functions";
-import { getMktonBootstrapState, provisionMktonFull } from "../lib/mkton-full-provision.functions";
 import { syncWorkspaceRegionalCache } from "../lib/workspace-currency-cache";
 
 import appCss from "../styles.css?url";
@@ -170,7 +167,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider><CustomKpisProvider><ComparisonWidgetsProvider><KpiRulesProvider>
-        <MktonPixel /><IdleLogoutGuard /><DeviceApprovalGate /><ConditionalSupportRobot /><WorkflowSalesbotBillingEnhancer />
+        <IdleLogoutGuard /><DeviceApprovalGate /><ConditionalSupportRobot /><WorkflowSalesbotBillingEnhancer />
         <CheckoutCompatibilityGuard><AuthGate><Outlet /><HomepageResourceLinks /></AuthGate></CheckoutCompatibilityGuard>
       </KpiRulesProvider></ComparisonWidgetsProvider></CustomKpisProvider></ThemeProvider>
     </QueryClientProvider>
@@ -181,9 +178,6 @@ function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const path = useRouterState({ select: (state) => state.location.pathname });
   const isPublicRoute = isPublicPath(path);
-  const provisionMktonLeadEntryFn = useServerFn(provisionMktonLeadEntry);
-  const provisionMktonFullFn = useServerFn(provisionMktonFull);
-  const getMktonBootstrapStateFn = useServerFn(getMktonBootstrapState);
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
@@ -216,13 +210,6 @@ function AuthGate({ children }: { children: ReactNode }) {
               console.error("Saúde Slim regional settings sync:", regionalError);
             }
 
-            if (currentPath.startsWith("/crm")) {
-              try {
-                const bootstrap = await getMktonBootstrapStateFn();
-                if (bootstrap.allowed && !bootstrap.leadEntryReady) await provisionMktonLeadEntryFn();
-                await provisionMktonFullFn();
-              } catch (provisionError) { console.error("Saúde Slim CRM provision:", provisionError); }
-            }
           }
         } catch (err) {
           console.error("AuthGate check failed:", err);
@@ -257,7 +244,7 @@ function AuthGate({ children }: { children: ReactNode }) {
       isMounted = false;
       unsubscribeAuth?.();
     };
-  }, [router, provisionMktonLeadEntryFn, provisionMktonFullFn, getMktonBootstrapStateFn]);
+  }, [router]);
 
   if (isPublicRoute) return <>{children}</>;
   if (initializing) return <div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>;
