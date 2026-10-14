@@ -281,13 +281,27 @@ export function SalesbotBuilder({ open, onClose, initialBotId, autoCreate, escop
   historyRef.current = [];
   setUndoDepth(0);
 
-  // A lista contém somente metadata. O grafo é carregado completo e paginado
-  // apenas para o bot selecionado.
+  // O editor precisa renderizar o StartNode imediatamente, mesmo enquanto
+  // a criação remota está em andamento. Erros remotos não são ocultados.
   let cancelled = false;
+  const creating = Boolean(autoCreate && !autoCreateHandledRef.current);
+  const draft: Salesbot | null = creating ? {
+   id: newId("bot"),
+   nome: escopo === "grupo" ? "Novo bot de grupo" : "Novo bot",
+   escopo: escopo ?? "individual",
+   blocks: [],
+   updatedAt: new Date().toISOString(),
+  } : null;
+  if (draft) {
+   autoCreateHandledRef.current = true;
+   setBots([draft]);
+   setActiveId(draft.id);
+  }
   (async () => {
    try {
     const res = (await fetchRemoteBots()) as unknown as { bots: Salesbot[] };
-    if (cancelled || !Array.isArray(res?.bots)) return;
+    if (cancelled) return;
+    if (!Array.isArray(res?.bots)) throw new Error("salesbot_list_invalid");
     const remote = [...res.bots].sort(
      (a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""),
     );
@@ -296,19 +310,11 @@ export function SalesbotBuilder({ open, onClose, initialBotId, autoCreate, escop
      ? initialBotId
      : remote[0]?.id ?? null;
 
-    if (autoCreate && !autoCreateHandledRef.current) {
-     autoCreateHandledRef.current = true;
-     const bot: Salesbot = {
-      id: newId("bot"),
-      nome: escopo === "grupo" ? "Novo bot de grupo " + (remote.length + 1) : "Novo bot " + (remote.length + 1),
-      escopo: escopo ?? "individual",
-      blocks: [],
-      updatedAt: new Date().toISOString(),
-     };
+    if (draft) {
      const created = (await syncFn({ data: { bot: {
-      id: bot.id,
-      nome: getBotName(bot),
-      escopo: bot.escopo ?? "individual",
+      id: draft.id,
+      nome: getBotName(draft),
+      escopo: draft.escopo ?? "individual",
       startBlockId: null,
       gatilhos: [],
       blocks: [],
@@ -316,13 +322,13 @@ export function SalesbotBuilder({ open, onClose, initialBotId, autoCreate, escop
       revision: number;
       baseBlockLocalIds: string[];
      };
-     syncProofRef.current.set(bot.id, {
+     if (cancelled) return;
+     syncProofRef.current.set(draft.id, {
       revision: Number(created.revision),
       baseBlockLocalIds: [...(created.baseBlockLocalIds ?? [])],
      });
-     if (cancelled) return;
-     next = [bot, ...remote];
-     nextActiveId = bot.id;
+     next = [draft, ...remote];
+     nextActiveId = draft.id;
     } else if (nextActiveId) {
      const full = await fetchCompleteBot(nextActiveId);
      if (cancelled) return;
@@ -334,14 +340,16 @@ export function SalesbotBuilder({ open, onClose, initialBotId, autoCreate, escop
     setActiveId(nextActiveId);
    } catch (err) {
     if (!cancelled) {
-     toast.error(err instanceof Error && err.message.includes("salesbot_changed_during_load")
-      ? "O bot mudou durante o carregamento. Abra novamente."
-      : "Não foi possível carregar o SalesBot com segurança.");
+     toast.error(draft
+      ? "O editor abriu, mas o bot não foi salvo no servidor. Não ative este bot antes de corrigir a conexão."
+      : err instanceof Error && err.message.includes("salesbot_changed_during_load")
+       ? "O bot mudou durante o carregamento. Abra novamente."
+       : "Não foi possível carregar o SalesBot com segurança.");
     }
    }
   })();
   return () => { cancelled = true; };
- }, [open, initialBotId, autoCreate]);
+ }, [open, initialBotId, autoCreate, escopo]);
 
  const active = useMemo(() => bots.find((b) => b.id === activeId)?? null, [bots, activeId]);
 
