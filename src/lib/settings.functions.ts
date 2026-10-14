@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { resolvePublicAppUrl } from "@/integrations/supabase/saude-slim-env";
 import { requireActiveWorkspace } from "@/lib/workspace-resolver.server";
 
@@ -85,7 +86,7 @@ async function requireSector(sb: AnySb, wsId: string, sectorId: string) {
 /* ---------- Bundle ---------- */
 
 export const getSettingsBundle = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = context.supabase as unknown as AnySb;
     const userId = context.userId;
@@ -174,7 +175,7 @@ const ProfileSchema = z.object({
 });
 
 export const updateProfile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => ProfileSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -198,7 +199,7 @@ const NotifSchema = z.object({
 });
 
 export const updateNotificationPrefs = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => NotifSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -238,7 +239,7 @@ const LogoSchema = z.object({
 });
 
 export const uploadWorkspaceLogo = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => LogoSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -260,7 +261,7 @@ export const uploadWorkspaceLogo = createServerFn({ method: "POST" })
   });
 
 export const updateWorkspace = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => WsSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -290,7 +291,7 @@ const BusinessHoursSchema = z.object({
 });
 
 export const updateBusinessHours = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => BusinessHoursSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -314,7 +315,7 @@ const InviteSchema = z.object({
 });
 
 export const inviteMember = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => InviteSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -362,7 +363,7 @@ const CreateEmployeeSchema = z.object({
 });
 
 export const createEmployee = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => CreateEmployeeSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -485,7 +486,7 @@ export const createEmployee = createServerFn({ method: "POST" })
 const InvIdSchema = z.object({ id: z.string().uuid() });
 
 export const revokeInvitation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => InvIdSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -502,7 +503,7 @@ export const revokeInvitation = createServerFn({ method: "POST" })
   });
 
 export const resendInvitation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => InvIdSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -524,7 +525,7 @@ export const resendInvitation = createServerFn({ method: "POST" })
 const RemoveSchema = z.object({ userId: z.string().uuid() });
 
 export const removeMember = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => RemoveSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -548,7 +549,7 @@ const RoleSchema = z.object({
 });
 
 export const updateMemberRole = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => RoleSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -584,7 +585,7 @@ export const previewInvitation = createServerFn({ method: "POST" })
   });
 
 export const acceptInvitation = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => TokenSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
