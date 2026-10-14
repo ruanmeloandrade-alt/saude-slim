@@ -145,6 +145,16 @@ jobs:
           timeout 60 "$CHROME" --headless --no-sandbox --disable-gpu \
             --disable-dev-shm-usage --virtual-time-budget=15000 --dump-dom \
             "https://slimesaude.com/auth" > /tmp/saude-slim-browser.html 2> /tmp/chrome-errors.log || true
+
+          echo "DIAGNOSTICO: title da página renderizada:"
+          grep -Eo '<title[^>]*>[^<]{0,130}</title>' /tmp/saude-slim-browser.html | head -n 2 || true
+          echo "DIAGNOSTICO: primeira parte sem base64:"
+          head -c 1500 /tmp/saude-slim-browser.html | sed -E 's/(data:image\/[a-zA-Z]+;base64,)[A-Za-z0-9+/=]+/\1[image redacted]/g' || true
+          echo
+          echo "DIAGNOSTICO: status root, auth, 404:"
+          for addr in https://slimesaude.com/ https://slimesaude.com/auth https://slimesaude.com/404.html; do
+            curl --location --silent --output /dev/null --write-out "%{http_code} %{content_type} %{url_effective}\n" --max-time 20 "$addr" || true
+          done
           if ! grep -Eqi '<form|type="password"|name="email"' /tmp/saude-slim-browser.html; then
             echo "::error::Não foi possível confirmar o formulário de login renderizado no navegador."
             tail -c 1500 /tmp/saude-slim-browser.html || true
