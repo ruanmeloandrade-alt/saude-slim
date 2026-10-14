@@ -219,3 +219,25 @@ export async function setDefaultSlimSource({data}:{data:{crmSourceId:string}}):P
   if(error)throw new Error(error.message);
   return {ok:true};
 }
+
+/** Reordena as etapas existentes de um mesmo funil; a entrada é validada antes da gravação. */
+export async function reorderSlimStages({data}:{
+  data:{pipelineId:string;stageIds:string[]}
+}):Promise<{ok:true}> {
+  const {ws,role}=await ctx();requiresEditor(role);
+  const {data:existing,error}=await sb.from("pipeline_stages").select("id")
+    .eq("workspace_id",ws).eq("pipeline_id",data.pipelineId);
+  if(error)throw new Error(error.message);
+  const ids=(existing??[]).map((item:{id:string})=>item.id);
+  if(!ids.length||ids.length!==data.stageIds.length
+     ||new Set(data.stageIds).size!==ids.length
+     ||data.stageIds.some(id=>!ids.includes(id)))
+    throw new Error("A ordem das etapas não corresponde ao funil selecionado.");
+  // Atualização por IDs do próprio workspace. Falhas retornam erro, nunca são ocultadas.
+  for(const [i,id] of data.stageIds.entries()){
+    const {error:updateError}=await sb.from("pipeline_stages")
+      .update({position:i+1}).eq("workspace_id",ws).eq("pipeline_id",data.pipelineId).eq("id",id);
+    if(updateError)throw new Error(updateError.message);
+  }
+  return {ok:true};
+}
