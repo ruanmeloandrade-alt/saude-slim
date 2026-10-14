@@ -80,6 +80,7 @@ const CRM_GROUP: NavGroup = {
   activeWhen: (path) => path.startsWith("/crm/funis-de-venda") || path.startsWith("/crm/leads") || path.startsWith("/crm/publicos") || path.startsWith("/crm/automacoes") || path.startsWith("/crm/agente-ia") || path.startsWith("/inbox"),
   children: [
     { label: "Funil de vendas", icon: Tags, to: "/crm/funis-de-venda", activeWhen: (path) => path.startsWith("/crm/funis-de-venda") },
+    { label: "Clientes", icon: Users, to: "/crm/leads", activeWhen: (path) => path.startsWith("/crm/leads") },
     { label: "Inbox", icon: Inbox, to: "/inbox/leads", activeWhen: (path) => path.startsWith("/inbox") },
     { label: "Automações", icon: RotateCcw, to: "/crm/automacoes", activeWhen: (path) => path.startsWith("/crm/automacoes") },
     { label: "Agentes IA", icon: Bot, to: "/crm/agente-ia", activeWhen: (path) => path.startsWith("/crm/agente-ia") },
