@@ -167,20 +167,6 @@ function CheckoutCompatibilityGuard({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const path = useRouterState({ select: (state) => state.location.pathname });
-  // Site em GitHub Pages: as rotas do núcleo Saúde Slim usam apenas
-  // Supabase Auth, RLS e Edge Functions. Evitar inicializar automações
-  // herdadas de outros sistemas que dependem de servidor TanStack.
-  if (path === "/auth" || path === "/saude-slim") {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <IdleLogoutGuard />
-          <Outlet />
-        </ThemeProvider>
-      </QueryClientProvider>
-    );
-  }
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider><CustomKpisProvider><ComparisonWidgetsProvider><KpiRulesProvider>
