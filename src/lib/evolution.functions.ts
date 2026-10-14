@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { renderSVG } from "uqr";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { resolvePublicAppUrl } from "@/integrations/supabase/saude-slim-env";
 import { directWhatsappJidFromCanonicalDigits, normalizeInternationalPhone } from "@/lib/whatsapp-identity";
 
@@ -256,7 +257,7 @@ const CreateSchema = z.object({
 });
 
 export const createEvolutionInstance = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => CreateSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as SbRpc;
@@ -410,7 +411,7 @@ async function triggerAndPollQr(
 }
 
 export const fetchEvolutionQrCode = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => SessionSchema.parse(d))
   .handler(async ({ data, context }) => {
     const creds = await loadCreds(context.supabase as unknown as SbRpc, data.sessionId);
@@ -456,7 +457,7 @@ export const fetchEvolutionQrCode = createServerFn({ method: "POST" })
 // ---------- Recriar inst-ncia travada ----------
 const RecreateSchema = z.object({ sessionId: z.string().uuid(), friendlyName: z.string().min(2).max(80) });
 export const recreateEvolutionInstance = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => RecreateSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as SbRpc;
@@ -552,7 +553,7 @@ export const recreateEvolutionInstance = createServerFn({ method: "POST" })
 
 // ---------- Status atual + telefone ----------
 export const fetchEvolutionStatus = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => SessionSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as SbRpc;
@@ -620,7 +621,7 @@ export const fetchEvolutionStatus = createServerFn({ method: "POST" })
 
 // ---------- Desconectar / apagar inst-ncia ----------
 export const disconnectEvolution = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => SessionSchema.parse(d))
   .handler(async ({ data, context }) => {
     const creds = await loadCreds(context.supabase as unknown as SbRpc, data.sessionId);
@@ -651,7 +652,7 @@ const SendTextSchema = z.object({
 });
 
 export const sendEvolutionText = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => SendTextSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as SbRpc;
@@ -700,7 +701,7 @@ export const sendEvolutionText = createServerFn({ method: "POST" })
 
 // ---------- Listar sessões Evolution do workspace ----------
 export const listEvolutionSessions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ workspaceId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     type SbSel = {
@@ -739,7 +740,7 @@ export const listEvolutionSessions = createServerFn({ method: "POST" })
 
 // ---------- Quota de números do plano ----------
 export const getWhatsappQuota = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ workspaceId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as SbRpc;
