@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { loadEffectivePermissions } from "@/lib/permissions-core.functions";
 import { allowedPipelines, scopeOf, requireAllowed } from "@/lib/permissions-core";
 
@@ -49,7 +50,7 @@ export interface LeadListRow {
 }
 
 export const listLeads = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -208,7 +209,7 @@ function displayCustomValue(value: unknown) {
 }
 
 export const getLeadDetail = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -332,7 +333,7 @@ export const getLeadDetail = createServerFn({ method: "POST" })
   });
 
 export const addLeadNote = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -370,7 +371,7 @@ export const addLeadNote = createServerFn({ method: "POST" })
 
  */
 export const sendLeadMessage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -644,7 +645,7 @@ export const sendLeadMessage = createServerFn({ method: "POST" })
 
  */
 export const updateLead = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -960,7 +961,7 @@ async function loadLeadConversationPage(
 }
 
 export const listLeadConversations = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -977,7 +978,7 @@ export const listLeadConversations = createServerFn({ method: "POST" })
   });
 
 export const getInboxBootstrap = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -1028,7 +1029,7 @@ export const getInboxBootstrap = createServerFn({ method: "POST" })
   });
 
 export const checkInboxHealth = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = context.supabase as unknown as AnySb;
     const wsId = await loadActiveWorkspace(sb, context.userId);
@@ -1130,7 +1131,7 @@ export const checkInboxHealth = createServerFn({ method: "GET" })
   });
 
 export const markLeadConversationRead = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ leadId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -1166,7 +1167,7 @@ const LeadActivityCursorSchema = z.object({
 });
 
 export const listLeadActivities = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -1267,7 +1268,7 @@ export const listLeadActivities = createServerFn({ method: "POST" })
  * Também atualiza payload.reactions da atividade local.
  */
 export const sendLeadReaction = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -1381,7 +1382,7 @@ export const sendLeadReaction = createServerFn({ method: "POST" })
  * Exclui uma mensagem: "para mim" (soft delete local) ou "para todos" (Evolution deleteMessageForEveryone).
  */
 export const deleteLeadMessage = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -1460,7 +1461,7 @@ export const deleteLeadMessage = createServerFn({ method: "POST" })
  * Resolve uma mídia do WhatsApp (principalmente figurinha) para data URL exibível no Inbox.
  */
 export const resolveLeadMessageMedia = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -1585,7 +1586,7 @@ export const resolveLeadMessageMedia = createServerFn({ method: "POST" })
  *     aparecer imediatamente no Inbox (com media_url = URL assinada).
  */
 export const sendLeadMedia = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -1787,7 +1788,7 @@ export const sendLeadMedia = createServerFn({ method: "POST" })
  * Idempotente: dedupe por whatsapp_message_id no payload.
  */
 export const syncWhatsAppInbox = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = context.supabase as unknown as AnySb;
     const wsId = await loadActiveWorkspace(sb, context.userId);
@@ -2015,7 +2016,7 @@ export const syncWhatsAppInbox = createServerFn({ method: "POST" })
 
 /** Lista campos personalizados da workspace (para o seletor de "Alterar campo"). */
 export const listLeadCustomFields = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = context.supabase as unknown as AnySb;
     const wsId = await loadActiveWorkspace(sb, context.userId);
@@ -2038,7 +2039,7 @@ export const listLeadCustomFields = createServerFn({ method: "GET" })
 
 /** Cria um campo personalizado na workspace ativa. */
 export const createLeadCustomField = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -2078,7 +2079,7 @@ export const createLeadCustomField = createServerFn({ method: "POST" })
 
 /** Atualiza nome/tipo/opções de um campo personalizado. */
 export const updateLeadCustomField = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -2107,7 +2108,7 @@ export const updateLeadCustomField = createServerFn({ method: "POST" })
 
 /** Remove um campo personalizado (e os valores gravados nos leads). */
 export const deleteLeadCustomField = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -2129,7 +2130,7 @@ export const deleteLeadCustomField = createServerFn({ method: "POST" })
 
 /** Grava valor de um campo personalizado (usado pelo runner de automação). */
 export const setLeadCustomFieldValue = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
@@ -2246,7 +2247,7 @@ export const setLeadCustomFieldValue = createServerFn({ method: "POST" })
  * Usado por seletores (ex.: condições do Salesbot) para escolher tag existente.
  */
 export const listWorkspaceTags = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = context.supabase as unknown as AnySb;
     const wsId = await loadActiveWorkspace(sb, context.userId);
@@ -2285,7 +2286,7 @@ export const listWorkspaceTags = createServerFn({ method: "GET" })
  * Transcreve um áudio de uma atividade de lead.
  */
 export const transcribeLeadAudio = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ leadId: z.string().uuid(), activityId: z.string().uuid() }).parse(d),
   )
