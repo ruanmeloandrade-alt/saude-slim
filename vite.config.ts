@@ -35,6 +35,8 @@ export default defineConfig({
     server: { entry: "server" },
   },
   vite: {
+    // Evita exportações parciais de createMiddleware no carregador SSR do Vite.
+    ssr: { optimizeDeps: { include: ["@tanstack/react-start", "@tanstack/start-client-core"] } },
     plugins: [salesbotSaveFeedbackPlugin],
   },
 });
