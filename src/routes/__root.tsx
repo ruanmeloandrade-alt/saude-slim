@@ -26,7 +26,6 @@ import { getMktonBootstrapState, provisionMktonFull } from "../lib/mkton-full-pr
 import { syncWorkspaceRegionalCache } from "../lib/workspace-currency-cache";
 
 import appCss from "../styles.css?url";
-import mktonIcon from "../assets/mkton-icon.png.asset.json";
 
 function NotFoundComponent() {
   return (
@@ -75,12 +74,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { name: "twitter:title", content: "Saúde Slim | Sistema interno" },
       { name: "twitter:description", content: "Sistema interno da Saúde Slim para vendas, pedidos, estoque, atendimento e automações." },
-      { name: "facebook-domain-verification", content: "89onlnqi4slnqw3g5bgtkyk9vme22n" },
-      { name: "mkton-token", content: "pk_d16029edf0ee4a15be7c3fd1b104b84e" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/png", href: mktonIcon.url },
+      { rel: "icon", href: "/favicon.ico" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" },
