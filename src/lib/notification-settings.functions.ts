@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 type AnySb = { from: (t: string) => any };
 
@@ -22,7 +23,7 @@ export type NotificationSettingsPayload = z.infer<typeof SettingsSchema>;
 
 /** Lê as preferências de notificação salvas no servidor para o usuário logado. */
 export const getNotificationSettings = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = context.supabase as unknown as AnySb;
     const { data, error } = await sb
@@ -57,7 +58,7 @@ export const getNotificationSettings = createServerFn({ method: "GET" })
 
 /** Grava (upsert) as preferências de notificação do usuário logado. */
 export const saveNotificationSettings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => SettingsSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
