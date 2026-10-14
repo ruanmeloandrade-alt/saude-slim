@@ -15,6 +15,8 @@
     "audit:saude-slim:env": "node scripts/audit-saude-slim-backend-env.mjs",
     "audit:saude-slim:origins": "node scripts/audit-saude-slim-hardcoded-origins.mjs",
     "check:routes": "node scripts/check-route-tree-parity.mjs",
+    "preflight:slim": "node scripts/preflight-saude-slim.mjs",
+    "build:verified": "npm run preflight:slim && npm run check:routes && npm run build",
     "format": "prettier --write .",
     "start": "node .output/server/index.mjs"
   },
