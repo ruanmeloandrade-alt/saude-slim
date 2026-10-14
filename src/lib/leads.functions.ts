@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
 export * from "./leads.functions.legacy";
 
@@ -208,7 +209,7 @@ const CreateMediaSchema = z.object({
 });
 
 export const sendLeadMedia = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((input: unknown) => CreateMediaSchema.parse(input))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
