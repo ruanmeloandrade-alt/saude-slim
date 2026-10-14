@@ -73,6 +73,25 @@ ser utilizado. Não usar GitHub Actions para validar essa frente.
 - Arquivos alterados e paths de import verificados na árvore do GitHub.
 - Nenhum GitHub Actions foi acionado manualmente nesta frente.
 
+
+## Continuação da integração em 14/10 (etapa seguinte)
+
+- Recuperado em `src/lib/saude-slim-funnel-client.ts` o cadastro de funis,
+  cadastro de leads no Kanban, atualização da fonte padrão do CRM e
+  reordenação das etapas, usando os dados e permissões do Supabase exclusivo.
+- A UI React original em `src/legacy/crm.funis-de-venda.legacy.tsx`
+  foi ligada a esses novos métodos, substituindo quatro chamadas de
+  servidor indisponíveis em Pages.
+- Em teste transacional autenticado, criado funil com fonte, etapa inicial e
+  lead no banco Saúde Slim; ROLLBACK executado.
+- Repetida consulta após o teste confirmou **zero** funis, leads e etapas de QA
+  restantes no banco. Nenhum dado de produção modificado.
+- Configuração SPA `defaultSsr:false` em `src/start.ts` confirmada como
+  opção suportada pela documentação do TanStack Start; ela **não**
+  executa funções de servidor no GitHub Pages.
+- **QA compilação:** build React e navegação em navegador **não executados**.
+  Não é seguro mesclar para `main` nem afirmar que a página está publicada.
+
 ## Não concluído / bloqueadores de produção
 
 - Build do frontend SPA completo da branch e smoke E2E em navegador autenticado:
