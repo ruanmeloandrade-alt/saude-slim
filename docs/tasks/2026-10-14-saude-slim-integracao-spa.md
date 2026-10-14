@@ -44,6 +44,11 @@ ser utilizado. Não usar GitHub Actions para validar essa frente.
   do workspace do dashboard sem `getActiveWorkspace` SSR.
 - `src/components/dashboard/DashboardV4ConnectedBoard.tsx`: identifica o
   workspace com Auth + associação à empresa, sem chamadas serverFn.
+- `src/lib/saude-slim-funnel-client.ts` e `src/legacy/crm.funis-de-venda.legacy.tsx`:
+  início da integração do Kanban original, com fontes, funis, usuários,
+  movimentação de clientes, criação e edição de etapas e renomeação de funis.
+  A navegação e o layout original foram preservados. Gatihos/SalesBots não
+  estão sendo executados no browser, e o usuário recebe aviso explícito.
 
 ## Verificação no Supabase (executada)
 
@@ -61,6 +66,10 @@ ser utilizado. Não usar GitHub Actions para validar essa frente.
 - Mesclagem de dois leads de teste por `saude_slim_merge_leads` executada
   sob papel `authenticated`: retorno `ok:true, mergedCount:1`, transação
   revertida por ROLLBACK. Não foram criados leads permanentes.
+- Testada gravação autenticada de um lead no funil, seguida de movimentação
+  para outra etapa; transação integralmente revertida com ROLLBACK.
+- Testada criação e edição autenticadas de etapa do funil; dados descartados
+  no ROLLBACK.
 - Arquivos alterados e paths de import verificados na árvore do GitHub.
 - Nenhum GitHub Actions foi acionado manualmente nesta frente.
 
