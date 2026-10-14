@@ -1,7 +1,5 @@
 import { useEffect } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { touchSession } from "@/lib/sessions.functions";
 
 const KEY = "mkton_device_key";
 
@@ -34,44 +32,36 @@ export function parseUA(ua: string) {
   return { browser, os, device_type };
 }
 
-/** Registra e mantém viva a sessão do dispositivo atual (heartbeat de 60s). */
+/** Mantém a sessão Supabase válida no navegador sem chamar endpoints SSR ausentes. */
 export function useSessionHeartbeat() {
-  const touch = useServerFn(touchSession);
-
   useEffect(() => {
     let alive = true;
-    let timer: ReturnType<typeof setInterval> | null = null;
-
-    const ping = async () => {
-      if (!alive || typeof document === "undefined" || document.visibilityState === "hidden") return;
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) return;
-      const ua = navigator.userAgent;
+    let checking = false;
+    async function ping() {
+      if (!alive || checking || typeof document === "undefined" || document.visibilityState !== "visible") return;
+      checking = true;
       try {
-        const r: any = await touch({
-          data: {
-            device_key: getDeviceKey(),
-            login_at: data.session.user.last_sign_in_at ?? undefined,
-            current_path: window.location.pathname,
-            ...parseUA(ua),
-          },
-        });
-        if (r?.revoked) {
-          await supabase.auth.signOut();
-          window.location.href = "/auth";
+        const { data: session } = await supabase.auth.getSession();
+        if (!session.session) return;
+        const { error } = await supabase.auth.getUser();
+        if (!alive || !error) return;
+        if (error.status === 401 || error.status === 403) {
+          await supabase.auth.signOut({ scope: "local" });
+          if (alive) window.location.assign("/auth");
         }
       } catch {
-        /* silencioso */
+        // Uma falha momentânea de rede não deve desconectar uma sessão válida.
+      } finally {
+        checking = false;
       }
-    };
-
+    }
     void ping();
-    timer = setInterval(ping, 60_000);
+    const timer = window.setInterval(ping, 60_000);
     document.addEventListener("visibilitychange", ping);
     return () => {
       alive = false;
-      if (timer) clearInterval(timer);
+      window.clearInterval(timer);
       document.removeEventListener("visibilitychange", ping);
     };
-  }, [touch]);
+  }, []);
 }
