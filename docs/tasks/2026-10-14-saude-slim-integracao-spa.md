@@ -119,3 +119,38 @@ ser utilizado. Não usar GitHub Actions para validar essa frente.
 
 **Status: integração parcial validada no banco; frontend e runtime completos
 ainda não homologados. Não declarar entrega pronta.**
+
+
+## Pré-build de 14/10: correções e bloqueios identificados
+
+- Inspecionada a árvore real da branch de recuperação via conector GitHub:
+  **147 imports gerados no `src/routeTree.gen.ts` e zero arquivos de rota ausentes**.
+  Também auditados imports locais de 16 arquivos críticos de frontend/adapter,
+  sem imports locais ausentes.
+- Verificada a configuração `defaultSsr:false` de `src/start.ts` frente
+  à documentação do TanStack Start: a opção é suportada, porém **não transforma
+  automaticamente funções server-side em rotas estáticas**.
+- `bun.lock` continha 501 URLs para o registro privado do cache Lovable.
+  Substituídas todas por `https://registry.npmjs.org/`. Segunda leitura no
+  repositório confirmou zero URLs privadas remanescentes e 501 URLs públicas.
+- `vite.config.ts`: removido `mcpPlugin()` legado que era ativado por padrão
+  em builds Linux. Nitro `node-server` preservado.
+- `src/lib/saude-slim-leads-client.ts`: corrigida expressão de WhatsApp com
+  `r.phone` potencialmente nulo. Reproduzidos os erros TypeScript
+  `TS2532`/`TS18047` num caso isolado, corrigido e revalidado com
+  `tsc --strict --noEmit` local.
+- Adicionado `scripts/preflight-saude-slim.mjs` (Node sem dependências) e
+  comandos `npm run preflight:slim`, `npm run build:verified`. O preflight
+  audita rotas, imports locais e URLs privadas antes de um build.
+- O Node local disponível na sessão é v22.16.0, dentro do intervalo
+  `>=22.12 <25` exigido em `package.json`.
+- **Ainda não foi possível executar `npm install`/`npm run build` real
+  nesta sessão:** o ambiente da ferramenta não resolve `github.com`, não
+  consegue obter o repositório como working tree, e não tem acesso ao npm para
+  instalar dependências. Não lançar CI/GitHub Actions porque o owner proibiu
+  usá-los. Um preflight estrutural não substitui build/typecheck de todo
+  projeto nem E2E.
+- `main` e `slimesaude.com` continuam intocados. A branch deve permanecer
+  segregada enquanto o build e os módulos dependentes do backend não passarem
+  por homologação.
+
