@@ -134,5 +134,8 @@
   "engines": {
     "node": ">=22.12 <25"
   },
-  "packageManager": "npm@10.9.2"
+  "packageManager": "npm@10.9.2",
+  "overrides": {
+    "@tanstack/start-server-core": "1.169.39"
+  }
 }
