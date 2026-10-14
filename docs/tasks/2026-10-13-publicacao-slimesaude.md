@@ -39,3 +39,25 @@
 6. Só então iniciar teste do WhatsApp conforme ordem do proprietário.
 
 **Não declarar produção pronta sem evidência de publicação e smoke.**
+
+
+## Frente GitHub Pages (2026-10-13, continuação)
+
+**Ordem do proprietário:** GitHub hospeda a interface, Supabase permanece exclusivo para Auth/banco, Railway continua exclusiva para Evolution/WhatsApp; não usar Vercel, Hostinger para hospedagem nem serviços novos. DNS do domínio já foi realizado pelo proprietário. Não testar Evolution antes de publicar e validar a página.
+
+**Escopo técnico desta tentativa:** Criar build de interface estática em modo SPA com TanStack Start somente no job GitHub Pages, sem tocar o preset Node em desenvolvimento, sem transferir credenciais secretas para o navegador. Criar CI no próprio GitHub para testar build e, depois de validado, publicar artefatos estáticos pelo Pages. O objetivo desta etapa é colocar a interface real do repositório na web, não trocar por uma página simulada.
+
+**Aceite parcial obrigatório:** CI compilar, existir `index.html` com JS/CSS, artefatos sem segredos, GitHub Pages servir HTML+assets em `slimesaude.com`, login Auth->Supabase carregar pelo browser.
+
+**Limitação estrutural que não pode ser escondida:** As muitas `createServerFn` e rotas `/api/*` do monolito TanStack Start exigem servidor Node e **não funcionarão só com GitHub Pages**. Modo SPA publica visual; não migra automaticamente estas funções para o banco Supabase. Não afirmar que WhatsApp/webhooks/módulos server-side foram integrados. Publicação de interface só é aceita como parcial até backend ser re-arquitetado e testado.
+
+**Plano de validação:** teste de build pela Actions nesta branch; observar logs; integração na main só após build mínimo; tentar deploy Pages no workflow apenas na main; smoke real HTTP e /auth, sem Evolution.
+**Status:** 🟡 em implementação, sem build ou publicação comprovados.
+
+## Evidência do build na branch (2026-10-14T00:27:30.441Z)
+
+- Ajuste técnico: o prerender automático SPA do TanStack Start falhou com `ERR_MODULE_NOT_FOUND: dist/server/server.js` quando Nitro emitiu `.output/server/index.mjs`. Retornamos ao build Node existente e capturamos o HTML legítimo de `/auth` executando temporariamente o servidor **somente no runner de build do GitHub Actions**. Não há novo host.
+- GitHub Actions execução [38490152515](https://github.com/ruanmeloandrade-alt/saude-slim/actions/runs/38490152515): **build SUCCESS**; Bun install, route parity, build Vite, teste HTTP local de `/auth` e criação de index/404 HTML e assets: PASS.
+- Nenhuma etapa do WhatsApp/Evolution executada.
+- Ainda falta publicação no GitHub Pages (main, deploy) e smoke do domínio final. O backend Node compilado permanece **somente artefato do runner**, não está hospedado no Pages.
+- Interface estática parcial: preservar o alerta sobre rotas de servidor e `useServerFn` que não serão executadas pelo Pages.
