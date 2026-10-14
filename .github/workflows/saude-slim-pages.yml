@@ -20,7 +20,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: saude-slim-pages-${{ github.ref }}
+  group: saude-slim-pages-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
