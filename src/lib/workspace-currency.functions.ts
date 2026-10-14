@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { z } from "zod";
 import { formatWorkspaceError, requireActiveWorkspace, resolveActiveWorkspace } from "@/lib/workspace-resolver.server";
 
@@ -20,7 +21,7 @@ async function resolveWorkspaceId(sb: Sb, userId: string, provided?: string): Pr
 }
 
 export const getWorkspaceDefaultCurrency = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d) => z.object({ workspaceId: z.string().uuid().optional() }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as Sb;
@@ -33,7 +34,7 @@ export const getWorkspaceDefaultCurrency = createServerFn({ method: "GET" })
 
 
 export const getWorkspaceRegionalSettings = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d) => z.object({ workspaceId: z.string().uuid().optional() }).parse(d ?? {}))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as Sb;
@@ -61,7 +62,7 @@ export const getWorkspaceRegionalSettings = createServerFn({ method: "GET" })
   });
 
 export const setWorkspaceDefaultCurrency = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d) =>
     z.object({
       workspaceId: z.string().uuid().optional(),
@@ -81,7 +82,7 @@ export const setWorkspaceDefaultCurrency = createServerFn({ method: "POST" })
 
 
 export const setWorkspaceRegionalSettings = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d) =>
     z.object({
       workspaceId: z.string().uuid().optional(),
