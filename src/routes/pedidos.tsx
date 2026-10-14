@@ -1,17 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState, type ReactNode } from "react";
 import { ClipboardList, PackagePlus, Plus, Search, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { createCrmSource, createLead, listAllPipelineStages, listCrmSources } from "@/lib/crm.functions";
-import { listLeads } from "@/lib/leads.functions";
-import { listProductCatalogs, saveProduct, type DbProduct } from "@/lib/products.functions";
+import { listSaudeSlimPipelineStages, listSaudeSlimSources, createSaudeSlimSource, createSaudeSlimLead, listSaudeSlimLeads, listSaudeSlimCatalogs, createSaudeSlimProduct, addSaudeSlimOrderProduct } from "@/lib/saude-slim-orders-client";
+import type { DbProduct } from "@/lib/products.functions";
 
 export const Route = createFileRoute("/pedidos")({
+  ssr: false,
   head: () => ({ meta: [{ title: "Pedidos · Saúde Slim" }, { name: "description", content: "Retirada de pedidos da operação Saúde Slim." }] }),
   component: PedidosPage,
 });
@@ -21,18 +20,14 @@ type CustomerMode = "existing" | "new" | "none";
 type DiscountMode = "value" | "percent";
 
 function PedidosPage() {
-  const loadLeads = useServerFn(listLeads);
-  const loadCatalogs = useServerFn(listProductCatalogs);
-  const loadSources = useServerFn(listCrmSources);
-  const loadPipelines = useServerFn(listAllPipelineStages);
-  const createLeadFn = useServerFn(createLead);
-  const createSourceFn = useServerFn(createCrmSource);
-  const saveProductFn = useServerFn(saveProduct);
+  const createLeadFn = createSaudeSlimLead;
+  const createSourceFn = createSaudeSlimSource;
+  const saveProductFn = createSaudeSlimProduct;
 
-  const leadsQ = useQuery({ queryKey: ["pedidos", "leads"], queryFn: () => loadLeads({ data: {} }), staleTime: 30_000 });
-  const catalogsQ = useQuery({ queryKey: ["pedidos", "catalogs"], queryFn: () => loadCatalogs(), staleTime: 30_000 });
-  const sourcesQ = useQuery({ queryKey: ["pedidos", "sources"], queryFn: () => loadSources(), staleTime: 60_000 });
-  const pipelinesQ = useQuery({ queryKey: ["pedidos", "pipelines"], queryFn: () => loadPipelines(), staleTime: 60_000 });
+  const leadsQ = useQuery({ queryKey: ["pedidos", "leads"], queryFn: listSaudeSlimLeads, staleTime: 30_000 });
+  const catalogsQ = useQuery({ queryKey: ["pedidos", "catalogs"], queryFn: listSaudeSlimCatalogs, staleTime: 30_000 });
+  const sourcesQ = useQuery({ queryKey: ["pedidos", "sources"], queryFn: listSaudeSlimSources, staleTime: 60_000 });
+  const pipelinesQ = useQuery({ queryKey: ["pedidos", "pipelines"], queryFn: listSaudeSlimPipelineStages, staleTime: 60_000 });
 
   const products = useMemo(() => (catalogsQ.data ?? []).flatMap((catalog) => catalog.products.map((product) => ({ ...product, catalogName: catalog.name }))), [catalogsQ.data]);
   const leads = leadsQ.data?.leads ?? [];
@@ -81,10 +76,11 @@ function PedidosPage() {
     try {
       let resolvedProductName = selectedProduct?.name ?? productName.trim();
       let resolvedProductPrice = total;
+      let createdProductId: string | null = null;
       if (productMode === "new") {
         const catalogId = catalogsQ.data?.[0]?.id;
         if (!catalogId) throw new Error("Crie um catálogo em Produtos antes de cadastrar produto durante o pedido.");
-        await saveProductFn({
+        const createdProduct = await saveProductFn({
           data: {
             catalogId,
             sku: "",
@@ -98,6 +94,7 @@ function PedidosPage() {
             active: true,
           },
         });
+        createdProductId = createdProduct.id;
         resolvedProductName = productName.trim();
         resolvedProductPrice = Math.max(0, moneyToNumber(productPrice));
       }
@@ -123,7 +120,7 @@ function PedidosPage() {
         : defaultSourceId;
       if (!sourceId) throw new Error("Nenhuma fonte de CRM disponível para registrar o pedido.");
 
-      await createLeadFn({
+      const createdLead = await createLeadFn({
         data: {
           crmSourceId: sourceId,
           pipelineId: defaultPipeline.id,
@@ -137,6 +134,10 @@ function PedidosPage() {
           facebookUrl: "",
         },
       });
+      const soldProductId = productMode === "existing" ? selectedProduct?.id : createdProductId;
+      if (soldProductId) {
+        await addSaudeSlimOrderProduct({ leadId: createdLead.id, productId: soldProductId, unitPrice: total || resolvedProductPrice });
+      }
       toast.success("Pedido enviado para o funil de vendas");
       setProductId("");
       setProductName("");
