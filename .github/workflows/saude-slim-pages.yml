@@ -132,3 +132,23 @@ jobs:
             exit 1
           fi
           echo "HTTPS no domínio e shell real da Saúde Slim confirmados (HTTP 200)."
+
+      - name: Verificar formulário real no navegador
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME=$(command -v google-chrome || command -v chromium-browser || command -v chromium || true)
+          if [ -z "$CHROME" ]; then
+            echo "::error::Chromium/Chrome indisponível no runner para teste de renderização."
+            exit 1
+          fi
+          timeout 60 "$CHROME" --headless --no-sandbox --disable-gpu \
+            --disable-dev-shm-usage --virtual-time-budget=15000 --dump-dom \
+            "https://slimesaude.com/auth" > /tmp/saude-slim-browser.html 2> /tmp/chrome-errors.log || true
+          if ! grep -Eqi '<form|type="password"|name="email"' /tmp/saude-slim-browser.html; then
+            echo "::error::Não foi possível confirmar o formulário de login renderizado no navegador."
+            tail -c 1500 /tmp/saude-slim-browser.html || true
+            tail -n 20 /tmp/chrome-errors.log || true
+            exit 1
+          fi
+          echo "Formulário de login renderizado no Chrome headless em /auth."
