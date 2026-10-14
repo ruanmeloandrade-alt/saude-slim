@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { requireActiveWorkspace } from "@/lib/workspace-resolver.server";
 
 type AnySb = { from: (t: string) => any; rpc: (fn: string, args?: any) => any };
@@ -48,7 +49,7 @@ async function requireWorkspaceSector(sb: AnySb, wsId: string, sectorId: string)
 /* ---------- Contexto: plano + pipelines + etapas + usuário ---------- */
 
 export const getPermissionsContext = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ userId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -89,7 +90,7 @@ const PermSchema = z.object({
 });
 
 export const saveUserPermissions = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => PermSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -111,7 +112,7 @@ export const saveUserPermissions = createServerFn({ method: "POST" })
 /* ---------- Modelos de permissão (reutilizáveis entre usuários) ---------- */
 
 export const listPermissionTemplates = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = context.supabase as unknown as AnySb;
     const wsId = await activeWorkspace(sb, context.userId);
@@ -126,7 +127,7 @@ export const listPermissionTemplates = createServerFn({ method: "POST" })
   });
 
 export const savePermissionTemplate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({
       name: z.string().trim().min(2).max(60),
@@ -168,7 +169,7 @@ export const savePermissionTemplate = createServerFn({ method: "POST" })
   });
 
 export const deletePermissionTemplate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
@@ -182,7 +183,7 @@ export const deletePermissionTemplate = createServerFn({ method: "POST" })
 /* ---------- Setores de trabalho (fluxo de trabalho) ---------- */
 
 export const listWorkSectors = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = context.supabase as unknown as AnySb;
     const wsId = await activeWorkspace(sb, context.userId);
@@ -196,7 +197,7 @@ export const listWorkSectors = createServerFn({ method: "POST" })
   });
 
 export const createWorkSector = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ name: z.string().min(2).max(60), color: z.string().max(20).optional() }).parse(d),
   )
@@ -214,7 +215,7 @@ export const createWorkSector = createServerFn({ method: "POST" })
   });
 
 export const setUserSector = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ userId: z.string().uuid(), sectorId: z.string().uuid().nullable() }).parse(d),
   )
