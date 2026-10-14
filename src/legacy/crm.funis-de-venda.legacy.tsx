@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Fragment } from "react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { listSlimSources, listSlimFunnels, listSlimUsers, moveSlimLead } from "@/lib/saude-slim-funnel-client";
+import { listSlimSources, listSlimFunnels, listSlimUsers, moveSlimLead, updateSlimStage, createSlimStage, renameSlimPipeline } from "@/lib/saude-slim-funnel-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
  Search,
@@ -207,9 +207,9 @@ function CrmFunisPage() {
   const moveLeadServer = moveSlimLead;
   const createFunnelServer = useServerFn(createFunnelServerFn);
   const setDefaultCrmSourceServer = useServerFn(setDefaultCrmSource);
-  const updateStageServer = useServerFn(updatePipelineStage);
+  const updateStageServer = updateSlimStage;
   const reorderStagesServer = useServerFn(reorderPipelineStages);
-  const renamePipelineServer = useServerFn(renamePipelineServerFn);
+  const renamePipelineServer = renameSlimPipeline;
   const reorderFunnelsServer = useServerFn(reorderFunnels);
   const deletePipelineServer = useServerFn(deletePipelineServerFn);
   const deleteLead = useServerFn(deleteLeadServerFn);
@@ -217,7 +217,7 @@ function CrmFunisPage() {
 
   const listStageAutomationsServer = useServerFn(listStageAutomationsServerFn);
   const saveStageAutomationsServer = useServerFn(saveStageAutomationsServerFn);
-  const createStageServer = useServerFn(createPipelineStage);
+  const createStageServer = createSlimStage;
   const deleteStageServer = useServerFn(deletePipelineStage);
 
   useEffect(() => {
