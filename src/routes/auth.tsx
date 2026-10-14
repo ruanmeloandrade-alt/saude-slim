@@ -275,6 +275,12 @@ function AuthPage() {
     const cleanWhatsapp = normalizeWhatsApp(whatsapp);
     const cleanInstagram = normalizeInstagram(instagram);
 
+    // Saúde Slim tem empresa única: cadastros são exclusivamente internos.
+    if (mode === "signup") {
+      setError("Cadastro público desativado. Solicite acesso ao administrador da Saúde Slim.");
+      return;
+    }
+
     if (mode === "signup") {
       if (cleanName.length < 3) return setError("Informe o nome do responsável pela conta.");
       if (cleanWhatsapp && cleanWhatsapp.length < 12) return setError("Informe um WhatsApp válido com DDD.");
