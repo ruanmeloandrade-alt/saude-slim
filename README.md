@@ -1,43 +1,27 @@
 # Saúde Slim
 
-Repositório próprio e exclusivo do sistema Saúde Slim.
+Sistema próprio da Saúde Slim, com código exclusivo neste repositório.
 
-**Domínio da aplicação:** https://slimesaude.com
-**Supabase exclusivo:** `vyzvfcgpjjzvcjegzzza`
+**Site:** https://slimesaude.com
 
-## Arquitetura correta
+## Infraestrutura
 
-- GitHub: fonte de verdade do código da aplicação.
-- Hospedagem do aplicativo: servidor Node.js compatível com TanStack Start/SSR (a definir e configurar no provedor autorizado).
-- Supabase: autenticação e banco de dados exclusivos da Saúde Slim.
-- Railway: **somente** serviço Evolution WhatsApp, PostgreSQL e Redis correspondentes. Não executar o aplicativo na Railway.
-- Hostinger: DNS do domínio.
+- **GitHub Pages:** publica a interface web a partir do arquivo `index.html` da branch `main`. O site não deve mostrar este README como página inicial.
+- **Supabase exclusivo:** autenticação, dados e Row Level Security (RLS), projeto `vyzvfcgpjjzvcjegzzza`. Edge Function `saude-slim-core` publicada para consultas autenticadas.
+- **Railway:** reservado ao conector Evolution/WhatsApp e seus serviços próprios. Não recebe o sistema web nem deve ser alterado pela publicação do site.
+- **Hostinger:** gerencia apenas o domínio e DNS já cadastrados.
 
-> GitHub Pages sozinho **não executa** Node.js ou endpoints de backend. Alterar o DNS ou criar `CNAME` não disponibiliza as rotas do aplicativo. Não apontar o domínio para Pages como se fosse o backend de produção.
+## Núcleo web publicado
 
-## Comandos do aplicativo (Node.js >= 22.12)
+A entrada do GitHub Pages é o `index.html` e seus acessos de compatibilidade são `/auth/` e `/saude-slim/`. Essa interface usa diretamente o Supabase com autenticação, RLS e os cadastros de clientes/pedidos, histórico de vendas, funil, produtos e estoque.
 
-```bash
-npm install
-npm run check:routes
-npm run build
-npm start
-```
+O repositório **também contém o aplicativo TanStack Start legado**, com mais funcionalidades e chamadas `createServerFn`. Esse código não é executado pelo GitHub Pages: módulos avançados e integrações legadas não devem ser anunciados como homologados.
 
-Comando de start: `node .output/server/index.mjs`.
-A configuração de Nitro está em `vite.config.ts`, preset `node-server`.
+## Segurança e entrega
 
-**Variáveis necessárias:** usar `.env.example` apenas como modelo, configurando os valores reais na hospedagem do aplicativo. Nunca commitar `.env`, service role, chaves de IA ou Evolution. `SUPABASE_SERVICE_ROLE_KEY` deve existir apenas no servidor, nunca no frontend.
+- Nunca publicar secrets nem a `SUPABASE_SERVICE_ROLE_KEY` no JavaScript cliente ou nos commits.
+- O banco, o domínio, o código e o WhatsApp permanecem exclusivos da Saúde Slim.
+- A interface está preparada para cadastramento e utilização, mas **a validação ponta a ponta de login e operações com uma conta real permanece pendente**.
+- Não afirmar que o WhatsApp está conectado. O teste da Evolution ocorrerá somente quando autorizado.
 
-```env
-PUBLIC_APP_URL=https://slimesaude.com
-APP_PUBLIC_URL=https://slimesaude.com
-SUPABASE_URL=https://vyzvfcgpjjzvcjegzzza.supabase.co
-SUPABASE_PROJECT_ID=vyzvfcgpjjzvcjegzzza
-```
-
-## Status de publicação
-
-O código e o preset Node.js estão preparados, **mas o deploy de produção, o funcionamento de `slimesaude.com`, login e endpoints não foram validados**. O status só pode mudar para pronto após build, publicação e smoke HTTPS reais.
-
-Não utilizar migrations, credenciais, dados ou serviços dos projetos MKTon/legados.
+Para manutenção, edite a aplicação da Saúde Slim neste repositório. Não importar credenciais ou informações da MktOn e de outros projetos.
