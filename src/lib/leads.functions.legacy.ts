@@ -1841,7 +1841,9 @@ export const syncWhatsAppInbox = createServerFn({ method: "POST" })
     const { data: existingLeads } = await sb
       .from("leads")
       .select("id, phone, phone_normalized, custom_data")
-      .eq("workspace_id", wsId);
+      .eq("workspace_id", wsId)
+      // Conversas mescladas são apenas histórico: nunca recebem novas mensagens.
+      .is("merged_into_id", null);
 
     const leadByPhone = new Map<string, string>();
     const customDataByLead = new Map<string, Record<string, unknown>>();
