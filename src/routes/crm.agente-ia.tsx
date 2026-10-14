@@ -132,11 +132,11 @@ function BrainPage() {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <AppSidebar />
-      <main className="min-w-0 flex-1 space-y-6 p-6">
+      <main className="min-w-0 w-full flex-1 space-y-6 p-6 md:ml-[272px]">
         <header><h1 className="flex items-center gap-2 text-2xl font-bold"><BrainCircuit /> Cérebro IA</h1>
           <p className="mt-2 text-sm text-muted-foreground">Base de conhecimento da Saúde Slim. Os agentes de atendimento são criados separadamente em Automações.</p>
         </header>
-        <section className="max-w-4xl rounded-lg border bg-card p-5">
+        <section className="w-full rounded-lg border bg-card p-5">
           <h2 className="mb-4 font-semibold">Adicionar conhecimento</h2>
           <div className="mb-4 flex flex-wrap gap-2">
             {([{ id: "text", label: "Informação", icon: FileText }, { id: "document", label: "Documento", icon: Upload }, { id: "url", label: "Link", icon: Link2 }, { id: "promotion", label: "Promoção", icon: Megaphone }] as const).map(option => (
@@ -154,16 +154,21 @@ function BrainPage() {
           {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
           {notice && <p className="mt-3 text-sm text-muted-foreground">{notice}</p>}
         </section>
-        <section className="max-w-4xl rounded-lg border bg-card p-5">
+        <section className="w-full rounded-lg border bg-card p-5">
           <h2 className="mb-2 font-semibold">Palavras proibidas</h2>
-          <p className="mb-3 text-xs text-muted-foreground">Termos que os agentes devem evitar. O filtro de saída ainda precisa ser conectado ao envio de mensagens.</p>
+          <p className="mb-3 text-xs text-muted-foreground">Termos que os agentes não devem usar. O bloqueio automático antes do envio ainda precisa ser integrado ao backend.</p>
           <div className="flex gap-2">
             <input aria-label="Nova palavra proibida" className="min-w-0 flex-1 rounded-md border bg-background p-2 text-sm" placeholder="Digite uma palavra ou expressão" value={newBlockedTerm} onChange={e=>setNewBlockedTerm(e.target.value)}/>
             <button type="button" onClick={addBlockedTerm} className="rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground">Adicionar</button>
           </div>
           <ul className="mt-3 space-y-2">{blockedTerms.map(item=><li key={item.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"><span>{item.term}</span><button type="button" aria-label={`Remover ${item.term}`} onClick={()=>removeBlockedTerm(item.id)}><Trash2 size={15}/></button></li>)}</ul>
         </section>
-        <section className="max-w-4xl rounded-lg border bg-card p-5">
+        <section className="w-full rounded-lg border bg-card p-5">
+          <h2 className="mb-2 font-semibold">Links autorizados</h2>
+          <p className="text-sm text-muted-foreground">Somente links ativos cadastrados abaixo poderão ser enviados pelos agentes. Links não cadastrados deverão ser bloqueados na etapa de envio. Cadastre-os em Adicionar conhecimento → Link.</p>
+          <ul className="mt-3 space-y-2">{sources.filter(source=>source.source_type==="url").map(source=><li key={source.id} className="rounded-md border p-3 text-sm"><strong>{source.title}</strong><div className="break-all text-xs text-muted-foreground">{source.url}</div><span className="text-xs">{source.enabled ? "Autorizado" : "Desativado"}</span></li>)}</ul>
+        </section>
+        <section className="w-full rounded-lg border bg-card p-5">
           <h2 className="mb-2 font-semibold">Fontes cadastradas ({sources.length})</h2>
           <p className="mb-4 text-xs text-muted-foreground">Armazenamento disponível. Indexação e busca RAG pelos agentes ainda estão em implementação.</p>
           {sources.length === 0 && <p className="py-4 text-sm text-muted-foreground">Nenhuma fonte adicionada.</p>}
