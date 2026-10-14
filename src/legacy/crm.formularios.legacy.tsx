@@ -78,7 +78,6 @@ function FormulariosPage() {
 
  const [editing, setEditing] = useState<FormRecord | null>(null);
  const [creating, setCreating] = useState(false);
- const [siteImport, setSiteImport] = useState(false);
  const [query, setQuery] = useState("");
 
  const filtered = useMemo(
@@ -116,9 +115,6 @@ function FormulariosPage() {
       </p>
      </div>
      <div className="flex items-center gap-2">
-      <Button variant="outline" size="sm" onClick={() => setSiteImport(true)}>
-       <Globe className="w-4 h-4 mr-1" /> Puxar do meu site
-      </Button>
       <Button onClick={() => { setCreating(true); createMut.mutate(); }} size="sm" disabled={createMut.isPending}>
        {createMut.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Plus className="w-4 h-4 mr-1" />} Novo formulário
       </Button>
@@ -178,14 +174,6 @@ function FormulariosPage() {
     </div>
    </main>
 
-   <SiteImportDialog
-    open={siteImport}
-    onOpenChange={setSiteImport}
-    onImported={() => {
-     qc.invalidateQueries({ queryKey: ["forms-list"] });
-     setSiteImport(false);
-    }}
-   />
 
    {editing && (
     <FormEditor
