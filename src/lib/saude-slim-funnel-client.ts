@@ -143,3 +143,79 @@ export async function renameSlimPipeline({data}:{data:{pipelineId:string;name:st
  if(!updated)throw new Error("Funil não encontrado.");
  return {ok:true};
 }
+
+/** Cria o funil e suas etapas padrão para a fonte do workspace ativo. */
+export async function createSlimFunnel({data}:{data:{crmSourceId:string;name:string}}):Promise<{pipelineId:string}> {
+  const {ws,role}=await ctx();requiresEditor(role);
+  const name=data.name?.trim();
+  if(!name||name.length>120)throw new Error("Informe um nome válido para o funil.");
+  const {data:source,error:sourceError}=await sb.from("crm_sources")
+    .select("id").eq("workspace_id",ws).eq("id",data.crmSourceId).maybeSingle();
+  if(sourceError||!source)throw new Error("Fonte do CRM inválida.");
+  const {data:existing,error:positionsError}=await sb.from("pipelines")
+    .select("position").eq("workspace_id",ws);
+  if(positionsError)throw new Error(positionsError.message);
+  const position=Math.max(0,...(existing??[]).map((v:any)=>Number(v.position??0)))+1;
+  const {data:created,error}=await sb.from("pipelines").insert({
+    workspace_id:ws,crm_source_id:source.id,name,position,
+  }).select("id").single();
+  if(error)throw new Error(error.message);
+  const pipelineId=created.id as string;
+  try{
+    const {error:linkError}=await sb.from("crm_source_funnels").insert({
+      workspace_id:ws,crm_source_id:source.id,pipeline_id:pipelineId,
+    });
+    if(linkError)throw new Error(linkError.message);
+    const stages=[
+      ["Novo lead","#3b82f6"],["Em contato","#8b5cf6"],["Qualificação","#06b6d4"],
+      ["Proposta","#f59e0b"],["Negociação","#ef4444"],["Venda realizada","#10b981"],
+      ["Perdida","#6b7280"],
+    ].map(([name,color],i)=>({
+      workspace_id:ws,pipeline_id:pipelineId,name,color,position:i+1,
+    }));
+    const {error:stageError}=await sb.from("pipeline_stages").insert(stages);
+    if(stageError)throw new Error(stageError.message);
+  }catch(e){
+    await sb.from("pipelines").delete().eq("workspace_id",ws).eq("id",pipelineId);
+    throw e;
+  }
+  return {pipelineId};
+}
+
+/** Cria lead diretamente no CRM Saúde Slim. Bots/eventos exigem runtime autorizado. */
+export async function createSlimLead({data}:{
+  data:{crmSourceId:string;pipelineId:string;stageId:string;name:string;
+    email?:string;phone?:string;value?:number}
+}):Promise<{id:string;leadId:string}> {
+  const {ws,role}=await ctx();requiresEditor(role);
+  const name=data.name?.trim();
+  if(!name||name.length>200)throw new Error("Nome do cliente inválido.");
+  const [sourceResult,stageResult]=await Promise.all([
+    sb.from("crm_sources").select("id").eq("workspace_id",ws).eq("id",data.crmSourceId).maybeSingle(),
+    sb.from("pipeline_stages").select("id,pipeline_id")
+      .eq("workspace_id",ws).eq("id",data.stageId).eq("pipeline_id",data.pipelineId).maybeSingle(),
+  ]);
+  if(sourceResult.error||!sourceResult.data||stageResult.error||!stageResult.data)
+    throw new Error("Fonte ou etapa indisponível para sua empresa.");
+  const {data:created,error}=await sb.from("leads").insert({
+    workspace_id:ws,crm_source_id:data.crmSourceId,pipeline_id:data.pipelineId,
+    stage_id:data.stageId,name,email:data.email?.trim()||null,phone:data.phone?.trim()||null,
+    value:Number.isFinite(Number(data.value))?Number(data.value):0,
+    source:"cadastro_manual_saude_slim",status:"active",
+  }).select("id").single();
+  if(error)throw new Error(error.message);
+  return {id:created.id,leadId:created.id};
+}
+
+export async function setDefaultSlimSource({data}:{data:{crmSourceId:string}}):Promise<{ok:true}>{
+  const {ws,role}=await ctx();requiresEditor(role);
+  const {data:source,error:sourceError}=await sb.from("crm_sources").select("id")
+    .eq("workspace_id",ws).eq("id",data.crmSourceId).maybeSingle();
+  if(sourceError||!source)throw new Error("Fonte indisponível.");
+  const {error:resetError}=await sb.from("crm_sources").update({is_default:false}).eq("workspace_id",ws);
+  if(resetError)throw new Error(resetError.message);
+  const {error}=await sb.from("crm_sources").update({is_default:true})
+    .eq("workspace_id",ws).eq("id",data.crmSourceId);
+  if(error)throw new Error(error.message);
+  return {ok:true};
+}
