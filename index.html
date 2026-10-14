@@ -160,8 +160,9 @@
       if(state.mode==="signup"){
         if(name.length<3)throw new Error("Informe o nome do responsável.");
         var reg=await http(BASE+"/auth/v1/signup",{method:"POST",headers:publicHeaders(),body:JSON.stringify({email:email,password:password,data:{full_name:name,signup_source:"saude_slim"}})});
-        if(!reg.access_token){state.notice="Cadastro recebido. Se necessário, confirme seu e-mail antes de entrar.";state.mode="login";return}
-        saveSession(reg);
+        if(reg.session&&reg.session.access_token)saveSession(reg.session);
+        else if(reg.access_token)saveSession(reg);
+        else {state.notice="Cadastro recebido. Se necessário, confirme seu e-mail antes de entrar.";state.mode="login";return}
       }else{
         var session=await http(BASE+"/auth/v1/token?grant_type=password",{method:"POST",headers:publicHeaders(),body:JSON.stringify({email:email,password:password})});
         saveSession(session);
