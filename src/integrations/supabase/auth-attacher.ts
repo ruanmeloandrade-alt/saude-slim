@@ -1,4 +1,4 @@
-import { createMiddleware } from '@tanstack/react-start'
+import { createMiddleware } from '@tanstack/start-client-core'
 import { supabase } from './client'
 
 export const attachSupabaseAuth = createMiddleware({ type: 'function' }).client(
