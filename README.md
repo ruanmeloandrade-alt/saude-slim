@@ -5,8 +5,10 @@ Repositório exclusivo da Saúde Slim. **Não confundir o aplicativo completo co
 ## Estado desta branch
 
 - A interface original TanStack Start continua no projeto, com seus componentes, páginas, estilos e navegação.
-- As páginas originais de **Histórico de vendas** (`src/routes/saude-slim.tsx`) e **Pedidos** (`src/routes/pedidos.tsx`) foram adaptadas para obter e salvar dados diretamente no Supabase exclusivo, preservando o layout React. Consultas e operações usam a sessão autenticada, associação ao workspace e RLS.
-- Essas duas páginas **ainda não foram homologadas em navegador com uma compilação desta branch**.
+- Páginas originais adaptadas para obter dados do Supabase exclusivo: **Histórico de vendas** (`src/routes/saude-slim.tsx`), **Pedidos** (`src/routes/pedidos.tsx`), **Estoque** (`src/routes/crm.estoque.tsx`) e **Clientes** (`src/routes/crm.leads.tsx`). O componente original de **Produtos/catálogos** (`src/legacy/crm.produtos.legacy.tsx`) foi integrado a adaptadores autenticados de CRUD e importação. O design desses módulos foi mantido.
+- `src/hooks/use-permissions.ts` consulta o vínculo real no Supabase e restringe o acesso aos módulos do proprietário/administrador enquanto a matriz granular não for portada.
+- A inicialização automática de pixel e provisionamento vinculados à MktOn foi removida desta branch.
+- As telas acima **ainda não foram homologadas em navegador com uma compilação desta branch**. Dependências residuais de outros componentes podem chamar funções legadas.
 - Outros módulos legados, automações, Inbox e integrações utilizam `createServerFn` ou rotas de API e **continuam dependendo do servidor ou de uma adaptação para Supabase Edge Functions**.
 - O Supabase exclusivo é o projeto `vyzvfcgpjjzvcjegzzza`; o banco contém apenas parte das tabelas esperadas pelo sistema original.
 - Esta branch **não está publicada em** `slimesaude.com`. A publicação atual na branch `main` continua sendo a interface estática simplificada.
