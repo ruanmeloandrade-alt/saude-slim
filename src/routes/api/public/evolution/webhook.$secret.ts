@@ -474,7 +474,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
               let resolvedLeadId: string | null = null;
               let freshInboundForLead = !msg.key?.fromMe;
               if (!isGroup && !unresolvedLid) {
-                const { data: leadMatch } = await supabaseAdmin
+                let { data: leadMatch } = await supabaseAdmin
                   .from("leads")
                   .select("id, name, source, status, phone_normalized, custom_data, pipeline_id, stage_id")
                   .eq("workspace_id", sess.workspace_id)
