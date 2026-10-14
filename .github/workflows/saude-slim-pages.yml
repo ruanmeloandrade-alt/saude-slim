@@ -52,23 +52,43 @@ jobs:
           SUPABASE_PUBLISHABLE_KEY: "sb_publishable_2CtVgMTogdtGT_hpxFs-ZQ_Wyul6NVX"
           PUBLIC_APP_URL: "https://slimesaude.com"
           APP_PUBLIC_URL: "https://slimesaude.com"
-      - name: Preparar HTML e assets para GitHub Pages
+      - name: Gerar HTML da interface a partir do build Node
         shell: bash
+        env:
+          PORT: "3100"
+          HOST: "127.0.0.1"
+          SUPABASE_PROJECT_ID: "vyzvfcgpjjzvcjegzzza"
+          SUPABASE_URL: "https://vyzvfcgpjjzvcjegzzza.supabase.co"
+          SUPABASE_PUBLISHABLE_KEY: "sb_publishable_2CtVgMTogdtGT_hpxFs-ZQ_Wyul6NVX"
+          PUBLIC_APP_URL: "https://slimesaude.com"
         run: |
           set -euo pipefail
           test -d .output/public
-          if [ ! -f .output/public/index.html ] && [ -f .output/public/_shell.html ]; then
-            cp .output/public/_shell.html .output/public/index.html
+          node .output/server/index.mjs > /tmp/saude-slim-ssr.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          READY=0
+          for attempt in $(seq 1 35); do
+            if curl --fail --silent --show-error --max-time 4 "http://127.0.0.1:3100/auth" > /tmp/saude-slim-auth.html; then
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$READY" -ne 1 ] || ! grep -qi '<html' /tmp/saude-slim-auth.html; then
+            echo "::error::O servidor compilado não gerou HTML para /auth."
+            tail -n 120 /tmp/saude-slim-ssr.log
+            exit 1
           fi
-          test -s .output/public/index.html
+          cp /tmp/saude-slim-auth.html .output/public/index.html
           if ! find .output/public -type f \( -name '*.js' -o -name '*.css' \) -print -quit | grep -q .; then
-            echo "::error::Build sem JS/CSS. Não publicar apenas documentação ou HTML vazio."
+            echo "::error::Build sem JS/CSS."
             exit 1
           fi
           cp .output/public/index.html .output/public/404.html
           printf 'slimesaude.com\n' > .output/public/CNAME
           touch .output/public/.nojekyll
-          echo "Shell, CNAME e assets verificados para publicação da interface."
+          echo "HTML, assets e CNAME verificados. Backend/server functions não são hospedados pelo Pages."
       - name: Enviar artefatos para GitHub Pages (somente main)
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
