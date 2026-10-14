@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
 import {
   Search,
   ArrowUpDown,
@@ -22,14 +21,16 @@ import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { DuplicatesPanel } from "@/components/leads/DuplicatesPanel";
 import { formatBRL, timeAgo } from "@/lib/crm-mock";
-import { getLeadDetail, listLeads, type LeadDetailResponse, type LeadListRow } from "@/lib/leads.functions";
-import { createLead, createCrmSource, listCrmSources, listAllPipelineStages } from "@/lib/crm.functions";
+import type { LeadDetailResponse, LeadListRow } from "@/lib/leads.functions";
+import { loadSlimLeads, loadSlimLeadDetail } from "@/lib/saude-slim-leads-client";
+import { createSaudeSlimLead, createSaudeSlimSource, listSaudeSlimSources, listSaudeSlimPipelineStages } from "@/lib/saude-slim-orders-client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/crm/leads")({
+  ssr: false,
   head: () => ({
     meta: [
       { title: "Clientes · Saúde Slim" },
@@ -47,12 +48,12 @@ type SortKey = "name" | "value" | "stage" | "createdAt";
 
 function LeadsPage() {
   const navigate = useNavigate();
-  const loadLeads = useServerFn(listLeads);
-  const loadLeadDetail = useServerFn(getLeadDetail);
-  const createLeadFn = useServerFn(createLead);
-  const createSourceFn = useServerFn(createCrmSource);
-  const loadSources = useServerFn(listCrmSources);
-  const loadPipelines = useServerFn(listAllPipelineStages);
+  const loadLeads = loadSlimLeads;
+  const loadLeadDetail = loadSlimLeadDetail;
+  const createLeadFn = createSaudeSlimLead;
+  const createSourceFn = createSaudeSlimSource;
+  const loadSources = listSaudeSlimSources;
+  const loadPipelines = listSaudeSlimPipelineStages;
 
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState("all");
@@ -80,7 +81,7 @@ function LeadsPage() {
 
   const leadsQuery = useQuery({
     queryKey: ["leads", "list"],
-    queryFn: () => loadLeads({ data: {} }),
+    queryFn: loadLeads,
     staleTime: 30_000,
   });
 
