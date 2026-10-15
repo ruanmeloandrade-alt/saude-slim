@@ -6,7 +6,7 @@
   "scripts": {
     "predev": "node scripts/apply-salesbot-save-contract.mjs",
     "dev": "vite dev",
-    "prebuild": "node scripts/apply-salesbot-save-contract.mjs && node --experimental-strip-types scripts/test-salesbot-save-contract.mjs && npm run preflight:slim && node scripts/check-route-tree-parity.mjs",
+    "prebuild": "node scripts/apply-salesbot-save-contract.mjs && node --experimental-strip-types scripts/test-salesbot-save-contract.mjs && node scripts/audit-saude-slim-menu.mjs && npm run preflight:slim && node scripts/check-route-tree-parity.mjs",
     "build": "vite build",
     "prebuild:dev": "node scripts/apply-salesbot-save-contract.mjs",
     "build:dev": "vite build --mode development",
