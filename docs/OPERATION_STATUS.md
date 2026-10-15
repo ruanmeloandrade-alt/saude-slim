@@ -1,64 +1,72 @@
 # Saúde Slim: semáforo de produção
 
-Checkpoint: 15/10/2026, retomada das pendências anteriores. Último código publicado previamente confirmado: f352e12, checkpoint 2d59a65. O código de métricas/marca desta branch ainda aguarda build/deploy; não declarar publicado antes do resultado.
-Destino exclusivo: ruanmeloandrade-alt/saude-slim, branch restauracao/sistema-completo-20261014, Supabase vyzvfcgpjjzvcjegzzza, serviço saude-slim-web. Branch de trabalho fix/slim-erp-final-20261015.
+Checkpoint: 15/10/2026, após publicação das métricas reais e revisão dos textos de marca.
+Código publicado e conferido: `8b78ae02617a0b33e728b9962358b455ab0d540e`.
+Railway: deployment `150dd28c-a58a-4900-b6eb-dc1c8de8fa8e`, SUCCESS; healthcheck aprovado em `2026-10-15T16:11:37Z`. Consulta posterior: Online, uma réplica em execução, nenhuma réplica travada, nenhum trabalho pendente naquele momento. Este checkpoint é documental e não altera o código do deployment verificado.
+
+Destino exclusivo: ruanmeloandrade-alt/saude-slim, branch restauracao/sistema-completo-20261014, Supabase vyzvfcgpjjzvcjegzzza, serviço saude-slim-web. Branch desta rodada: fix/slim-erp-final-20261015.
 
 ## Legenda
 
-🟢 Correção técnica delimitada publicada e verificada no nível indicado. 🟡 Parcial/em validação. 🔴 Pendente/bloqueada. Não confundir build/healthcheck ou tabelas existentes com homologação funcional. Não há trabalho do assistente em segundo plano após um checkpoint.
+🟢 Correção técnica delimitada publicada e verificada no nível indicado. 🟡 Parcial ou aguardando homologação. 🔴 Pendente/bloqueada. Build, healthcheck e leitura de catálogo não substituem navegação autenticada nem prova de envio de mensagens.
 
-## Prioridade desta rodada
+## Resultado desta rodada
 
-O usuário pediu concluir as pendências já aprovadas e só depois preparar/apresentar o escopo dos novos ajustes, aguardando novo OK. Os novos ajustes não serão misturados com a implementação antiga.
-
-## Estado do escopo aprovado
-
-| Frente | Estado | Evidência e pendência |
+| Entrega delimitada | Estado | Evidência |
 |---|---|---|
-| Interface, menu recolhível, Gestão ERP, posição de Disparo, Cérebro alinhado | 🟡 Publicados anteriormente | Correções f352e12 preservadas; navegação autenticada integral ainda não homologada. |
-| Centavos em Produtos e custo de fornecedor | 🟡 Publicados anteriormente | 0,01 / 19,99 / 1.234,56 verificados no banco com rollback; falta checkout/documento completo. |
-| Cadastro de fornecedores | 🟡 Publicado anteriormente | Origem manual própria e confirmação de alteração corrigidas; cenários integrais de tela pendentes. |
-| Checkout consistente e multi-item | 🔴 BLOQUEADO NO BANCO | Migration slim_atomic_erp_orders_ledger rejeitada pela segurança da ferramenta. slim_orders não existe; nenhuma implementação de checkout declarada concluída. |
-| Pedido → Histórico → Dashboard → Estoque | 🔴 NÃO CORRIGIDO | Dois pedidos com itens 8,50/7,39 e um registro sem item de 101 identificados em leitura. Estoque/pedidos não alterados; reconciliação exige contrato transacional autorizado. |
-| Copiloto: erro antigo de membership | 🟡 Código corrigido anteriormente | Consumidor da RPC revogada corrigido sem mudar privilégios. Resposta real e presença em todas as páginas não comprovadas; presença global é pedido novo aguardando próxima rodada. |
-| Métricas de SalesBots e relatórios | 🟡 Código em validação | Execução finished real identificada. Leitor paginado, alias local/canônico, períodos, histórico e regra de atribuição implementados. Falta build/deploy/interface. |
-| PDF por pedido e emissão fiscal | 🔴 NÃO ENTREGUE | Dependência do pedido persistente ainda bloqueada. Nenhum PDF comercial apresentado como NF autorizada. |
-| Confirmação de envio do documento WhatsApp | 🔴 NÃO ENTREGUE | Nenhum documento nem mensagem foi enviado. |
-| Marca Saúde Slim nos textos visíveis | 🟡 Código em validação | Parser altera somente contextos de apresentação reconhecidos; 17 testes locais. URLs/identificadores/contratos e históricos preservados. |
-| Configurações segurança/convites | 🔴 BLOQUEIO ANTERIOR | Pacote anteriormente rejeitado permanece não aplicado e não foi reexecutado. |
+| Contadores reais na listagem dos SalesBots | 🟢 Código publicado | UUID e local_id associados às execuções; total iniciado e sessões running/waiting_timer/waiting_message; atualização em dez segundos. Não grava nem altera a definição dos bots. |
+| Relatórios de bots/IA | 🟢 Código publicado | Geral/Bots/Agentes com registros reais e histórico, períodos 7/30/90 dias, falhas distintas de zero. Ausência da fonte de grupos aparece como indisponível, não como grupo inexistente. |
+| Remoção de indicadores inventados | 🟢 Publicado | Retirados 68% de engajamento, 94% de sucesso e conversões estimadas a partir de 25% das execuções, inclusive no endpoint herdado. Objetivos IA não equivalem a vendas. |
+| Marca Saúde Slim nos textos reconhecidos | 🟢 Publicado no recorte | Build alterou 297 trechos de apresentação em 109 arquivos. Preservou identificadores, enum/provider mkton, URLs, e-mails, seletores, SQL e contratos. Não alterou conversas históricas ou textos armazenados de usuários. A varredura é sintática, não homologação visual de todas as telas. |
+| Checkout e registro transacional de pedidos | 🔴 NÃO CONCLUÍDO | A aplicação de slim_atomic_erp_orders_ledger foi bloqueada pela segurança da ferramenta. A alteração não chegou ao banco e não foi implantada por outro meio. |
+| Baixa de estoque/histórico/Dashboard por pedido | 🔴 NÃO CORRIGIDO | Dois pedidos com itens e um registro incompleto foram identificados, sem qualquer ajuste de estoque ou reconciliação persistida. |
 
-## Semáforo dos módulos
+## Métricas e validação efetivamente conferidas
 
-| Área | Estado | Situação |
+- Consulta somente leitura aos registros existentes: bot Teste (bot_iy77l02) possui uma execução iniciada e concluída, zero sessões ativas e zero compras atribuídas pela regra documentada. Novo bot tem zero execuções. Não foram criadas execuções para preencher indicadores.
+- Regra de conversão: vínculo comprou realmente registrado para o mesmo lead, atribuído ao último SalesBot iniciado até trinta dias antes da compra; uma conversão por execução. É uma regra explícita de atribuição, não prova de causalidade nem pagamento. O problema de cliente/pedido duplicado continua separado e não é disfarçado por essa regra.
+- As sessões ativas representam a situação atual. O período filtra o início das execuções. O histórico mostra cem últimas, com total completo separado. Leituras são paginadas por ID, limitadas explicitamente a 200 mil registros por fonte; falha/limite não vira total parcial apresentado como completo.
+- **54 verificações novas passaram no build final:** 27 de métricas/paginação, 17 da transformação de marca e dez de integração sobre fontes reais. Todas as regressões anteriores mantidas no prebuild também passaram. Testes com dados controlados não são homologação de navegador.
+- Verificação de catálogo confirmou SELECT para authenticated nas fontes de métricas; não foi apresentada como teste de navegação com token real. Nenhuma credencial de usuário foi lida ou trocada.
+- Build e healthcheck passaram no primeiro deployment desta rodada. Não houve teste ponta a ponta de WhatsApp/OpenAI, nem teste de interface autenticada.
+
+## Bloqueio do ERP e registros antigos
+
+A ferramenta rejeitou a única tentativa de aplicar a migration de pedidos. Duas consultas posteriores somente leitura confirmaram: slim_orders inexistente e migration não registrada. O SQL bloqueado não foi colocado no repositório, no prebuild nem em uma implantação alternativa.
+A aprovação do usuário para o escopo anterior já existe; o impedimento deste checkpoint é a execução da alteração pelo conector, não falta de nova autorização de escopo.
+O código antigo continua criando um lead active e um vínculo de produto em requisições separadas, sem baixa de estoque. Foram observados pedidos com item/quantidade/valor de 8,50 e 7,39, vinculados ao produto TZ TESTE, com estoque 950. Um terceiro registro tem valor 101 sem item. Não foram inventados item, forma de pagamento ou cliente canônico; nenhum registro foi modificado.
+O checkout multi-item, confirmação atômica/idempotente, baixa e estorno, reconciliação, PDF por pedido e envio opcional continuam pendentes. Não declarar documento comercial como nota fiscal autorizada.
+
+## Semáforo do escopo aprovado
+
+| Frente | Estado funcional | Situação |
 |---|---|---|
-| Agentes IA | 🟡 | Cofre e autorização corrigidos antes; atendimento real não homologado. |
-| Histórico de Vendas | 🟡 | Paginação/status corrigidos antes; ausência dos pedidos relatados permanece aberta. |
-| Dashboard detalhada | 🟡 | Fontes e agregações corrigidas antes; consistência ERP não entregue, coleta real não homologada. |
-| Gestão ERP: Pedidos | 🔴 | Falta transação, vínculo consistente ao cliente, baixa/estorno e checkout. |
-| Gestão ERP: Fornecedores | 🟡 | Correção técnica anterior preservada. |
-| Gestão ERP: Estoque | 🔴 | Baixa por pedido ainda não implementada; cadastro manual não equivale a movimentação. |
-| Gestão ERP: Produtos | 🟡 | Precisão corrigida anteriormente, fluxo comercial pendente. |
-| CRM: Disparo em massa | 🟡 | Fila/progresso publicados antes; entrega real não homologada. |
-| CRM: Funil | 🟡 | Automação de etapa publicada antes; drawer/mini-Inbox novo não implementado. |
-| CRM: Clientes | 🟡 | Duplicação ao abrir conversa agora relatada; registrada para próximo escopo, não corrigida aqui. |
-| CRM: Inbox | 🟡 | Controles anteriores publicados; novas falhas de anexos/etiquetas/grupo/áudio/compositor não implementadas nesta rodada. |
-| CRM: Automações | 🟡 | Métricas novas em validação; grupos/workflow avançados e entrega real pendentes. |
-| CRM: Cérebro IA | 🟡 | Layout corrigido antes; ingestão/RAG completo não homologados. |
-| CRM: Públicos | 🟡 | Filtros/contagem publicados antes; validação real pendente e filtro legado de silêncio ainda usa updated_at. |
-| Configurações gerais | 🔴 | Validações/UI anteriores publicadas, backend de segurança/convites permanece bloqueado. |
-| Integrações | 🟡 | Cofre corrigido; contratos individuais e chamadas reais não inteiramente homologados. |
+| Interface, menu recolhível, Gestão ERP, Disparo e Cérebro alinhado | 🟡 Publicado antes | f352e12 preservado; homologação integral das janelas ainda pendente. |
+| Precisão monetária | 🟡 Publicado antes | Cadastro e custo com centavos verificados antes; checkout/documento completo não entregue. |
+| Fornecedores | 🟡 Publicado antes | Origem manual própria, edição e custo corrigidos; cenários de tela ainda não homologados integralmente. |
+| Checkout | 🔴 Bloqueado | Contrato transacional não aplicado. |
+| Pedido → Histórico → Dashboard → Estoque | 🔴 Pendente | Nenhuma baixa automática ou reconciliação foi executada nesta rodada. |
+| Copiloto: erro antigo de membership | 🟡 Código corrigido antes | Resposta real e presença em todas as páginas não homologadas; presença global e novas ações estão na próxima solicitação ainda não iniciada. |
+| Métricas e relatórios | 🟡 Publicados, falta homologação UI | Correção técnica acima publicada; grupos/integrações avançadas não viram concluídos por causa desse relatório. |
+| Documento PDF e emissão fiscal | 🔴 Pendente | Dependem de pedido persistente e, para emissão fiscal, integração fiscal válida. |
+| Envio opcional do documento no WhatsApp | 🔴 Pendente | Nenhum documento foi enviado. |
+| Marca | 🟡 Varredura publicada | 297 trechos alterados; textos dinâmicos/históricos não renomeados às cegas. |
+| Configurações de segurança/convites | 🔴 Bloqueio anterior | Pacote anteriormente rejeitado permanece não aplicado e não foi reexecutado. |
 
-## Validação desta retomada
+## Pendências dos demais módulos preservadas
 
-Leituras GitHub e catálogo/dados de produção realizadas. A tentativa de migration ERP foi bloqueada antes de aplicar; consulta somente leitura confirmou tabela inexistente e ausência no histórico de migrations. Nada desse SQL foi incluído em publicação automática ou executado por outro caminho.
-27 testes locais de métricas e 17 de marca passaram. São testes de código/paginação com transporte simulado, sem mensagens ou mutações de banco. Integração de fontes reais e regressões completas ainda aguardam build.
-Não houve modificação de pedido, estoque, usuário, chave, conversa, DNS ou conector Evolution. Não foram executados testes de navegador autenticado ou entrega de mensagens.
+Histórico/Dashboard: paginação, classificação e cinco fontes corrigidas anteriormente; coerência com pedidos e coleta real não homologadas.
+Públicos/Disparos: fila/filtros/progresso/cancelamento publicados antes, entrega real ainda não homologada; silêncio legado usa updated_at.
+CRM/Funil/Clientes/Inbox: controles anteriores preservados; relatos novos de duplicação e perda de histórico registrados, não alterados nesta rodada.
+Automações: etapas e reserva de execução anteriores preservadas; grupos/workflow/Meta e cenários completos ainda pendentes.
+Cérebro IA: layout/armazenamento preservados; ingestão/RAG/bloqueio de saída não homologados integralmente.
+Integrações/Configurações: cofre/validações/indicação de segurança preservados, backend de segurança e convites ainda bloqueado.
 
-## Pedidos novos preservados para a próxima aprovação
+## Novos requisitos, separados da implementação anterior
 
-Copiloto em todas as páginas e ações previamente aprovadas; endereço/frete; conversa sem duplicação/perda de histórico; anexos; remoção do botão enviar formulário; etiquetas/grupos; indicadores coloridos; drawer com mini-Inbox; compositor livre durante envio; áudio/transcrição; IA somente por prompt. Nenhum deles foi iniciado nesta rodada. Escopo detalhado/aprovação devem vir depois do fechamento das pendências antigas, como solicitado.
+Copiloto global e ações com aprovação; endereço/frete; conversa sem duplicação ou perda de histórico; anexos; remoção do botão de formulário; etiquetas/grupos; indicadores coloridos; drawer com mini-Inbox; compositor livre durante envio; áudio/transcrição; IA por prompt. Recebidos e registrados, SEM implementação nesta rodada. Como o escopo antigo ainda não está concluído, não foi apresentada a próxima rodada como liberada para execução.
 
 ## Continuidade
 
-Escopo corrente: docs/tasks/2026-10-15-slim-erp-final.md. Preservar documentos anteriores de interface, preços, fornecedores, Pedidos, Públicos, Configurações e tracking. Próximo gate: resultado de build/deploy das métricas; depois registrar resultado real sem transformar ERP bloqueado em conclusão.
-Sem main, GitHub Actions, Vercel, Lovable, projeto original MktOn/Harpia/MCP ou alterações de credenciais.
+Documento detalhado: docs/tasks/2026-10-15-slim-erp-final.md. Não marcar o sistema finalizado nem pedir aprovação da próxima implementação como se o ERP estivesse pronto. O semáforo registra o estado verificado, não trabalho do assistente em segundo plano.
+Nenhuma mensagem de teste, alteração de estoque/pedido, criação de cliente, mudança de chave, DNS, autenticação ou conexão Evolution. Preservados main e projetos originais MktOn/Harpia/MCP. Sem GitHub Actions, Vercel ou Lovable.

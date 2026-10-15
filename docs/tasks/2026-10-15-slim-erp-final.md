@@ -1,51 +1,56 @@
 # Saúde Slim: fechamento do escopo anterior
 
-Checkpoint: 🟡 métricas/identidade prontas para validação de build; 🔴 ERP bloqueado no banco, não concluído. Base 2d59a65 (código anterior f352e12). Branch fix/slim-erp-final-20261015. Destino restauracao/sistema-completo-20261014. Somente ruanmeloandrade-alt/saude-slim, Supabase vyzvfcgpjjzvcjegzzza, serviço saude-slim-web.
+Checkpoint de 15/10/2026: métricas reais e revisão de textos publicadas em 8b78ae02617a0b33e728b9962358b455ab0d540e. Deployment 150dd28c-a58a-4900-b6eb-dc1c8de8fa8e SUCCESS, healthcheck aprovado 16:11:37 UTC. ERP continua bloqueado e NÃO foi concluído.
+Base 2d59a65; branch fix/slim-erp-final-20261015; destino restauracao/sistema-completo-20261014. Somente ruanmeloandrade-alt/saude-slim, Supabase vyzvfcgpjjzvcjegzzza e serviço saude-slim-web.
 
-## Ordem recebida
+## Ordem e limite desta execução
 
-Concluir as pendências antigas primeiro. Somente depois preparar o escopo completo da próxima rodada e aguardar novo OK. Os pedidos novos de Copiloto/Inbox/funil/áudio/prompt NÃO foram implementados. Os acréscimos de endereço de entrega/frete também ficam na próxima aprovação; não confundir com o checkout anterior já aprovado.
+Concluir pendências antigas primeiro. Somente depois preparar o escopo completo da próxima rodada e aguardar novo OK. Pedidos novos de Copiloto/Inbox/funil/áudio/prompt NÃO foram implementados. Endereço de entrega/frete também ficam na próxima aprovação; não confundir com o checkout anterior já aprovado.
 
-## Bloqueio novo de ERP
+## ERP: operação rejeitada e nenhuma aplicação
 
-Foi tentada uma única aplicação da migration slim_atomic_erp_orders_ledger pelo conector Supabase. A ferramenta respondeu: "Esta ferramenta foi bloqueada pelas configurações de segurança da OpenAI. Verifique novamente o que está enviando."
-Consulta somente leitura posterior confirmou slim_orders inexistente e migration ausente no histórico. Nenhuma tabela, pedido, movimentação, documento, permissão, chave ou autenticação foi alterada por essa tentativa.
-Não repetir o mesmo pacote por partes, trocar identidade/serviço, publicar SQL em prebuild ou usar outro caminho para contornar o bloqueio. O SQL não está nesta branch nem em um caminho de implantação automática. Continuam não aplicados os pacotes de segurança/convites anteriormente bloqueados.
+Houve uma tentativa de apply_migration para slim_atomic_erp_orders_ledger. Retorno: "Esta ferramenta foi bloqueada pelas configurações de segurança da OpenAI. Verifique novamente o que está enviando."
+Consultas somente leitura posteriores confirmaram slim_orders inexistente e migration ausente no histórico. Nenhuma tabela/pedido/movimentação/documento/privilégio foi alterado por essa tentativa. O pacote rejeitado não foi repetido por partes, outra identidade, serviço, SQL de prebuild ou implantação alternativa. Não está nesta branch nem em caminho de execução automática.
+O bloqueio anterior de segurança/convites também permanece. Não dizer que a aprovação de escopo do usuário está faltando; ela já existe.
 
-Consequência funcional: checkout atômico, múltiplos itens efetivamente confirmados, baixa/estorno de estoque, histórico financeiro por pedido, documento por pedido e envio opcional permanecem NÃO concluídos. Não trocar a tela por uma fachada que anuncia sucesso sem persistência. Não marcar venda só pelo nome da etapa.
+## Reconciliação: somente diagnóstico
 
-## Reconciliação somente leitura
+Schema sem pedido/itens/movimentações. /pedidos cria lead active source=pedido_saude_slim e depois lead_products em requisição separada; Histórico filtra won. Não há baixa de estoque nessa sequência.
+Dois registros têm item/sold_at e valores 8,50/7,39, quantidade um, produto TZ TESTE com estoque 950. Outro registro tem valor 101 sem item. Nenhum foi reconciliado, unido a outro cliente por nome, marcado como pago ou usado para baixar estoque. Nenhum dado faltante foi inventado.
+O fechamento exige transação, idempotência, bloqueio concorrente de estoque, snapshot, pagamento declarado e estorno único. Atualizações soltas de saldo/status não substituem isso. O checkout, histórico ERP, estoque, PDF por pedido e envio opcional permanecem pendentes. Nenhum PDF comercial foi apresentado como NF autorizada.
 
-O schema atual não possui pedidos/itens/movimentações. O código cria lead active com source=pedido_saude_slim e depois um vínculo lead_products em outra requisição. O Histórico filtra won. Não há trigger de baixa de estoque.
-Na consulta foram identificados dois registros completos com item/sold_at, valores 8,50 e 7,39 e quantidade um, vinculados ao produto TZ TESTE com estoque 950. Outro registro tem valor 101 e nenhum item vinculado. Não foram inferidos cliente canônico, pagamento ou dados faltantes. Nenhum desses registros foi reconciliado/escrito; estoque permaneceu inalterado.
-O fechamento posterior precisa de contrato transacional idempotente, snapshot e auditoria antes de mexer nos registros antigos, e não de atualizações soltas em leads/estoque.
+## Métricas reais entregues
 
-## Métricas implementadas, independentes do bloco acima
+Listagem agora consulta salesbot_runs e associa UUID/local_id, em vez de ler os contadores vazios da definição do bot. Conta iniciadas/concluídas/interrompidas/falhas e os estados ativos reais running/waiting_timer/waiting_message, sem regravar definição ou alterar atendimento.
+A consulta dos dados existentes confirmou Teste: uma iniciada/concluída, zero ativa, zero compra atribuída; Novo bot: zero iniciadas. Há logs reais de início manual, envio e encerramento. Não foram criadas execuções fictícias.
+Leitor com paginação por ID, workspace obrigatório, limite explícito e erro sem retorno parcial. Estado ativo representa agora, período filtra início. Histórico visível até cem últimas com total completo separado.
+Conversão: compra kind=comprou realmente registrada, atribuída à última execução para o mesmo lead nos trinta dias anteriores; uma por execução. Critério de atribuição explícito, não prova causal, pagamento ou reconciliação ERP. Concluir bot não vira venda.
+Relatórios Geral/Bots/Agentes mostram registros, objetivos IA e mensagens aceitas, não estimativas. Grupos sem tabela aparecem indisponíveis; engajamento fica não medido. As constantes 68%/94% e estimativa de conversões de 25% foram retiradas inclusive do endpoint herdado. Dados CRM são rotulados como oportunidades, não recebimento de pedidos.
+Atualização em dez segundos com tela aberta. Cliente autenticado verifica identidade/empresa/vínculo; nenhum leitor usa supabaseAdmin ou altera dados.
 
-Fontes verificadas: salesbots, salesbot_runs, lead_products, conversation_agent_runs, whatsapp_web_messages e pipeline_stages. Consulta de produção mostrou uma execução finished do bot Teste (local_id bot_iy77l02), com log de envio e encerramento. A listagem lia campos de definição sem contadores, por isso exibia zero. Grupos não têm tabela operacional no banco consultado; não retornar zero como se a fonte existisse.
+## Marca
 
-- Uma camada compartilhada calcula execuções iniciadas/concluídas/falhas/interrompidas, estados ativos reais running/waiting_timer/waiting_message e vínculo entre UUID e local_id.
-- Leitura completa por chave de ID, workspace obrigatório, erro explícito em vez de total parcial, limite de segurança de 200 mil registros por fonte.
-- Sessões ativas representam agora; o período filtra início de execuções. Histórico visível até cem últimas, total calculado sobre todas as execuções lidas.
-- Conversão corresponde ao vínculo comprou realmente registrado, atribuído ao último início de SalesBot para o mesmo lead até trinta dias antes da compra, uma conversão por execução. É uma regra explícita de atribuição, não causalidade nem confirmação de recebimento. Não resolve a inconsistência de pedidos/estoque e não junta leads duplicados.
-- Relatórios Geral/Grupos/Bots/Agentes agora têm conteúdo concreto. Grupo indisponível e engajamento não medido são explícitos. Mensagens exigem saída com status de aceite, período e destino de grupo quando aplicável. Contador de objetivos da IA não é chamado de venda.
-- Foram removidas as constantes 68% e 94% e a estimativa de conversões por 25% do contador, inclusive do endpoint herdado de grupos.
-- Atualização de métricas em dez segundos com tela aberta, sem gravar definição/fluxo ou mudar a conversa. Somente cliente autenticado do usuário; sem supabaseAdmin/credencial privilegiada nos leitores.
+Parser TypeScript revisou 297 trechos de apresentação em 109 arquivos durante o build. Atua em JSX, atributos de apresentação, mensagens de erro/toast, rótulos e prompts reconhecidos. Preserva URLs/e-mails/seletores/SQL/nomes de função/enum/provider/contratos de API. Não edita históricos ou dados de usuários no banco. Nenhuma afirmação de que todas as telas foram visitadas.
 
-## Identidade visível
+## Testes e publicação comprovados
 
-Transformação pelo parser TypeScript em textos JSX, atributos de apresentação, mensagens de erro/toast, rótulos e prompts reconhecidos. Identificadores técnicos, enum/provider mkton, URLs, e-mails, seletores, SQL e contratos de API são preservados. Não edita mensagens históricas nem conteúdo armazenado por usuários. O número de textos efetivamente alterados será obtido do build, não estimado. Contextos que o classificador não reconhece não são renomeados cegamente.
+54 novos testes passaram no build: 27 de métricas/paginação, 17 de marca, dez de integração sobre o arquivo legado real transformado. Os testes locais de lógica também passaram. As regressões anteriores de Inbox, IA, Histórico, Dashboard, Públicos, Configurações, tracking, dinheiro, fornecedores, menu e salvamento manual/120s permaneceram e passaram.
+Consulta somente leitura confirmou a execução existente e permissões SELECT do papel authenticated nas fontes. Não foi apresentada como navegação autenticada. Nenhum envio WhatsApp/OpenAI, pedido, baixa de estoque ou cliente de teste foi criado. Não houve browser autenticado ou entrega real neste lote.
+Deployment 150dd28c-a58a-4900-b6eb-dc1c8de8fa8e passou no primeiro build desta rodada; healthcheck aprovado. Consulta posterior Online com uma réplica em execução e nenhum trabalho pendente naquele instante. O commit documental seguinte não muda o código verificado.
 
-## Testes efetivamente executados antes da publicação
+## Solicitação nova registrada para futuro escopo, sem execução
 
-27/27 verificações locais da lógica de métricas e paginação e 17/17 da transformação de marca passaram. Parse/transpilação dos arquivos novos foi executado localmente. Transporte dos testes é simulado; não é consulta autenticada real nem teste de navegador. Testes de integração sobre o arquivo legado transformado e regressões anteriores serão executados no build antes do aceite.
-Nenhuma chamada OpenAI/WhatsApp, criação de lead, envio de mensagem ou mudança de estoque foi feita para validar este lote. Não contabilizar a migration bloqueada como aplicada ou testada.
+- Copiloto em todas as páginas internas e ferramentas operacionais com aprovação prévia: mover etapa, enviar mensagem, gerar relatório, conferir estoque, iniciar bot e demais operações autorizadas. Não dar acesso administrativo indiscriminado.
+- Endereço de entrega e frete no checkout, depois de corrigir a base transacional já aprovada.
+- Clientes: Abrir conversa deve reutilizar cliente/conversa e preservar/recuperar histórico, sem criar cópia nem unir pessoas por nome.
+- Inbox: envio de imagem/vídeo/arquivo; remover só o botão Enviar formulário; criar etiquetas e grupos.
+- Indicadores de conversa: amarelo enquanto entrada não aberta; vermelho após abrir sem responder; sem bolinha quando a última mensagem é nossa; azul-marinho para bot ativo; branco para IA ativa. Prioridade entre estados será formalizada no novo escopo, sem alterar os estados agora.
+- Funil: clique abre drawer com ficha completa e mini-Inbox da mesma conversa, com botões Abrir Inbox e Abrir no WhatsApp Web; sem redirecionamento automático.
+- Compositor: permitir escrever a próxima mensagem enquanto a anterior envia, preservando ordem/estado de entrega e evitando duplicação.
+- Áudio: corrigir gravação/envio e adicionar botão separado de transcrição; não transformar transcrição em envio automático.
+- Remover fluxo de objetivos e manter IA por prompt, preservando dados durante a migração. Nada disso foi implementado nesta rodada.
 
-## Novos requisitos recebidos, sem execução nesta rodada
+## Próximo passo registrado
 
-Presença global do Copiloto; ferramentas operacionais com prévia/aprovação, permissões e auditoria; endereço/frete no checkout; abrir conversa sem duplicar lead ou perder mensagens; anexos e remoção do botão de formulário; criação de etiquetas/grupos; estados amarelo/vermelho/azul-marinho/branco do Inbox; drawer do funil com mini-Inbox e botões de abrir; compositor não bloqueante; envio de áudio e transcrição separada; migração de objetivos para IA por prompt. Este registro preserva a solicitação e NÃO é autorização de implementação da nova rodada.
-
-## Próximo checkpoint
-
-Verificar build, publicação e resultados reais. Atualizar docs/OPERATION_STATUS.md sem marcar ERP/Configurações/entrega real como concluídos. O bloqueio técnico não deve ser ocultado por quantidade de testes. Manter o pedido de aprovação da rodada seguinte separado e posterior ao fechamento do escopo anterior.
-Preservados main, DNS, Evolution, MktOn original/Harpia/MCP, salvamento manual/120s e demais rotas. Sem GitHub Actions, Vercel ou Lovable.
+Resolver o bloqueio de aplicação do ERP por autorização efetiva da ferramenta, sem contornar controles, e homologar o fluxo pendente. Só depois encerrar o escopo antigo e apresentar/liberar a próxima rodada para novo OK. Atualização integral em docs/OPERATION_STATUS.md; não chamar o sistema de finalizado.
+Preservados main, DNS, Evolution, MktOn/Harpia/MCP, rotas e salvamento manual/120s. Sem GitHub Actions, Vercel ou Lovable.
