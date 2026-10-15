@@ -1,60 +1,23 @@
-import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-type AnySb = { from: (t: string) => any };
-
-async function loadActiveWorkspace(supabase: AnySb, userId: string): Promise<string> {
-  const { data: prof } = await supabase
-    .from("profiles")
-    .select("current_workspace_id")
-    .eq("id", userId)
-    .maybeSingle();
-  const wsId = (prof as { current_workspace_id?: string } | null)?.current_workspace_id;
-  if (!wsId) throw new Error("Workspace ativo não encontrado.");
-  return wsId;
-}
-
+import {createServerFn} from '@tanstack/react-start';
+import {z} from 'zod';
+import {requireSupabaseAuth} from '@/integrations/supabase/auth-middleware';
+import {assertSlimChatMembership} from './slim-chat-membership.core';
 export interface GroupKpiReport {
-  totalGroups: number;
-  totalMessages: number;
-  avgEngagement: string;
-  botExecutions: number;
-  aiConversions: number;
-  successRate: string;
+ totalGroups:number|null;totalMessages:number|null;avgEngagement:string|null;
+ botExecutions:number|null;aiConversions:number|null;successRate:string|null;
+ issues?:Array<{source:string;message:string;code:string}>;
 }
-
-export const getGroupReports = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ days: z.number().int().default(30) }).parse(d ?? {}))
-  .handler(async ({ data, context }) => {
-    const sb = context.supabase as unknown as AnySb;
-    const wsId = await loadActiveWorkspace(sb, context.userId);
-
-    // 1. Grupos
-    const { count: groupCount } = await sb
-      .from("whatsapp_groups")
-      .select("*", { count: "exact", head: true })
-      .eq("workspace_id", wsId);
-
-    // 2. Mensagens (estimada)
-    const { count: msgCount } = await sb
-      .from("whatsapp_web_messages")
-      .select("*", { count: "exact", head: true })
-      .eq("workspace_id", wsId);
-
-    // 3. Bots/IA execuções (estimada por run)
-    const { count: agentRunCount } = await sb
-      .from("group_agent_runs")
-      .select("*", { count: "exact", head: true })
-      .eq("workspace_id", wsId);
-
-    return {
-      totalGroups: groupCount ?? 0,
-      totalMessages: msgCount ?? 0,
-      avgEngagement: "68%", // Placeholder mantido do mock anterior
-      botExecutions: agentRunCount ?? 0,
-      aiConversions: Math.floor((agentRunCount ?? 0) * 0.25),
-      successRate: "94%",
-    } satisfies GroupKpiReport;
-  });
+// Compatibility endpoint: no estimated conversions or fixed performance percentages.
+export const getGroupReports=createServerFn({method:'POST'}).middleware([requireSupabaseAuth])
+ .inputValidator((input:unknown)=>z.object({days:z.number().int().min(1).max(365).default(30)}).parse(input??{}))
+ .handler(async({data,context}):Promise<GroupKpiReport>=>{
+  const sb=context.supabase as any;
+  const p=await sb.from('profiles').select('current_workspace_id').eq('id',context.userId).maybeSingle();
+  if(p.error||!p.data?.current_workspace_id)throw new Error('Empresa ativa indisponível para o relatório.');
+  const ws=p.data.current_workspace_id;await assertSlimChatMembership(sb,ws,context.userId);
+  const {loadSlimAutomationMetrics}=await import('./slim-automation-metrics.server');
+  const report=await loadSlimAutomationMetrics(sb,ws,data.days,true);
+  return {totalGroups:report.groups?.count??null,totalMessages:report.messages?.groupSent??null,
+   avgEngagement:null,botExecutions:null,aiConversions:null,successRate:null,
+   issues:report.issues};
+ });
