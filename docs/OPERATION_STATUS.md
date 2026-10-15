@@ -1,77 +1,89 @@
 # Saúde Slim: semáforo de produção
 
-Checkpoint: 15/10/2026, continuidade do ERP. **ERP NÃO concluído em produção. Nenhuma nova correção funcional foi publicada nesta retomada.**
-Último código operacional conferido no checkpoint anterior: 8b78ae02617a0b33e728b9962358b455ab0d540e, deployment 150dd28c-a58a-4900-b6eb-dc1c8de8fa8e SUCCESS, healthcheck aprovado em 16:11:37 UTC. Não foi repetida uma checagem de deploy nesta retomada.
+Checkpoint: 15/10/2026. O banco do ERP existe e passou nos testes de pedido, baixa, repetição e estorno desta retomada. A interface publicada AINDA NÃO foi conectada ao novo fluxo. Não declarar os quatro itens integralmente concluídos.
 
-Destino exclusivo: ruanmeloandrade-alt/saude-slim, branch operacional restauracao/sistema-completo-20261014; banco vyzvfcgpjjzvcjegzzza; serviço saude-slim-web. Branch de preparação: fix/slim-erp-final-20261015.
-O checkout e o gerador de PDF do checkpoint anterior estão no commit 9e7c48c5074d9b2fd66d9fdbeb460eb85cbd2e39 da branch de preparação, não ligados à rota /pedidos. O escopo da continuação foi registrado em 976379c1313fde8361cd762cfb0ff40e977d35da, antes de implementar os novos componentes locais.
+Destino exclusivo: ruanmeloandrade-alt/saude-slim; branch operacional restauracao/sistema-completo-20261014; preparação fix/slim-erp-final-20261015; Supabase vyzvfcgpjjzvcjegzzza; serviço saude-slim-web.
+Último código funcional verificado no checkpoint anterior: 8b78ae02617a0b33e728b9962358b455ab0d540e. Nenhuma nova publicação funcional ou checagem de deploy foi realizada nesta retomada. Este commit altera somente documentação.
 
 ## Legenda
 
-🟢 Correção técnica delimitada publicada e verificada no nível indicado.
-🟡 Trabalho parcial, preparado ou com homologação pendente.
-🔴 Pendente ou bloqueado em produção.
-Teste local, leitura de catálogo e healthcheck não substituem transação de estoque, interface autenticada, pagamento bancário, resposta IA ou entrega WhatsApp.
+🟢 Correção técnica delimitada aplicada e verificada no nível descrito.
+🟡 Trabalho parcial ou integração preparada, ainda sem conclusão funcional em produção.
+🔴 Bloqueio atual ou entrega pendente.
+Teste local, transação SQL e healthcheck são evidências diferentes. Não declarar navegador autenticado, concorrência entre sessões ou entrega WhatsApp quando não foram executados.
 
-## Novidades desta retomada
+## Os quatro itens solicitados
 
-| Recorte | Estado | Evidência e limite |
+| Item | Estado | Realizado | Pendente |
+|---|---|---|---|
+| Checkout e PDF | 🟡 Integração preparada | Componentes anteriores em 9e7c48c; adaptadores autenticados, geração/armazenamento derivado do snapshot e rota de checkout preparados localmente nesta retomada. | Gravar o novo código, integrar à branch operacional, compilar e publicar; homologar interface e documento real. |
+| Histórico e confirmação de envio | 🟡 Integração preparada | Histórico por pedido, cancelamento, indicadores a partir da mesma fonte e confirmação vinculada a documento/hash/versão/cliente/canal preparados localmente. | Publicação e teste autenticado; entrega real de documento não realizada. |
+| Versionamento e publicação | 🔴 Chamada de código bloqueada | Escopo atualizado com sucesso na branch em 163b5d362a9dd4ada34c6a1b936e9329ef1680e5. | GitHub.create_tree contendo cinco módulos foi recusada pela segurança da ferramenta. Sem tree/commit de código retornado. Não foi repetida por outro método ou em partes. |
+| Pedido → estoque → histórico → Dashboard | 🟡 Banco validado, telas pendentes | As funções instaladas confirmam pedido e baixa na mesma transação; leitura e estorno foram testados com rollback. | A rota publicada ainda usa o fluxo antigo; ligar os consumidores ao novo registro depende do código bloqueado. Pedidos históricos ainda não reconciliados. |
+
+## Avanço real no banco
+
+A primeira leitura desta retomada encontrou já instaladas as migrations 20261015172716 slim_erp_transactional_checkout_reviewed e 20261015173628 slim_erp_document_pending_guard. A informação anterior de ausência do ERP deixou de representar o estado atual. A instalação dessas duas migrations não foi repetida nesta sessão e sua autoria não foi inferida.
+
+Existem slim_orders, slim_stock_movements, slim_order_documents e slim_order_document_deliveries. Existem as funções autenticadas slim_confirm_order e slim_cancel_order. O registro mantém snapshot de cliente, emitente, itens, preços, descontos, pagamento declarado e referência da tentativa. As novas tabelas possuem RLS; authenticated não tem INSERT direto em slim_orders. Cancelamento preserva o snapshot original.
+
+🟢 Nesta sessão foi aplicada a migration 20261015190856 slim_erp_fix_contact_validation. Corrige os escapes duplicados que rejeitavam e-mail válido de cliente novo e telefone internacional de entrega de documento. Preserva autorização, permissões, RLS e operações transacionais. Não altera pedidos, produtos ou saldos reais.
+
+## Testes efetivamente executados nesta sessão
+
+### Transação de pedido e estoque
+
+Uma sonda SQL com papel authenticated, registros temporários e subtransação revertida confirmou:
+- R$ 19,99 x 3 = R$ 59,97; estoque 10 para 7.
+- Mesma referência e conteúdo retornam o mesmo pedido e não repetem a baixa.
+- Mesma referência com outro conteúdo é rejeitada.
+- Segunda compra do mesmo cliente é outro pedido, sem criar outro cliente.
+- Preço divergente e estoque insuficiente são rejeitados sem gravar partes do pedido.
+- Cancelamento repetido produz apenas um estorno; saldo volta a 7 depois de cancelar uma das duas compras.
+- Pedidos cancelados ficam fora da soma de confirmados.
+- Usuário sem vínculo não lê nem confirma pedido da empresa; anônimo não executa confirmação.
+- Todos os registros temporários foram revertidos e sua ausência foi conferida.
+
+### Cliente novo e documento
+
+Outra sonda, também integralmente revertida, confirmou cliente novo com qa@example.invalid, produto de R$ 0,01 e desconto integral com total zero, sem fallback para o preço original. Verificou documento único por pedido, leitura autorizada, formato de telefone e rejeição de dois envios pendentes para o mesmo documento. A linha temporária de entrega no banco NÃO acionou WhatsApp. Nenhum arquivo foi enviado.
+
+### Código local
+
+63/63 testes de leitura e confirmação de documento foram reexecutados e passaram.
+28/28 testes novos da integração lógica passaram: origem canônica do snapshot, cancelamento, consultas completas, recuperação por operador, referência local sem dados pessoais, confirmação única e estados de envio aceito/rejeitado/incerto sem repetição automática.
+Dez arquivos TypeScript/TSX passaram em verificação de sintaxe/transpilação. Dois scripts novos passaram em node --check. Não é typecheck do projeto completo.
+Quinze verificações de integração sobre as rotas reais foram preparadas, mas NÃO executadas: dependem da aplicação dos transforms e do repositório completo. Os 53 testes do checkout/PDF anteriores não foram reexecutados nesta retomada.
+
+Não houve build do novo código, navegador autenticado, ensaio concorrente com duas sessões independentes, pagamento bancário, chamada OpenAI, envio WhatsApp ou reconciliação de saldos reais nesta sessão.
+
+## Código e publicação
+
+O checkout/PDF anterior está preservado na branch em 9e7c48c. O escopo atualizado está em docs/tasks/2026-10-15-slim-erp-integration.md, commit 163b5d3.
+Foram preparados localmente leitores autenticados, adaptadores de confirmação/cancelamento, geração e conferência do PDF, transporte de documento com confirmação e reserva persistente, referência local da tentativa, conexão do checkout/histórico/resumo e integração da rota Pedidos. Não foi usado o fluxo antigo como fallback.
+
+A chamada GitHub.create_tree foi recusada com: "Esta ferramenta foi bloqueada pelas configurações de segurança da OpenAI. Verifique novamente o que está enviando." Nenhum SHA de árvore ou commit foi retornado. A atualização documental é uma operação diferente e não publica o código recusado. Não alterar permissões globais, usar outra identidade ou dividir a carga para obter o efeito recusado.
+A recusa atual não demonstra falta de plano, créditos ou nova autorização de escopo. Não prometer que uma compra, reconexão ou novo chat resolverá.
+Uma consulta de catálogo que incluía a definição da função de credenciais também foi recusada; não foi repetida para obter esse conteúdo. Nenhuma credencial foi lida ou trocada. A lista de migrations e as sondas independentes do ERP foram aceitas normalmente.
+
+## Semáforo dos demais módulos
+
+| Área | Estado | Situação preservada |
 |---|---|---|
-| Validação do snapshot de pedido | 🟡 Preparada localmente | Confere empresa, IDs, datas com fuso, itens, centavos, desconto, pagamento e cancelamento. Validação de forma não comprova autenticidade ou persistência; servidor autorizado continua obrigatório. |
-| Leitura de histórico e totais | 🟡 Preparada localmente | Pedidos independentes para o mesmo cliente, cancelamentos fora dos totais, pagamento declarado separado de pendente, filtros pelo dia em Brasília; rejeita lote incompleto/duplicado em vez de inventar total. Sem conexão com Dashboard publicada. |
-| Componente do histórico ERP | 🟡 Preparado localmente | Busca, datas, situação, itens, paginação e ação de documento. Requer resposta completa do servidor; não lê diretamente banco nem recalcula pelo catálogo atual. |
-| Confirmação do documento | 🟡 Preparada localmente | Revisão de pedido/documento/versão/destinatário, uma aprovação por tentativa, estados incerto/aceito/rejeitado e consulta sem reenvio. Nenhum envio real ou endpoint implementado nesta retomada. |
-| Versionamento do código novo | 🔴 Chamada bloqueada | GitHub.create_tree, contendo os dois módulos puros de leitura/aprovação, foi bloqueada porque não foi possível determinar o status de segurança da solicitação. Não houve retorno de tree/commit; não foi repetida por outro endpoint, partes ou credencial. Os arquivos permanecem locais. |
-| Gravação real do ERP | 🔴 Bloqueio anterior preservado | Migration anterior não aplicada. Nenhuma nova tentativa de banco, mecanismo alternativo, reconciliação, baixa ou estorno nesta retomada. |
+| Interface, menu, Gestão ERP e Cérebro alinhado | 🟡 Publicados antes | Correções f352e12 preservadas; interface autenticada integral não homologada. |
+| Preços e fornecedores | 🟡 Publicados antes | Precisão e origem local verificadas anteriormente; integração ao checkout publicado pendente. |
+| Copiloto | 🟡 Correção anterior | Membership corrigida; resposta real não homologada. Presença global e novas ações pertencem ao escopo seguinte. |
+| Métricas dos bots e marca | 🟡 Publicadas antes | Contadores reais e revisão de marca 8b78ae0; sem percentuais inventados; nenhuma nova alteração nesta retomada. |
+| Públicos e Disparos | 🟡 Parcial anterior | Filtros/fila/progresso preservados; entrega real e silêncio por histórico ainda pendentes. |
+| Funil, Clientes e Inbox | 🟡 Parcial anterior | Novos relatos de duplicação, mídia, etiquetas, grupos, áudio e compositor registrados, sem implementação agora. |
+| Automações e Cérebro funcional | 🟡 Parcial anterior | Grupos/workflow/Meta, ingestão e recuperação de conhecimento ainda exigem homologação. |
+| Dashboard: fontes externas | 🟡 Parcial anterior | Cinco fontes restauradas; coleta real ainda não homologada integralmente. |
+| Segurança e convites | 🔴 Bloqueio anterior | Pacote de segurança não aplicado. As migrations do ERP não resolvem nem substituem esse pacote. |
+| Emissão fiscal | 🔴 Integração fiscal pendente | O PDF comercial é não fiscal. Não apresentar como NF autorizada. |
 
-## Testes desta retomada
+## Pedidos anteriores e próxima rodada
 
-**63/63 verificações locais passaram** em scripts/test-slim-order-read-documents.mjs, Node 22.16. Cobrem validação de snapshot, cálculos, dois pedidos do mesmo cliente, cancelamentos, data/fuso, erro de lote parcial, duplicação, descontos integrais, troca de destinatário/empresa, confirmação única, timeout e consulta sem reenvio.
-Os dois módulos puros passaram também em TypeScript strict --noEmit. Os dois componentes React passaram em verificação de sintaxe/transpilação, não em typecheck completo do projeto.
-Nenhum teste autenticado de React/navegador foi realizado. O ambiente não tinha React instalado e a obtenção dos pacotes para esse ensaio não foi concluída; não foi usado um fixture estático como substituto e chamado de E2E.
-Os 53 testes do checkpoint anterior continuam descritos em docs/tasks/2026-10-15-slim-checkout-preparation.md; não foram reexecutados nesta retomada. O código anterior não foi alterado. Nenhum PDF de cliente, pedido, movimentação ou mensagem foi criado.
-Pacote local desta retomada: slim-erp-continuation, com dois módulos, dois componentes e teste reproduzível. Não contém SQL bloqueado, rota de produção, adaptador de mutação ou comando de deploy.
+Os registros antigos de 8,50/7,39 com item e de 101 sem item não foram convertidos, fundidos ou usados para ajustar estoque por suposição. O snapshot do ERP novo não reescreve essas vendas. A reconciliação histórica continua pendente, com necessidade de evidência para cada ajuste.
 
-## Bloqueios e estado do banco
-
-O bloqueio anterior de apply_migration permanece registrado: "Esta ferramenta foi bloqueada pelas configurações de segurança da OpenAI. Verifique novamente o que está enviando." A consulta anterior confirmou ausência das tabelas/funções de ERP. A opção do plugin Supabase já estava em Allow all actions. A regra ou trecho exato causador da recusa não foi revelado. Não atribuir a plano, crédito, cobrança ou falta de aprovação do usuário.
-Nenhuma configuração de segurança foi modificada. Não houve nova tentativa da migration, divisão do SQL, uso de outra identidade, servidor, prebuild ou integração para obter o efeito recusado.
-Nesta retomada, a tentativa independente de gravar código puro no GitHub também foi bloqueada por classificação de segurança indeterminada. Isso não comprova que todo o GitHub está sem escrita: o escopo documental havia sido gravado com sucesso antes. A presente atualização registra fatos em documentação, não publica o código bloqueado.
-
-## Semáforo completo
-
-| Área | Estado funcional | Situação |
-|---|---|---|
-| Interface/menu/Gestão ERP/Cérebro alinhado | 🟡 Publicado anteriormente | f352e12 preservado; falta homologação integral das janelas. |
-| Precisão monetária em Produtos | 🟡 Publicado anteriormente | Cadastro/custo com centavos verificados; integração a pedidos não entregue. |
-| Fornecedores | 🟡 Publicado anteriormente | Origem manual própria, edição e custo corrigidos; cenários completos de tela pendentes. |
-| Pedidos/checkout | 🔴 Bloqueado em produção | Componentes de checkout em 9e7c48c; novo histórico local; backend e integração pendentes. |
-| Estoque por pedido | 🔴 Pendente | Nenhuma baixa automática, reserva concorrente ou estorno implantado. |
-| Histórico e Dashboard comercial | 🟡 Parcial | Paginação/classificação/fontes anteriores preservadas; dados reais de ERP não integrados. |
-| PDF e emissão fiscal | 🔴 Integração pendente | Gerador comercial isolado preparado antes; storage, vínculo real e emissão fiscal válida não entregues. |
-| Envio do documento por WhatsApp | 🔴 Pendente em produção | Aprovação local preparada; não há novo endpoint, envio ou confirmação real nesta rodada. |
-| Métricas/relatórios dos bots | 🟡 Publicados | Contadores reais e períodos, sem percentuais inventados; homologação UI pendente. |
-| Marca Saúde Slim | 🟡 Varredura publicada | 297 trechos em 109 arquivos no build anterior; URLs/identificadores/dados históricos preservados. |
-| Copiloto | 🟡 Correção anterior | Membership corrigida; resposta real não comprovada. Presença global e ações no escopo futuro. |
-| Públicos/Disparos | 🟡 Publicados parcialmente | Filtros/fila/progresso/cancelamento anteriores; envio real não homologado; silêncio legado usa updated_at. |
-| CRM/Funil/Clientes/Inbox | 🟡 Parcial | Controles anteriores; duplicação/perda de histórico e novos pedidos não alterados. |
-| Automações/Cérebro funcional | 🟡 Parcial | Etapas/reserva anteriores; grupos/workflow/Meta, ingestão/RAG e bloqueio de saída pendentes. |
-| Dashboard: coleta externa | 🟡 Parcial | Cinco fontes restauradas antes; coleta real do pixel/formulário não homologada integralmente. |
-| Configurações/Integrações | 🔴 Segurança/convites bloqueados | Cofre/validações preservados; pacote de segurança/dispositivos/convites não aplicado. |
-
-## Entregas técnicas anteriores preservadas
-
-Interface, navegação, preços, fornecedores e autorização do Copiloto foram publicados em f352e12, com 66 verificações daquela rodada. Métricas e marca foram publicadas em 8b78ae0, com 54 novas verificações daquela rodada. Removidos os percentuais inventados 68%/94%; bot Teste observado com uma execução concluída, zero ativa e zero compra atribuída. Esses resultados não foram apresentados como novos testes desta sessão.
-
-## Pedidos anteriores
-
-Diagnóstico anterior: duas compras com item e valor 8,50/7,39 ligadas ao produto TZ TESTE e um registro de 101 sem item. A rota antiga grava lead active e vínculo separadamente, sem baixa de estoque. Nenhum desses dados foi reconciliado nesta retomada. Não unir clientes por nome nem inventar item, forma de pagamento ou estoque anterior.
-
-## Próxima rodada ainda não iniciada
-
-Copiloto global e ações com aprovação; endereço/frete; conversa sem duplicação/perda de histórico; anexos; remoção do botão de formulário; etiquetas/grupos; indicadores coloridos; drawer com mini-Inbox; compositor livre durante envio; áudio/transcrição; IA por prompt. A sequência solicitada pelo usuário permanece: concluir o antigo, apresentar o novo escopo e aguardar OK. Não declarar esse gate encerrado.
-
-## Continuidade
-
-Escopos: docs/tasks/2026-10-15-slim-erp-final.md, docs/tasks/2026-10-15-slim-checkout-preparation.md e docs/tasks/2026-10-15-slim-order-read-models.md na branch de preparação. O novo código local ainda precisa de gravação autorizada, integração ao backend autorizado, testes de transação/concorrência, interface e publicação.
-Sem alterações em main, DNS, Evolution, MktOn/Harpia/MCP, usuários, chaves, pedido/estoque real ou autenticação. Sem GitHub Actions, Vercel ou Lovable. Este documento registra o checkpoint e não significa execução em segundo plano.
+A sequência pedida pelo usuário permanece: concluir estes quatro itens, preparar o novo escopo de Inbox/Copiloto/funil/áudio/prompt/endereço/frete e aguardar OK. A próxima implementação não foi iniciada e não é considerada liberada por este checkpoint.
+Preservados main, DNS, Evolution, projetos MktOn/Harpia/MCP, chaves e salvamento manual/120s. Sem GitHub Actions, Vercel ou Lovable. Este arquivo registra o trabalho executado, não processamento do assistente em segundo plano.
