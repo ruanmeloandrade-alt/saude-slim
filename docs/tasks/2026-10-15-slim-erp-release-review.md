@@ -1,25 +1,31 @@
-# Saúde Slim: revisão final da integração ERP
+# Saúde Slim: publicação do checkout ligado ao banco
 
-Status: em revisão, ainda não publicada. Continuação autorizada pelo usuário: publicar as correções validadas para teste após F5 e manter o semáforo atualizado. Base operacional conferida 464efa7f98f6df23db61e6b6ef5c3cb6ca6cbc70; preparação 163b5d362a9dd4ada34c6a1b936e9329ef1680e5.
+Status: código revisado, aguardando build/deploy. Usuário autorizou publicar o que estiver validado e continuar o ERP. Destino exclusivo saude-slim, branch restauracao/sistema-completo-20261014; preparação fix/slim-erp-final-20261015; Supabase vyzvfcgpjjzvcjegzzza.
 
-## Destino e limites
+## Revisão e redução real de privilégios
 
-Somente ruanmeloandrade-alt/saude-slim, branch de preparação fix/slim-erp-final-20261015 e publicação restauracao/sistema-completo-20261014. Supabase vyzvfcgpjjzvcjegzzza; serviço existente saude-slim-web. Sem alterar main, autenticação global, chaves, DNS, Evolution, MktOn original, Harpia, MCP ou GitHub Actions. Novos recursos de Inbox/Copiloto/endereço/frete/objetivos continuam aguardando a aprovação separada solicitada.
+O pacote de envio/armazenamento anterior não foi reenviado em partes nem por outro endpoint. Esta implementação tem um escopo mais restrito: não contém supabaseAdmin, leitura de credenciais, escrita direta de documento ou chamadas a provedores externos. Só usa a sessão autenticada do próprio operador, as duas RPCs de pedido/cancelamento já instaladas e leituras protegidas por RLS. O envio WhatsApp anteriormente planejado NÃO está incluído nesta publicação. Essa pendência continuará no semáforo.
 
-## Estado efetivamente conferido
+A confirmação valida limites, identidade, empresa, operador e o recibo retornado. O documento é gerado sob demanda a partir do snapshot persistido, como comprovante comercial não fiscal. Sua geração não cria nova venda e não altera estoque. Não há criação de arquivos públicos nem transmissão de dados do cliente para outro serviço.
 
-Leitura do banco confirmou as três migrations ERP já aplicadas e as funções autenticadas slim_confirm_order/slim_cancel_order. Zero pedidos, movimentos, documentos e envios pendentes nesse ledger. Não é necessário repetir a migration anteriormente bloqueada. O pacote de integração local foi recuperado do arquivo da conversa, não inventado.
+## O que esta release integra
 
-## Revisão antes de publicar
+- Rota Pedidos com carrinho multi-item, cliente existente/novo, quantidades, preços exatos, desconto, situação e forma de pagamento, revisão e confirmação usando slim_confirm_order.
+- Baixa e estorno ficam nas funções transacionais existentes. A interface não subtrai estoque por conta própria nem utiliza o gravador legado como fallback.
+- Referência local opaca impede repetição automática após resultado incerto. Recebimento é validado antes de limpar a referência; recuperação consulta o mesmo pedido.
+- Histórico por pedido, filtros, cancelamento explícito com motivo e PDF do snapshot. História antiga do CRM preservada em bloco separado, sem contagem dupla.
+- Dashboard recebe resumo de pedidos/recebimento informado/pendente/unidades/cancelados da mesma fonte. Métricas anteriores de CRM permanecem identificadas como oportunidades e atendimento.
 
-Conferir os adaptadores contra o contrato instalado. Reforçar a confirmação do recibo retornado e o tratamento da rejeição, impedir fallback entre empresas na seleção do canal, aplicar limites/tipos no servidor e validar a integridade dos documentos. Manter explícita a confirmação do usuário antes de qualquer envio WhatsApp. Não executar transporte externo nos testes.
+## Testes antes da gravação
 
-A recusa anterior de GitHub.create_tree permanece registrada. Não usar outra credencial, mecanismo de deploy ou alteração de permissões para contorná-la. Somente submeter a versão revisada às verificações normais do conector, após revisão e testes; se recusada, interromper essa gravação, registrar o limite e não dividir o conteúdo para obter o efeito recusado.
+37 testes locais das regras e leitores desta release passaram. O modelo de leitura original foi revalidado na bateria de 63 testes do pacote local; isso não significa teste do novo frontend. Três módulos puros passaram em TypeScript strict --noEmit e oito arquivos passaram em análise de sintaxe. Sem repositório integral no container por falha de DNS; não declarar build local completo.
 
-## Integração pretendida
+Prebuild mantém regressões anteriores e acrescenta os 53 testes de checkout/PDF já versionados, os 37 desta release e 17 verificações sobre os arquivos reais após os transforms. Esses resultados de build somente serão registrados após consulta dos logs.
 
-Checkout multi-item autenticado usa exclusivamente slim_confirm_order, sem o gravador legado. Histórico e resumo na Dashboard compartilham slim_orders. Cancelamento explícito usa slim_cancel_order. Estoque é o campo products.stock movimentado na transação instalada, não uma dedução calculada na interface. Comprovante não fiscal usa snapshot, possui acesso protegido e envio opcional confirmado. O histórico antigo será preservado separado, sem recontar oportunidades como pedidos nem reconciliar saldos por suposição.
+## Banco e limites
 
-## Aceite de release
+Leitura atual confirma slim_orders/slim_stock_movements/documentos e as migrations 20261015172716, 20261015173628 e 20261015190856. Nenhuma nova migration é necessária nesta release. Zero pedidos/movimentos/documentos no ledger na consulta inicial. Os testes autenticados anteriores de transação foram preservados no escopo 2026-10-15-slim-erp-integration.md; não apresentados como novos testes desta sessão.
 
-Reexecutar testes puros, validar fontes reais transformadas, build e regressões. Confirmar deployment e healthcheck, distinguir isso de navegação autenticada e entrega WhatsApp. Atualizar docs/OPERATION_STATUS.md com commit publicado, feitos e pendências; não declarar nota fiscal emitida nem homologação ponta a ponta sem evidência.
+Pendentes: envio opcional do documento WhatsApp e armazenamento da versão enviada; emissão fiscal autorizada; reconciliação dos pedidos antigos sem inventar dados; homologação UI/ponta a ponta e concorrência em duas sessões independentes. Configurações de segurança/convites continuam com bloqueio anterior. Endereço/frete e novos recursos de Inbox/Copiloto/objetivos permanecem aguardando o OK separado do escopo seguinte.
+
+Preservados main, DNS, Evolution, chaves, autenticação global, MktOn/Harpia/MCP e salvamento manual/120s. Sem GitHub Actions, Vercel ou Lovable. Não declarar publicado até o Railway confirmar e não declarar todos os itens finalizados por causa de uma entrega parcial.
