@@ -14,7 +14,7 @@ function array(value: unknown, label: string): unknown[] {
   if (!Array.isArray(value)) throw new Error(`Resposta incompleta de tracking: ${label}.`);
   return value;
 }
-function label(value: unknown, fallback: string): string { return typeof value === 'string' && value.trim() ? value : fallback; }
+function label(value: unknown, fallback: string): string { return typeof value === 'string' ? value : fallback; }
 export function shapeSlimTrackingOverview(day: unknown, week: unknown, sitesInput: unknown, feedInput: unknown) {
   const a24 = object(day, '24h'); const a7 = object(week, '7d');
   const counts = ['events', 'sessions', 'visitors', 'identified_visitors', 'leads', 'page_views', 'form_submits', 'conversions'];

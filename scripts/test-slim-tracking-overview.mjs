@@ -19,4 +19,5 @@ test('missing feed rejected',()=>assert.throws(()=>shaped(empty(),[],null)));
 test('real click types added',()=>assert.equal(shaped({...empty(),by_event:{click:2,whatsapp_click:3,phone_click:4}}).funnel.clicks,9));
 test('unsafe integer count rejected',()=>assert.throws(()=>shaped({...empty(),events:Number.MAX_SAFE_INTEGER+1})));
 test('duplicate campaign aggregate rejected',()=>assert.throws(()=>shaped({...empty(),by_campaign:[{campaign:'A',sessions:0},{campaign:'A',sessions:0}]})));
+test('blank labels keep database group identity',()=>{const a={...empty(),by_campaign:[{campaign:'',sessions:1},{campaign:'(sem campanha)',sessions:2}]};assert.equal(shaped(a).topCampaigns.length,2);});
 console.log(`${n}/${n} tracking aggregate checks passed; local source logic, no network calls.`);
