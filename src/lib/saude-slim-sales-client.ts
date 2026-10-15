@@ -1,13 +1,8 @@
-/**
- * Consultas do histórico original da Saúde Slim compatíveis com GitHub Pages.
- * Mantém a página e sua interface React; substitui as chamadas createServerFn
- * por leituras Supabase autenticadas, isoladas por workspace e RLS.
- * Não contém service role, Evolution nem dependência de MktOn.
- */
+/** Authenticated, workspace-scoped sales history. RLS remains enforced by Supabase. */
 import { supabase } from "@/integrations/supabase/client";
 import type { DrilldownLead } from "@/lib/mock-dashboard";
+import { readAllSalesRows, salesStatus } from "./saude-slim-sales-read.core";
 
-type SbResponse = { error: { message: string } | null; data: unknown };
 type Stage = { id: string; name: string };
 type Pipeline = { id: string; name: string };
 type Lead = {
@@ -29,11 +24,6 @@ type Product = { id: string; name: string };
 type Link = { lead_id: string; product_id: string };
 const sb = supabase as any;
 
-function valid(res: SbResponse): unknown[] {
-  if (res.error) throw new Error(res.error.message);
-  return Array.isArray(res.data) ? res.data : [];
-}
-
 async function activeWorkspace(): Promise<string> {
   const { data: userResponse, error: authError } = await supabase.auth.getUser();
   if (authError || !userResponse.user) throw new Error("Entre na sua conta Saúde Slim para continuar.");
@@ -51,11 +41,6 @@ async function activeWorkspace(): Promise<string> {
   return workspaceId;
 }
 
-function statusOf(lead: Lead, stage: Stage | undefined): "open" | "won" | "lost" {
-  if (lead.status === "won" || /ganh|vendid|conclu/i.test(stage?.name ?? "")) return "won";
-  if (lead.status === "lost" || /perdid|cancel/i.test(stage?.name ?? "")) return "lost";
-  return "open";
-}
 function getTags(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
 }
@@ -69,20 +54,23 @@ function getFields(value: unknown): { key: string; value: string }[] {
 
 export async function getSaudeSlimSalesHistory(): Promise<{ drilldownLeads: DrilldownLead[] }> {
   const workspaceId = await activeWorkspace();
-  const [leadsRes, stagesRes, pipelinesRes] = await Promise.all([
-    sb.from("leads")
+  // Stable ID ordering avoids shifting page boundaries when a lead is edited.
+  const [leads, stages, pipelines] = await Promise.all([
+    readAllSalesRows<Lead>((from, to) => sb.from("leads")
       .select("id,name,phone,email,stage_id,pipeline_id,value,status,source,tags,custom_data,created_at,updated_at")
-      .eq("workspace_id", workspaceId).order("updated_at", { ascending: false }).limit(1000),
-    sb.from("pipeline_stages").select("id,name").eq("workspace_id", workspaceId),
-    sb.from("pipelines").select("id,name").eq("workspace_id", workspaceId),
+      .eq("workspace_id", workspaceId).order("id").range(from, to)),
+    readAllSalesRows<Stage>((from, to) => sb.from("pipeline_stages")
+      .select("id,name").eq("workspace_id", workspaceId).order("id").range(from, to)),
+    readAllSalesRows<Pipeline>((from, to) => sb.from("pipelines")
+      .select("id,name").eq("workspace_id", workspaceId).order("id").range(from, to)),
   ]);
-  const leads = valid(leadsRes) as Lead[];
-  const stageMap = new Map((valid(stagesRes) as Stage[]).map((s) => [s.id, s]));
-  const pipelineMap = new Map((valid(pipelinesRes) as Pipeline[]).map((p) => [p.id, p]));
+  leads.sort((a, b) => (Date.parse(b.updated_at) || 0) - (Date.parse(a.updated_at) || 0) || a.id.localeCompare(b.id));
+  const stageMap = new Map(stages.map((s) => [s.id, s]));
+  const pipelineMap = new Map(pipelines.map((p) => [p.id, p]));
   return {
     drilldownLeads: leads.map((lead): DrilldownLead => {
       const stage = stageMap.get(lead.stage_id ?? "");
-      const status_key = statusOf(lead, stage);
+      const status_key = salesStatus(lead.status, stage?.name);
       return {
         lead_id: lead.id,
         stage_id: lead.stage_id,
@@ -108,18 +96,19 @@ export async function getSaudeSlimSalesHistory(): Promise<{ drilldownLeads: Dril
 
 export async function getSaudeSlimSalesProducts(): Promise<{ rows: { name: string; leadIds: string[] }[] }> {
   const workspaceId = await activeWorkspace();
-  const [linksRes, productsRes] = await Promise.all([
-    sb.from("lead_products").select("lead_id,product_id").eq("workspace_id", workspaceId).eq("kind", "comprou").limit(1000),
-    sb.from("products").select("id,name").eq("workspace_id", workspaceId).limit(1000),
+  const [links, productRows] = await Promise.all([
+    readAllSalesRows<Link>((from, to) => sb.from("lead_products")
+      .select("lead_id,product_id").eq("workspace_id", workspaceId).eq("kind", "comprou").order("id").range(from, to)),
+    readAllSalesRows<Product>((from, to) => sb.from("products")
+      .select("id,name").eq("workspace_id", workspaceId).order("id").range(from, to)),
   ]);
-  const links = valid(linksRes) as Link[];
-  const products = new Map((valid(productsRes) as Product[]).map((product) => [product.id, product.name]));
+  const products = new Map(productRows.map((product) => [product.id, product.name]));
   const rows = new Map<string, { name: string; leadIds: string[] }>();
   for (const item of links) {
     const name = products.get(item.product_id);
     if (!name) continue;
     const row = rows.get(item.product_id) ?? { name, leadIds: [] };
-    row.leadIds.push(item.lead_id);
+    if (!row.leadIds.includes(item.lead_id)) row.leadIds.push(item.lead_id);
     rows.set(item.product_id, row);
   }
   return { rows: Array.from(rows.values()) };
