@@ -1,309 +1,198 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Bot, Loader2, Send, Square, X, Zap } from "lucide-react";
+import { Bot, Loader2, Play, Square, X } from "lucide-react";
 import { toast } from "sonner";
-import { listSalesbots, startSalesbotForLead } from "@/lib/salesbots.functions";
-import {
-  activateConversationAgentForLead,
-  listActiveWorkspaceConversationAgents,
-} from "@/lib/conversation-agents.functions";
-import {
-  getLeadAutomationControlState,
-  resolveLeadWhatsappIdentity,
-  stopLeadConversationAgent,
-  stopLeadSalesbots,
-} from "@/lib/inbox-lead-actions.functions";
-import {
-  listGroupSalesbotsForManagement,
-  stopGroupSalesbotRun,
-} from "@/lib/group-salesbot-management.functions";
-import {
-  resolveInboxSalesbotTarget,
-  startGroupSalesbotFromInbox,
-} from "@/lib/inbox-group-salesbot.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { resolveInboxSalesbotTarget } from "@/lib/inbox-group-salesbot.functions";
+import { resolveLeadWhatsappIdentity } from "@/lib/inbox-lead-actions.functions";
+import { controlInboxAutomation, getInboxAutomationState, type InboxAutomationAction } from "@/lib/inbox-automation-controls.functions";
+import { InboxLeadRouteEnhancements as LegacyGroupControls } from "./InboxLeadRouteEnhancements.legacy";
 
-type Activity = { id?: string; type?: string };
-type ActivityResult = { activities?: Activity[]; [key: string]: unknown };
-type InboxBotOption = { id: string; name: string; is_active: boolean };
-
-function withoutTechnicalEvents(value: unknown): unknown {
-  if (!value || typeof value !== "object") return value;
-  const result = value as ActivityResult;
-  if (!Array.isArray(result.activities)) return value;
-  const filtered = result.activities.filter((activity) => activity?.type !== "conversation_read");
-  if (filtered.length === result.activities.length) return value;
-  return { ...result, activities: filtered };
-}
+type Panel = "bots" | "agents" | "runs" | "active-agent" | null;
+const labels: Record<string, string> = { queued: "Na fila", pending: "Pendente", running: "Em execução", waiting: "Em espera", waiting_timer: "Aguardando temporizador", waiting_message: "Aguardando resposta", paused: "Pausado" };
+const errorText = (error: unknown) => error instanceof Error ? error.message : "Não foi possível consultar as automações.";
 
 export function InboxLeadRouteEnhancements({ leadId }: { leadId: string }) {
-  const queryClient = useQueryClient();
-  const resolveTarget = useServerFn(resolveInboxSalesbotTarget);
-  const resolveWhatsapp = useServerFn(resolveLeadWhatsappIdentity);
-  const getAutomationState = useServerFn(getLeadAutomationControlState);
-  const stopSalesbots = useServerFn(stopLeadSalesbots);
-  const stopAgent = useServerFn(stopLeadConversationAgent);
-  const listBots = useServerFn(listSalesbots);
-  const listGroupBots = useServerFn(listGroupSalesbotsForManagement);
-  const startBot = useServerFn(startSalesbotForLead);
-  const startGroupBot = useServerFn(startGroupSalesbotFromInbox);
-  const stopGroupBot = useServerFn(stopGroupSalesbotRun);
-  const listAgents = useServerFn(listActiveWorkspaceConversationAgents);
-  const activateAgent = useServerFn(activateConversationAgentForLead);
-  const [panel, setPanel] = useState<"salesbot" | "agent" | null>(null);
-  const [composerNode, setComposerNode] = useState<HTMLElement | null>(null);
-
-  const targetQ = useQuery({
-    queryKey: ["inbox", "salesbot-target", leadId],
-    queryFn: () => resolveTarget({ data: { conversationId: leadId } }),
-    staleTime: 10_000,
+  const resolve = useServerFn(resolveInboxSalesbotTarget);
+  const client = useQueryClient();
+  const [epoch, setEpoch] = useState(0);
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT" || event === "SIGNED_IN") {
+        client.removeQueries({ queryKey: ["inbox", "automation-v2"] });
+        setEpoch((value) => value + 1);
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, [client]);
+  const target = useQuery({
+    queryKey: ["inbox", "automation-v2", "target", leadId, epoch],
+    queryFn: () => resolve({ data: { conversationId: leadId } }),
+    staleTime: 0, retry: 1, refetchInterval: 15_000,
   });
-  const targetResolved = targetQ.isSuccess;
-  const isGroup = targetQ.data?.kind === "group";
-  const groupActiveRunId = isGroup ? targetQ.data.activeRunId : null;
+  const resolved = target.data as { kind: "lead" | "group"; workspaceId?: string; userId?: string } | undefined;
+  if (resolved?.kind === "group") return <LegacyGroupControls key={`group:${leadId}`} leadId={leadId} />;
+  return <ClientAutomationControls key={`${leadId}:${resolved?.workspaceId ?? "loading"}:${epoch}`}
+    leadId={leadId} workspaceId={resolved?.workspaceId ?? null} targetError={target.error}
+    reloadTarget={() => { void target.refetch(); }} />;
+}
+
+function ClientAutomationControls({ leadId, workspaceId, targetError, reloadTarget }: {
+  leadId: string; workspaceId: string | null; targetError: unknown; reloadTarget: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const readState = useServerFn(getInboxAutomationState);
+  const control = useServerFn(controlInboxAutomation);
+  const identity = useServerFn(resolveLeadWhatsappIdentity);
+  const [panel, setPanel] = useState<Panel>(null);
+  const [search, setSearch] = useState("");
+  const [composer, setComposer] = useState<HTMLElement | null>(null);
+  const busyRef = useRef(false);
+  const requestIds = useRef(new Map<string, string>());
+  const key = useMemo(() => ["inbox", "automation-v2", workspaceId, leadId, "state"], [workspaceId, leadId]);
+  const stateQ = useQuery({ queryKey: key,
+    queryFn: () => readState({ data: { workspaceId: workspaceId!, leadId } }),
+    enabled: !!workspaceId, retry: 1, staleTime: 0, refetchInterval: 5_000,
+  });
+  const state = stateQ.data;
+  const failure = targetError || stateQ.error;
 
   useEffect(() => {
-    setPanel(null);
-    const locateComposer = () => {
-      const fileInput = document.querySelector(
-        '[data-chat-surface] input[type="file"][accept*="application/pdf"]',
-      );
-      const parent = fileInput?.parentElement;
-      setComposerNode(parent instanceof HTMLElement ? parent : null);
+    const locate = () => {
+      const input = document.querySelector('[data-chat-surface] input[type="file"][accept*="application/pdf"]');
+      const parent = input?.parentElement;
+      setComposer((old) => old === parent ? old : parent instanceof HTMLElement ? parent : null);
     };
-
-    locateComposer();
-    const observer = new MutationObserver(locateComposer);
+    locate();
+    const observer = new MutationObserver(locate);
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [leadId]);
 
+  // Keep the inherited thread cleanup without storing operational state locally.
   useEffect(() => {
-    if (isGroup) return;
     const sanitize = () => {
-      for (const query of queryClient.getQueryCache().findAll({ queryKey: ["inbox", "activities", leadId] })) {
-        const current = query.state.data;
-        const sanitized = withoutTechnicalEvents(current);
-        if (sanitized !== current) queryClient.setQueryData(query.queryKey, sanitized);
+      for (const q of queryClient.getQueryCache().findAll({ queryKey: ["inbox", "activities", leadId] })) {
+        const current = q.state.data as any;
+        if (!Array.isArray(current?.activities)) continue;
+        const activities = current.activities.filter((a: any) => a.type !== "conversation_read");
+        if (activities.length !== current.activities.length) queryClient.setQueryData(q.queryKey, { ...current, activities });
       }
     };
     sanitize();
-    const unsubscribe = queryClient.getQueryCache().subscribe((event) => {
-      const key = event?.query?.queryKey;
-      if (Array.isArray(key) && key[0] === "inbox" && key[1] === "activities" && key[2] === leadId) sanitize();
+    return queryClient.getQueryCache().subscribe((event) => {
+      const k = event?.query?.queryKey;
+      if (k?.[0] === "inbox" && k[1] === "activities" && k[2] === leadId) sanitize();
     });
-    return unsubscribe;
-  }, [isGroup, leadId, queryClient]);
+  }, [queryClient, leadId]);
 
-  useQuery({
-    queryKey: ["inbox", "whatsapp-identity", leadId],
+  useQuery({ queryKey: ["inbox", "whatsapp-identity", leadId, workspaceId],
     queryFn: async () => {
-      const identity = await resolveWhatsapp({ data: { leadId } });
-      if (identity.phone) {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["inbox", "detail", leadId] }),
-          queryClient.invalidateQueries({ queryKey: ["inbox", "lead-conversations"] }),
-        ]);
-      }
-      return identity;
-    },
-    enabled: targetResolved && !isGroup,
-    staleTime: 5 * 60_000,
-    retry: 1,
+      const result = await identity({ data: { leadId } });
+      if (result.phone) void queryClient.invalidateQueries({ queryKey: ["inbox", "detail", leadId] });
+      return result;
+    }, enabled: !!workspaceId, staleTime: 300_000, retry: 1,
   });
 
-  const automationQ = useQuery({
-    queryKey: ["inbox", "automation-control", leadId],
-    queryFn: () => getAutomationState({ data: { leadId } }),
-    enabled: targetResolved && !isGroup,
-    refetchInterval: isGroup ? false : 10_000,
-    staleTime: 5_000,
-  });
-  const botsQ = useQuery<{ bots: InboxBotOption[] }>({
-    queryKey: ["inbox", "salesbots", isGroup ? "group" : "lead"],
-    queryFn: async () => {
-      if (isGroup) {
-        const result = await listGroupBots();
-        return {
-          bots: (result.bots ?? []).map((bot) => ({
-            id: bot.id,
-            name: bot.nome,
-            is_active: bot.ativo,
-          })),
-        };
-      }
-      const result = await listBots();
-      return {
-        bots: (result.bots ?? []).map((bot) => ({
-          id: bot.id,
-          name: bot.name,
-          is_active: bot.is_active,
-        })),
-      };
-    },
-    enabled: panel === "salesbot" && targetResolved,
-    staleTime: 30_000,
-  });
-  const agentsQ = useQuery({
-    queryKey: ["inbox", "conversation-agents"],
-    queryFn: () => listAgents(),
-    enabled: panel === "agent" && targetResolved && !isGroup,
-    staleTime: 30_000,
-  });
+  useEffect(() => {
+    if (!workspaceId) return;
+    const refresh = () => { void queryClient.invalidateQueries({ queryKey: key }); };
+    const realtime = supabase.channel(`slim-inbox-controls:${workspaceId}:${leadId}:${crypto.randomUUID()}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "salesbot_runs", filter: `lead_id=eq.${leadId}` }, refresh)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "leads", filter: `id=eq.${leadId}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "salesbots", filter: `workspace_id=eq.${workspaceId}` }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversation_ai_agents", filter: `workspace_id=eq.${workspaceId}` }, refresh)
+      .subscribe((status) => { if (status === "SUBSCRIBED") refresh(); });
+    return () => { void supabase.removeChannel(realtime); };
+  }, [workspaceId, leadId, queryClient, key]);
 
-  const bots = useMemo(() => (botsQ.data?.bots ?? []).filter((bot) => bot.is_active), [botsQ.data]);
-  const agents = useMemo(() => (agentsQ.data?.agents ?? []).filter((agent) => agent.enabled), [agentsQ.data]);
-  const salesbotActive = isGroup ? !!groupActiveRunId : automationQ.data?.salesbotActive === true;
-  const agentActive = !isGroup && automationQ.data?.agentActive === true;
+  useEffect(() => {
+    if (!panel) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setPanel(null); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [panel]);
 
-  const refreshAutomation = async () => {
-    if (isGroup) {
+  const mutation = useMutation({
+    mutationFn: (action: InboxAutomationAction) => control({ data: action }),
+    onSuccess: async (result, action) => {
+      if (action.action === "start-bot") requestIds.current.delete(action.botId);
+      toast.success(action.action === "start-bot" ? (result.reused ? "Este SalesBot já foi iniciado nesta conversa." : "SalesBot registrado na fila desta conversa.")
+        : action.action === "stop-bot" ? "Execução encerrada nesta conversa."
+        : action.action === "start-agent" ? "Agente IA selecionado para as próximas mensagens desta conversa."
+        : "Agente IA encerrado nesta conversa.");
+      setPanel(null);
       await Promise.all([
-        targetQ.refetch(),
-        queryClient.invalidateQueries({ queryKey: ["inbox", "group-messages", leadId] }),
-        queryClient.invalidateQueries({ queryKey: ["inbox", "group-conversations"] }),
+        queryClient.invalidateQueries({ queryKey: key }),
+        queryClient.invalidateQueries({ queryKey: ["inbox", "activities", leadId] }),
+        queryClient.invalidateQueries({ queryKey: ["inbox", "detail", leadId] }),
       ]);
-      return;
-    }
-    await Promise.all([
-      automationQ.refetch(),
-      queryClient.invalidateQueries({ queryKey: ["inbox", "detail", leadId] }),
-      queryClient.invalidateQueries({ queryKey: ["inbox", "activities", leadId] }),
-    ]);
-  };
-
-  const botMut = useMutation({
-    mutationFn: (salesbotId: string) =>
-      isGroup
-        ? startGroupBot({ data: { conversationId: leadId, salesbotId } })
-        : startBot({ data: { salesbotId, leadId } }),
-    onSuccess: async () => {
-      toast.success(isGroup ? "SalesBot iniciado neste grupo." : "SalesBot iniciado para este lead.");
-      setPanel(null);
-      await refreshAutomation();
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Falha ao iniciar SalesBot."),
+    onError: (error) => { toast.error(errorText(error)); void queryClient.invalidateQueries({ queryKey: key }); },
+    onSettled: () => { busyRef.current = false; },
   });
-  const agentMut = useMutation({
-    mutationFn: (agentId: string) => activateAgent({ data: { agentId, leadId } }),
-    onSuccess: async () => {
-      toast.success("Agente IA assumiu as próximas mensagens deste lead.");
-      setPanel(null);
-      await refreshAutomation();
-    },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Falha ao ativar Agente IA."),
-  });
-  const stopBotMut = useMutation({
-    mutationFn: async () => {
-      if (isGroup) {
-        if (!groupActiveRunId) return { stopped: 0 };
-        await stopGroupBot({ data: { runId: groupActiveRunId } });
-        return { stopped: 1 };
-      }
-      return stopSalesbots({ data: { leadId } });
-    },
-    onSuccess: async (result) => {
-      toast.success(
-        result.stopped > 0
-          ? isGroup
-            ? "SalesBot parado neste grupo."
-            : `SalesBot parado (${result.stopped} execução${result.stopped === 1 ? "" : "ões"}).`
-          : isGroup
-            ? "Nenhum SalesBot ativo neste grupo."
-            : "Nenhum SalesBot ativo neste lead.",
-      );
-      await refreshAutomation();
-    },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Falha ao parar SalesBot."),
-  });
-  const stopAgentMut = useMutation({
-    mutationFn: () => stopAgent({ data: { leadId } }),
-    onSuccess: async () => {
-      toast.success("Agente IA parado para este lead.");
-      await refreshAutomation();
-    },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Falha ao parar Agente IA."),
-  });
+  function act(action: InboxAutomationAction) {
+    if (busyRef.current || failure || !state) return;
+    busyRef.current = true;
+    mutation.mutate(action);
+  }
+  function open(next: Panel) { setSearch(""); setPanel((old) => old === next ? null : next); if (workspaceId) void stateQ.refetch(); else reloadTarget(); }
+  function startBot(botId: string) {
+    if (!workspaceId) return;
+    let requestId = requestIds.current.get(botId);
+    if (!requestId) { requestId = crypto.randomUUID(); requestIds.current.set(botId, requestId); }
+    act({ action: "start-bot", workspaceId, leadId, botId, requestId });
+  }
+  const busy = mutation.isPending;
+  const runs = state?.runs ?? [];
+  const agent = state?.activeAgent;
+  const title = panel === "bots" ? "Escolher SalesBot" : panel === "agents" ? "Escolher Agente IA" : panel === "runs" ? "Encerrar um SalesBot" : "Encerrar Agente IA";
+  const filter = (row: { name: string }) => row.name.toLocaleLowerCase("pt-BR").includes(search.toLocaleLowerCase("pt-BR"));
+  const choices = panel === "bots" ? state?.bots ?? [] : state?.agents ?? [];
+  const buttonStyle = "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md px-2 text-[11px] font-semibold hover:bg-white/10 disabled:opacity-50";
 
-  const busy = botMut.isPending || agentMut.isPending || stopBotMut.isPending || stopAgentMut.isPending;
-
-  if (!composerNode) return null;
-
-  return createPortal(
-    <div data-inbox-lead-actions="composer" className="relative order-first flex shrink-0 items-center">
-      {panel && (
-        <div className="absolute bottom-full left-0 z-50 mb-2 w-[min(320px,calc(100vw-24px))] overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
-          <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
-            <div className="flex items-center gap-2 text-xs font-semibold">
-              {panel === "salesbot" ? <Send className="h-3.5 w-3.5 text-primary" /> : <Bot className="h-3.5 w-3.5 text-primary" />}
-              {panel === "salesbot" ? "Enviar SalesBot" : "Enviar Agente IA"}
+  if (!composer) return null;
+  return createPortal(<div data-inbox-lead-actions="composer" className="relative order-first flex shrink-0 items-center text-foreground">
+    <div className="flex items-center gap-0.5">
+      <button type="button" className={buttonStyle} disabled={busy} onClick={() => open("bots")} aria-label="Escolher SalesBot"><Play className="h-3.5 w-3.5 text-primary" /><span className="hidden sm:inline">SalesBot</span></button>
+      {runs.length > 0 && <button type="button" className={`${buttonStyle} text-destructive`} disabled={busy} onClick={() => open("runs")} aria-label="Encerrar bot" title="Escolher execução para encerrar"><Square className="h-3.5 w-3.5" />{runs.length}</button>}
+      <button type="button" className={buttonStyle} disabled={busy} onClick={() => open("agents")} aria-label="Escolher Agente IA"><Bot className="h-3.5 w-3.5 text-primary" /><span className="hidden sm:inline">Agente IA</span></button>
+      {agent && <button type="button" className={`${buttonStyle} text-destructive`} disabled={busy} onClick={() => open("active-agent")} aria-label="Encerrar Agente IA" title={`Encerrar ${agent.name} nesta conversa`}><Square className="h-3.5 w-3.5" /></button>}
+      {busy && <Loader2 aria-label="Processando" className="h-3.5 w-3.5 animate-spin" />}
+      {!!failure && <span role="status" className="text-[10px] text-destructive" title={errorText(failure)}>Falha ao consultar</span>}
+    </div>
+    {panel && <>
+      <button type="button" className="fixed inset-0 z-40 cursor-default" aria-label="Fechar seletor" onClick={() => setPanel(null)} />
+      <section role="dialog" aria-label={title} className="absolute bottom-full left-0 z-50 mb-2 w-[min(340px,calc(100vw-24px))] rounded-xl border border-border bg-card text-card-foreground shadow-2xl">
+        <header className="flex items-center justify-between border-b border-border p-3"><strong className="text-xs">{title}</strong><button type="button" aria-label="Fechar" onClick={() => setPanel(null)}><X className="h-4 w-4" /></button></header>
+        <div className="px-3 pt-2 text-[10px] text-muted-foreground">Somente nesta conversa. Não desativa a automação na empresa.</div>
+        {state?.lastRunError && <p role="alert" className="px-3 pt-2 text-xs text-destructive">Última execução: {state.lastRunError}</p>}
+        {!!failure ? <div role="alert" className="p-3 text-xs"><p>{errorText(failure)}</p><button type="button" className="mt-2 text-primary underline" onClick={() => { reloadTarget(); if (workspaceId) void stateQ.refetch(); }}>Tentar novamente</button></div>
+          : !state ? <div className="flex items-center gap-2 p-4 text-xs"><Loader2 className="h-4 w-4 animate-spin" />Carregando automações...</div>
+          : <>
+            {(panel === "bots" || panel === "agents") && <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar pelo nome" aria-label="Buscar automação" className="m-2 h-9 w-[calc(100%-16px)] rounded-md border border-border bg-background px-3 text-xs" />}
+            <div className="max-h-64 overflow-y-auto p-2">
+              {(panel === "bots" || panel === "agents") && <>
+                {panel === "agents" && agent && !agent.paused && <p className="px-2 py-2 text-xs text-muted-foreground">{agent.name} está atendendo. Encerre esse agente antes de escolher outro.</p>}
+                {choices.filter(filter).map((row) => {
+                  const already = panel === "bots" ? runs.some((run) => run.botId === row.id) : agent?.id === row.id && !agent.paused;
+                  const unavailable = panel === "agents" && !!agent && !agent.paused;
+                  return <button type="button" key={row.id} disabled={busy || already || unavailable} className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left text-xs hover:bg-muted disabled:opacity-50" onClick={() => panel === "bots" ? startBot(row.id) : act({ action: "start-agent", workspaceId: workspaceId!, leadId, agentId: row.id })}>
+                    <span className="min-w-0 break-words font-medium">{row.name}</span><span className="shrink-0 text-primary">{already ? "Em execução" : "Iniciar"}</span>
+                  </button>;
+                })}
+                {!choices.filter(filter).length && <p className="p-3 text-xs text-muted-foreground">{search ? "Nenhum resultado para a busca." : panel === "bots" ? "Nenhum SalesBot individual ativo. Salve e ative um bot na Central de Automações." : "Nenhum Agente IA ativo cadastrado. Cadastre e habilite um agente na Central de Automações."}</p>}
+              </>}
+              {panel === "runs" && (runs.length ? runs.map((run) => <div key={run.id} className="flex items-center justify-between gap-3 rounded-lg p-3 text-xs">
+                <div className="min-w-0"><strong className="break-words">{run.name}</strong><p className="mt-1 text-[10px] text-muted-foreground">{labels[run.status] ?? run.status}</p></div>
+                <button type="button" disabled={busy} className="shrink-0 rounded border border-destructive/40 px-2 py-1.5 text-destructive disabled:opacity-50" onClick={() => act({ action: "stop-bot", workspaceId: workspaceId!, leadId, runId: run.id })}>Encerrar</button>
+              </div>) : <p className="p-3 text-xs text-muted-foreground">Nenhum SalesBot em execução nesta conversa.</p>)}
+              {panel === "active-agent" && (agent ? <div className="flex items-center justify-between gap-3 p-3 text-xs"><div className="min-w-0"><strong className="break-words">{agent.name}</strong><p className="mt-1 text-[10px] text-muted-foreground">{agent.paused ? "Pausado" : "Atendendo nesta conversa"}</p></div><button type="button" disabled={busy} className="shrink-0 rounded border border-destructive/40 px-2 py-1.5 text-destructive disabled:opacity-50" onClick={() => act({ action: "stop-agent", workspaceId: workspaceId!, leadId, agentId: agent.id, version: agent.version })}>Encerrar</button></div> : <p className="p-3 text-xs text-muted-foreground">Nenhum Agente IA vinculado a esta conversa.</p>)}
             </div>
-            <button type="button" onClick={() => setPanel(null)} className="rounded p-1 text-muted-foreground hover:bg-muted" aria-label="Fechar">
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
-          <div className="max-h-60 overflow-y-auto p-2">
-            {panel === "salesbot" ? (
-              botsQ.isLoading ? (
-                <Loading />
-              ) : bots.length ? (
-                bots.map((bot) => (
-                  <button key={bot.id} type="button" disabled={busy} onClick={() => botMut.mutate(bot.id)} className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted disabled:opacity-50">
-                    <span className="truncate font-medium">{bot.name}</span>
-                    <Zap className="h-3.5 w-3.5 shrink-0 text-primary" />
-                  </button>
-                ))
-              ) : (
-                <Empty text={isGroup ? "Nenhum SalesBot de grupo ativo neste workspace." : "Nenhum SalesBot ativo neste workspace."} />
-              )
-            ) : agentsQ.isLoading ? (
-              <Loading />
-            ) : agents.length ? (
-              agents.map((agent) => (
-                <button key={agent.id} type="button" disabled={busy} onClick={() => agentMut.mutate(agent.id)} className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-xs hover:bg-muted disabled:opacity-50">
-                  <span className="truncate font-medium">{agent.name}</span>
-                  <Bot className="h-3.5 w-3.5 shrink-0 text-primary" />
-                </button>
-              ))
-            ) : (
-              <Empty text="Nenhum Agente IA ativo neste workspace." />
-            )}
-          </div>
-        </div>
-      )}
-
-      <div className="flex h-9 items-center gap-0.5">
-        <button type="button" disabled={busy || !targetResolved} onClick={() => setPanel((current) => current === "salesbot" ? null : "salesbot")} className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[11px] font-semibold text-muted-foreground hover:bg-white/10 hover:text-foreground disabled:opacity-50" title={isGroup ? "Enviar SalesBot para este grupo" : "Enviar SalesBot para este lead"}>
-          <Send className="h-3.5 w-3.5 text-primary" />
-          <span className="hidden xl:inline">SalesBot</span>
-        </button>
-        {salesbotActive && (
-          <button type="button" disabled={busy} onClick={() => stopBotMut.mutate()} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-destructive hover:bg-destructive/10 disabled:opacity-50" title={isGroup ? "Parar SalesBot deste grupo" : "Parar SalesBot deste lead"} aria-label="Parar SalesBot">
-            <Square className="h-3.5 w-3.5" />
-          </button>
-        )}
-        {!isGroup && (
-          <button type="button" disabled={busy || !targetResolved} onClick={() => setPanel((current) => current === "agent" ? null : "agent")} className="inline-flex h-8 items-center gap-1.5 rounded-md px-2 text-[11px] font-semibold text-muted-foreground hover:bg-white/10 hover:text-foreground disabled:opacity-50" title="Enviar Agente IA para este lead">
-            <Bot className="h-3.5 w-3.5 text-primary" />
-            <span className="hidden xl:inline">Agente IA</span>
-          </button>
-        )}
-        {agentActive && (
-          <button type="button" disabled={busy} onClick={() => stopAgentMut.mutate()} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-destructive hover:bg-destructive/10 disabled:opacity-50" title="Parar Agente IA deste lead" aria-label="Parar Agente IA">
-            <Square className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-    </div>,
-    composerNode,
-  );
-}
-
-function Loading() {
-  return <div className="flex items-center justify-center gap-2 px-3 py-6 text-xs text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando…</div>;
-}
-
-function Empty({ text }: { text: string }) {
-  return <div className="px-3 py-5 text-center text-xs text-muted-foreground">{text}</div>;
+          </>}
+      </section>
+    </>}
+  </div>, composer);
 }
