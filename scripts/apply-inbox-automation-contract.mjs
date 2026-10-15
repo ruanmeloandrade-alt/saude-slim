@@ -69,9 +69,13 @@ async function runAiAgentTurnUnchecked(
 `    const raw = json.choices?.[0]?.message?.content ?? "";`,
 `    await assertAutomationMayContinue();
     const raw = json.choices?.[0]?.message?.content ?? "";`, 'stop after AI response before side effects');
-  code = once(code,
-`            else await log(supabaseAdmin, run, b, "error", r.error);`,
-`            else { await log(supabaseAdmin, run, b, "error", r.error); throw new Error(r.error ?? "Falha no envio da mensagem."); }`, 'propagate actual message failure');
+  const deliveryError = `            else await log(supabaseAdmin, run, b, "error", r.error);`;
+  const deliveryFailure = `            else { await log(supabaseAdmin, run, b, "error", r.error); throw new Error(r.error ?? "Falha no envio da mensagem."); }`;
+  if (!code.includes(deliveryFailure)) {
+    const count = code.split(deliveryError).length - 1;
+    if (count !== 2) throw new Error(`[Inbox] Expected text and attachment error handlers, found ${count}`);
+    code = code.replaceAll(deliveryError, deliveryFailure);
+  }
   // Guard every HTTP side effect in this executor, including after typing delays.
   code = code.replace(/\bawait fetch\(/g, 'await guardedAutomationFetch(');
   if (!code.includes('await guardedAutomationFetch(')) throw new Error('[Inbox] No guarded executor HTTP calls');
