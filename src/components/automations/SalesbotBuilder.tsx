@@ -448,6 +448,9 @@ export function SalesbotBuilder({ open, onClose, initialBotId, autoCreate, escop
   if (closing) return;
   setClosing(true);
   try {
+    // O botão Salvar deve iniciar uma gravação real, mesmo quando a criação
+    // inicial falhou e a fila de autosave está vazia.
+    if (active) persist(bots, [active.id]);
     const done = await flushPendingSaves();
     if (!done) {
      toast.error(getSalesbotSaveStatus().error ?? "Não foi possível salvar tudo. Tente novamente.");
@@ -1348,6 +1351,11 @@ export function SalesbotBuilder({ open, onClose, initialBotId, autoCreate, escop
           try {
             // Estrutura pendente precisa terminar primeiro: a ativação também
             // avança a revision e não pode correr em paralelo com o save.
+            // O bot recém-criado pode não ter uma revisão remota ainda.
+            // Garante primeiro o salvamento do grafo antes de ativar.
+            if (!syncProofRef.current.has(localId)) {
+              persist(bots, [localId]);
+            }
             await waitForSalesbotSync(localId);
             let proof = syncProofRef.current.get(localId);
             if (!proof) {
