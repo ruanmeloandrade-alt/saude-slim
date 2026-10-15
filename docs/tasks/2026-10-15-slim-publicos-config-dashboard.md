@@ -1,49 +1,43 @@
 # Saúde Slim: Públicos, Disparos, Automações e Configurações
 
-Checkpoint: código preparado; verificar build e publicação antes de declarar publicado. Base 5151b45, branch fix/slim-publicos-config-20261015. Destino restauracao/sistema-completo-20261014, somente ruanmeloandrade-alt/saude-slim e banco vyzvfcgpjjzvcjegzzza.
+Atualização de 15/10/2026: a implementação 022d6ce foi publicada com baf3993, deployment e81d14d0-6712-4adb-b86f-218c8ea30cb7 SUCCESS e healthcheck aprovado. As correções seguintes de Configurações e fontes da Dashboard estão em docs/tasks/2026-10-15-slim-settings-dashboard-continuation.md. O status canônico atual é docs/OPERATION_STATUS.md.
+
+Destino exclusivo: ruanmeloandrade-alt/saude-slim, branch restauracao/sistema-completo-20261014, banco vyzvfcgpjjzvcjegzzza. Não usar o projeto original.
 
 ## Ordem solicitada
 
-1. Públicos, Disparos e automações avançadas.
-2. Configurações gerais.
-3. No final da fila: corrigir as fontes da Dashboard (Envios de formulários, Campos personalizados, Valores dos campos, Sites de tracking, Indicadores de tracking). Não esconder o aviso nem inventar métricas.
+Públicos, Disparos e automações avançadas; depois Configurações gerais; por último as cinco fontes da Dashboard. Não esconder aviso ou inventar métrica para declarar conclusão.
 
-## Banco realmente aplicado
+## Banco aplicado nesta frente
 
-- 20261015115919: crm_lead_audiences, lead_custom_fields, lead_custom_field_values, tasks, crm_stage_automations, crm_automation_jobs; índices, RLS por workspace, operador versus visualizador, validação de vínculos e substituição atômica das ações de etapa.
-- 20261015120218: campanhas/destinatários persistentes, identificação de requisição, deduplicação de destinatários, cancelamento e reserva exclusiva de execução; resultados incertos não são reenviados automaticamente. Apenas serviço pode reservar/alterar resultado de envio. Nenhum segredo fica nessas tabelas.
-- As duas migrations acima foram lidas no histórico e versionadas neste repositório. Não reaplicadas por scripts de build.
+20261015115919: crm_lead_audiences, lead_custom_fields, lead_custom_field_values, tasks, crm_stage_automations e crm_automation_jobs; índices, RLS por workspace, validação de vínculos e substituição atômica das ações de etapa.
 
-## Código preparado
+20261015120218: campanhas/destinatários persistentes, identidade da requisição, deduplicação, cancelamento e reserva de execução. Apenas o serviço pode reservar/alterar o resultado de entrega. As duas migrations foram conferidas no histórico e versionadas, não executadas por scripts de build.
 
-Públicos: tags JSON em strings/objetos, combinação any/all/none, filtros falsos, campos/produtos/tarefas, paginação sem corte antes dos filtros, falhas de fonte não tratadas como ausência de contatos, erro explícito ao atualizar contagem. O limite de segurança é 100 mil registros por fonte, não leitura ilimitada.
+## Código publicado
 
-Disparos/reativação: troca do loop prolongado dentro da requisição por fila persistente, mesmo requestId durante uma repetição após falha e novo ID após confirmação, progresso na tela, encerramento dos pendentes, checagem de sessão/empresa, bloqueios de contato, mudança de telefone, timeout e resultados incertos. SalesBot iniciado não é contado como mensagem WhatsApp entregue. Agente diferente ativo não é substituído silenciosamente; atualização é condicionada à versão e rechecagem antes do envio. O encerramento não desfaz envio já iniciado ou bot já iniciado no Inbox.
+Públicos: filtros combinados, tags JSON de strings/objetos, filtros falsos, campos/produtos/tarefas, paginação sem cortar antes de filtrar e falha explícita de fonte/atualização de contagem. O limite de segurança é 100 mil registros por fonte. O filtro herdado de silêncio continua baseado em updated_at do lead e não foi homologado como histórico real de mensagens.
 
-Automações de etapa: execução imediata/agendada compartilha reserva atômica, consulta definição ainda habilitada, servidor processa pendências e operadores sem permissão de escrita são rejeitados antes do uso de cliente privilegiado. Recursos de grupos, workflow e integrações Meta continuam dependentes de contratos não restaurados nesta entrega.
+Disparos/reativação: fila persistente em vez de loop demorado dentro da requisição; identificador preservado durante repetição após erro ambíguo e renovado após confirmação; progresso e encerramento de pendências na tela; checagens de sessão/empresa, contato bloqueado, telefone alterado, timeout e resultado incerto. Não há reenvio automático de resultado incerto. Iniciar SalesBot não comprova entrega WhatsApp. Agente diferente ativo não é substituído silenciosamente. Cancelamento não desfaz mensagem já enviada nem encerra um bot já iniciado no Inbox.
 
-Configurações: leitura/gravação de segurança e verificação de convite deixam de esconder falhas como sucesso ou convite inexistente. Não declarar proteção contra senhas vazadas ativa por valor padrão. Isso não resolve o backend ausente de segurança/convites.
+Automações de etapa: persistência, reserva compartilhada entre execução imediata/agendada, rechecagem da definição habilitada, processamento pelo servidor e rejeição de operador sem permissão antes de usar o cliente privilegiado. Grupos, workflow e integrações Meta ainda possuem dependências não homologadas.
 
-## Testes efetivamente executados antes do build
+## Validação efetivamente realizada
 
-- 13/13 testes locais da seleção de Públicos, usando código real com transporte simulado.
-- 16/16 testes locais da orquestração de entrega, incluindo cancelamento, isolamento, opt-out, telefone alterado, agente concorrente, resultado sem recibo, falha de persistência e timeout. Não fazem chamada a WhatsApp/OpenAI.
-- A sonda SQL da primeira migration executou CRUD de público, campos/valores/tarefas, preservação após falha da substituição atômica, referências inválidas e isolamento; retornou sem erro e reverteu os registros.
-- O teste SQL da fila inicialmente falhou por local_id obrigatório no bot temporário. A transação foi abortada. O teste corrigido foi bloqueado pela segurança da ferramenta e NÃO passou/não executou. Não reexecutado por outro meio.
-- Consulta somente leitura posterior: zero campanhas, destinatários, públicos e ações de teste; nenhuma tabela pública com RLS desabilitada.
+46 verificações desta frente passaram no build: 13 de filtros, 16 de orquestração, 11 do contrato de integração e seis de autorização. Lógica real com transporte simulado e inspeção de fontes; não são testes de envio real.
 
-## Bloqueio explícito: Configurações
+A sonda da primeira migration executou CRUD de público, campos/valores/tarefas, preservação após falha na substituição atômica, referências inválidas e isolamento. Registros revertidos.
 
-A ferramenta bloqueou a migration slim_restore_settings_security_and_invitations. Ela NÃO foi aplicada. Consulta posterior confirmou workspace_security_settings inexistente. Não houve tentativa de contornar o bloqueio por outra identidade, serviço ou implantação. Esse pacote não foi colocado em um caminho de execução automática.
+A sonda SQL da fila inicialmente falhou pelo local_id obrigatório no bot temporário, com transação abortada. A tentativa corrigida foi bloqueada pela ferramenta e não executada. A fila não foi declarada homologada com base nos testes locais. Consulta posterior daquela etapa confirmou zero registros temporários.
 
-Permanecem pendentes: segurança, dispositivos, MFA/passkeys/recovery, políticas de equipe e convites. Salvamento de preferência não comprova aplicação da proteção; o middleware global de proteção herdado permanece desativado e precisa de correção própria.
+## Configurações: bloqueio não resolvido por este pacote
 
-## Dashboard no fim da fila
+A migration slim_restore_settings_security_and_invitations foi bloqueada e não aplicada. Não foi colocada em script de implantação para contornar a restrição. As correções posteriores de lógica/UI não criam esse backend.
 
-Campos e valores deixaram de ser tabelas ausentes porque também são dependências de Públicos e foram restaurados na primeira migration. Isso ainda não é homologação da tela. Envios de formulários e tracking continuam aguardando implementação/validação. Não marcar o pedido das cinco fontes como concluído.
+Segurança, dispositivos, MFA/passkeys/recuperação e convites não estão declarados prontos. Preferência salva não comprova aplicação da proteção. Permanecem os avisos do advisor registrados no checkpoint seguinte.
 
-## Limites e semáforo
+## Dashboard: continuidade executada
 
-Atualizar docs/OPERATION_STATUS.md após obter o resultado real do build. Testes novos de integração do código e autorização serão executados no prebuild com as regressões anteriores; não contabilizá-los como passados antes dos logs.
-Nenhuma mensagem foi enviada durante testes; não foi criada conta real, lida chave de cliente nem modificada a conexão Evolution. Não houve navegador autenticado/E2E. As rotinas de envio real e a fila de banco ainda precisam de homologação; não declarar os dois blocos integralmente concluídos.
-Não alterar main, DNS, Harpia, MCP, MktOn original, Pedidos ou GitHub Actions. Não usar Lovable.
+Campos/valores foram restaurados nesta frente por serem dependências de Públicos. Envios de formulários, fontes de tracking e agregação foram tratados depois de Configurações, nas migrations 20261015125725 e 20261015130340. Ver o documento da continuidade para testes, publicação e limites. A coleta no site e a navegação autenticada ainda não foram homologadas.
+
+Nenhuma mensagem real foi enviada durante testes, nenhuma chave foi lida/rotacionada, nenhuma conta real foi criada e a conexão Evolution foi preservada. Sem mudanças em main, DNS, Harpia, MCP, MktOn original, Pedidos, GitHub Actions ou agente Lovable.

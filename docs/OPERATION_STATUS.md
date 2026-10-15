@@ -1,69 +1,83 @@
 # Saúde Slim: semáforo de produção
 
-Checkpoint de 15/10/2026. Repositório exclusivo ruanmeloandrade-alt/saude-slim; branch operacional restauracao/sistema-completo-20261014; Supabase vyzvfcgpjjzvcjegzzza; serviço saude-slim-web.
-Última versão funcional previamente conferida: c7956c4, com checkpoint documental 5151b45. Nova implementação 022d6ce: aguardando resultado de build/deploy neste checkpoint. Não afirmar que já está publicada.
+Checkpoint: 15/10/2026.
+Último código funcional publicado e conferido: `debbd1e63134d757c1e1b4052b99a934a64c28dd`.
+Railway: deployment `b68da748-1ebe-48a9-b9d5-2ca4ea80d893`, SUCCESS; healthcheck aprovado em `2026-10-15T13:25:15Z`.
+Este checkpoint é documental e não altera o código do deployment acima.
+
+Destino exclusivo: `ruanmeloandrade-alt/saude-slim`, branch `restauracao/sistema-completo-20261014`, Supabase `vyzvfcgpjjzvcjegzzza`, serviço `saude-slim-web`.
 
 ## Legenda
 
-🟢 Entrega delimitada concluída e verificada. 🟠 Parcial/em validação. 🔴 Bloqueio ou implementação pendente. O verde de uma correção não significa homologação integral do módulo. Testes de código, banco e build não são teste autenticado de interface.
+🟢 Correção delimitada aplicada/publicada e verificada no nível indicado. 🟠 Parcial ou aguardando homologação. 🔴 Bloqueio ou implementação pendente.
+O verde de uma correção não significa homologação integral do módulo. Banco, verificações de código e healthcheck não substituem navegação autenticada nem entrega real de mensagens.
 
-## Prioridade atual solicitada
+## Ordem solicitada nesta frente
 
-1. Públicos, Disparos e automações avançadas.
-2. Configurações gerais.
-3. Ao final: as cinco fontes da Dashboard (Envios de formulários, Campos personalizados, Valores dos campos, Sites de tracking e Indicadores de tracking). Não apenas ocultar o aviso.
+Públicos/Disparos/automações avançadas, depois Configurações gerais, e por último as cinco fontes da Dashboard. Pedidos e demais frentes permanecem no escopo anterior, sem serem declarados corrigidos neste bloco.
 
-## Trabalho novo deste checkpoint
+## Entregas delimitadas verificadas
 
-| Recorte | Estado | Realizado | Falta |
-|---|---|---|---|
-| Público persistente e ações de etapa | 🟠 | Migration 20261015115919 aplicada. Sonda SQL de CRUD, referências e substituição atômica executada e revertida. | Publicação do código e homologação da interface. |
-| Filtros de Públicos | 🟠 | Código corrige tags JSON, filtros combinados e corte anterior à filtragem; 13 testes locais passaram. | Build e teste autenticado. O filtro legado de silêncio ainda usa atualização do lead, não histórico real de mensagens. |
-| Fila de disparos/reativação | 🟠 | Migration 20261015120218 aplicada; código de processamento/progresso/cancelamento preparado; 16 testes locais da orquestração passaram. | Teste real da fila e do envio não comprovados; sonda SQL da fila foi bloqueada pela segurança da ferramenta. Não contabilizar como teste aprovado. |
-| Automações de etapa | 🟠 | Persistência restaurada, reserva atômica e processamento pelo servidor preparados; bloqueio de visualizador antes de cliente privilegiado. | Build, execução real controlada e contratos avançados de grupos/workflow/Meta. |
-| Configurações gerais | 🔴 | Código prepara erros explícitos onde antes havia sucesso/default falso. | Migration de segurança/equipe/convites bloqueada pela ferramenta e NÃO aplicada. Tabela workspace_security_settings segue ausente. |
-| Dashboard: campos e valores | 🟠 | Duas estruturas restauradas por serem dependências de Públicos; gravação/releitura incluídas na sonda. | Homologação da UI e indicadores. |
-| Dashboard: envios e tracking | 🔴 | Mantidos no final da fila conforme solicitação. | Estruturas, ingestão, agregação e validação real. |
-
-## Semáforo completo dos módulos
-
-| Área | Estado | Feito e pendências |
+| Entrega | Estado | Evidência |
 |---|---|---|
-| Agentes IA | 🟠 | Cofre/persistência corrigidos e publicados anteriormente. Falta resposta real com chave própria e agente cadastrado. |
-| Home: Histórico de Vendas | 🟠 | Paginação/status corrigidos e publicados; falta homologação integral dos filtros/detalhes. |
-| Home: Dashboard detalhada | 🟠 | Carregamento comercial corrigido/publicado. Fontes extras agora têm tarefa explícita no fim da fila. |
-| Pedidos | 🟠 | Diagnóstico documentado: gravação não atômica, cliente existente/novo lead, desconto integral e valores; sem correção neste bloco. |
-| Fornecedores | 🟠 | CRUD/custo testados no banco anteriormente; interface ainda não homologada. |
-| Estoque | 🟠 | Cadastro/edição básica verificados; baixa e histórico por pedido pendentes. |
-| Produtos | 🟠 | Catálogo/produto verificados no banco; interface/vínculos completos pendentes. |
-| Disparo em massa | 🟠 | Nova fila e código em validação; não declarar entrega WhatsApp pronta. |
-| CRM: Funil | 🟠 | Contrato de automações restaurado; execução integrada e interface pendentes. |
-| CRM: Clientes | 🟠 | Operações básicas verificadas; cenários completos de filtros/deduplicação/permissões pendentes. |
-| CRM: Inbox | 🟠 | SalesBot enviado pelo teste do usuário e controles publicados anteriormente; IA/anexos/cenários completos pendentes. |
-| CRM: Automações | 🟠 | Contrato de etapa novo em validação; grupos/workflow/integrações avançadas continuam pendentes. |
-| CRM: Cérebro IA | 🟠 | Fontes/chunks/termos existentes; ingestão/recuperação/resposta real pendentes. |
-| CRM: Públicos | 🟠 | Persistência aplicada e filtros corrigidos no código; publicar/validar interface. Meta/exportação não homologados. |
-| Configurações: Geral | 🔴 | Bloqueio explícito de ferramenta no pacote de banco. Não afirmar que apenas atualizar o site resolverá. |
-| Configurações: Integrações | 🟠 | Cofre IA corrigido anteriormente; credenciais próprias e demais contratos ainda exigem validação. |
+| Código de Públicos, fila de Disparos e controles de execução | 🟢 Publicado | Implementação 022d6ce publicada com baf3993; 13 testes de filtros, 16 de orquestração, 11 de contrato e seis de autorização reconfirmados no build final. Não equivale a envio real homologado. |
+| Configurações: confirmação de gravação e validação de expediente | 🟢 Publicado | 654d92a exige retorno de registro alterado em quatro gravações; valida fuso/horários e setor antes de criar funcionário. 20 verificações de lógica e 12 de integração do código passaram. |
+| Configurações: indicação correta de segurança | 🟢 Publicado | Pontuação sem comprovação removida; falha/carregamento não libera controles; ausência de resposta não vira proteção ativa; senha libera o estado de carregamento mesmo em erro de transporte. Não implementa o backend bloqueado de segurança/convites. |
+| Dashboard: ausência das cinco fontes | 🟢 Corrigida no banco | Envios de formulários e tracking restaurados; campos/valores já restaurados como dependências de Públicos. Leituras autenticadas de todas as fontes e do RPC final passaram. Nenhum aviso foi simplesmente ocultado. |
+| Dashboard: indicadores completos de tracking | 🟢 Publicado | ca72ab0/debbd1e usam agregação no banco, sem substituir totais por lista truncada de conversões. 17 testes de agregação, oito do carregador e sete verificações do contrato passaram no build. |
 
-## Entregas delimitadas anteriores preservadas
+## Resultado desta retomada
 
-🟢 Cofre IA e persistência: migrations 20261015024506/20261015025453, nove testes de chave no build.
-🟢 Leitura do Histórico: 28c8a5a, sete regressões de paginação/status.
-🟢 Carregamento comercial da Dashboard: c7956c4, 16 testes de dados e oito verificações de integração no build, oito consultas autenticadas no banco.
-🟢 Varredura estrutural: 16 frentes/444 arquivos/147 rotas; não equivale a homologação funcional integral.
-🟢 Semáforo exclusivo da Saúde Slim substitui definitivamente o status herdado da MktOn.
+**64 verificações novas aprovadas no build final:** 20 + 12 de Configurações e 17 + 8 + 7 de tracking. As regressões anteriores também permaneceram no prebuild e passaram.
 
-## Evidências e bloqueios desta execução
+**Banco, teste controlado:** gravação e releitura de envio de formulário; leitura de campos/valores; eventos e conversões; períodos de 24 horas e sete dias; exclusão de eventos internos/futuros; sessões/visitantes separados por site; receita BRL sem somar USD; período inválido e workspace indevido rejeitados. Todos os registros da sonda bem-sucedida foram revertidos.
 
-Somente as migrations 20261015115919 e 20261015120218 foram aplicadas nesta retomada. O pacote slim_restore_settings_security_and_invitations foi bloqueado e não foi executado nem colocado em implantação automática.
-O teste inicial da fila falhou por local_id obrigatório no bot temporário e foi revertido. O teste corrigido foi bloqueado, não executado. Nenhuma tentativa de contornar o bloqueio por outra identidade ou serviço.
-Consulta somente leitura posterior: zero campanhas, destinatários, públicos e ações de teste; zero tabelas públicas com RLS desabilitada.
-Advisors de segurança: permanecem quatro avisos preexistentes das funções do Inbox e proteção contra senhas vazadas desativada; nenhuma aprovação ampla de segurança é declarada.
-Testes locais: 13 de Públicos e 16 de orquestração de entrega realmente passaram. Novos testes de contrato/autorização ainda aguardam os logs de build. Nenhuma mensagem real enviada durante testes, nenhum usuário criado, nenhuma chave lida/rotacionada.
+**Banco, leitura final:** as cinco fontes e a versão final de tracking_overview foram consultadas com papel authenticated. Os campos de receita por moeda e conversões por campanha foram confirmados. Consulta posterior de permissões confirmou que o navegador não pode marcar site como verificado, alterar sua empresa ou inserir eventos; execução anônima do agregado não é permitida.
 
-## Próximo checkpoint
+**Limite de teste específico:** a sonda de mutação da segunda migration de tracking foi bloqueada pela ferramenta e não passou/não foi executada. A leitura de catálogo e a leitura final do RPC não foram apresentadas como substitutas dessa sonda. A migration foi aplicada com sucesso e versionada.
 
-Conferir build/deploy da implementação 022d6ce e atualizar este arquivo com resultados reais. Manter Configurações bloqueadas e Dashboard extras na posição solicitada, sem declarar todos os módulos concluídos. A última frente trabalhada não significa execução do assistente em segundo plano.
-Escopo detalhado: docs/tasks/2026-10-15-slim-publicos-config-dashboard.md. Preservar os escopos anteriores de Pedidos e Dashboard.
-Sem alterações em main, DNS, Evolution, Harpia, MCP, MktOn original ou GitHub Actions. Sem Lovable.
+## Semáforo funcional completo
+
+| Ordem | Área | Estado | Feito / pendência efetiva |
+|---|---|---|---|
+| 0 | Agentes IA | 🟠 | Cofre, persistência e tratamento de falhas publicados. Atendimento real com provedor e WhatsApp ainda não homologado nesta auditoria. Não inferir estado atual da chave a partir de consulta antiga. |
+| 1 | Home: Histórico de Vendas | 🟠 | Paginação/status corrigidos e publicados; faltam cenários completos da interface e coerência com o modelo de Pedidos. |
+| 2 | Home: Dashboard detalhada | 🟠 | Carregamento comercial e as cinco fontes corrigidos; agregação completa publicada. Falta navegação autenticada, coleta real do pixel/formulário no site e homologação dos demais indicadores. |
+| 3 | Vendas: Pedidos | 🟠 | Diagnóstico registrado: gravação não atômica, cliente existente/novo lead, desconto integral, valores e recompra. Sem correção de Pedidos nesta frente. |
+| 4 | Vendas: Fornecedores | 🟠 | CRUD/custo testados anteriormente no banco; tela e relações completas pendentes. |
+| 5 | Vendas: Estoque | 🟠 | Cadastro/edição básicos verificados; baixa e histórico por pedido pendentes. |
+| 6 | Vendas: Produtos | 🟠 | Catálogo/produto verificados no banco; tela, exclusão e vínculos completos pendentes. |
+| 7 | Vendas: Disparo em massa | 🟠 | Fila/progresso/cancelamento publicados; entrega real e execução completa da fila ainda não homologadas. Nenhuma mensagem foi disparada para testar. |
+| 8 | CRM: Funil | 🟠 | Persistência de automações de etapa restaurada; cenários de disparo e interface completa pendentes. |
+| 9 | CRM: Clientes | 🟠 | Operações básicas verificadas; filtros, alterações, deduplicação e permissões completas pendentes. |
+| 10 | CRM: Inbox | 🟠 | Usuário confirmou envio SalesBot anteriormente; controles individuais preservados. IA, anexos e cenários completos pendentes. |
+| 11 | CRM: Automações | 🟠 | Ações de etapa, reserva de execução e servidor publicados. Grupos/workflow/integrações avançadas continuam com contratos pendentes. |
+| 12 | CRM: Cérebro IA | 🟠 | Fontes/chunks/termos existentes; ingestão/recuperação/resposta real não homologadas integralmente. |
+| 13 | CRM: Públicos | 🟠 | Persistência, filtros, contagem e fila publicados. Interface e exportação Meta não homologadas. Filtro de silêncio herdado ainda usa atualização do lead, não histórico real de mensagens. |
+| 14 | Configurações: Geral | 🔴 Backend parcialmente bloqueado | Correções de validação/retorno/UI publicadas. Migration de segurança/dispositivos/convites foi bloqueada e NÃO aplicada. MFA, passkeys e recuperação não são declarados prontos. |
+| 15 | Configurações: Integrações | 🟠 | Cofre IA corrigido anteriormente; demais contratos e integração real dependem de validação específica. |
+
+## Migrations aplicadas e versionadas nesta retomada
+
+- `20261015125725_slim_dashboard_form_and_tracking_sources.sql`
+- `20261015130340_slim_tracking_metadata_and_currency_totals.sql`
+
+As duas são restritas às fontes de formulários/tracking. Não executam o pacote de segurança/convites bloqueado nem alteram identidades, membros ou autenticação.
+
+## Bloqueios preservados e verificação de segurança
+
+O pacote `slim_restore_settings_security_and_invitations` continua não aplicado. Atualizar o navegador não cria esse backend.
+A sonda SQL da fila de Públicos bloqueada na etapa anterior continua não homologada; testes locais não foram usados para afirmar que ela passou.
+O advisor de segurança foi executado após as mudanças e manteve quatro avisos preexistentes das funções do Inbox e a proteção contra senhas vazadas desativada. Não foi declarada aprovação global de segurança.
+
+Nenhuma mensagem a clientes, alteração de credencial, criação de usuário real, mudança de DNS ou conexão Evolution foi feita durante esta validação. Não houve teste de navegador autenticado ou ponta a ponta do coletor de tracking.
+
+## Continuidade e documentos
+
+Próximo trabalho funcional: resolver o bloqueio de Configurações por um caminho autorizado e homologar os fluxos reais ainda laranja. Não declarar todo o sistema concluído.
+Detalhamento desta entrega: `docs/tasks/2026-10-15-slim-settings-dashboard-continuation.md`.
+Escopo de Públicos/Disparos: `docs/tasks/2026-10-15-slim-publicos-config-dashboard.md`.
+Pendências de Pedidos: `docs/tasks/2026-10-15-slim-orders-audit.md`.
+A tabela registra a última situação verificada, não execução do assistente em segundo plano.
+
+Preservados: main, projetos originais MktOn/Harpia/MCP, DNS, Evolution, rotas/widgets, salvamento manual e autosave de 120 segundos. Sem GitHub Actions, Vercel ou agente Lovable.
