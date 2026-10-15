@@ -9,7 +9,18 @@ await test('formatted prices retain both fractional digits',()=>{assert.match(fo
 await test('blank promo and legitimate zero differ',()=>{assert.equal(validateProductMoney('19,99','').promoPrice,undefined);assert.equal(validateProductMoney('19,99','0').promoPrice,0);assert.equal(validateProductMoney('0','').error,null);});
 await test('higher promo rejected',()=>assert.ok(validateProductMoney('19,99','20').error));
 await test('supplier cost bound respects numeric(12,2)',()=>{assert.equal(decimalMoney('9999999999,99',999999999999),'9999999999.99');assert.throws(()=>decimalMoney('10000000000',999999999999));});
-function fake(data,error=null){const calls=[];return {calls,from(table){calls.push(['from',table]);return {select(){return this;},eq(k,v){calls.push([k,v]);return this;},order(){return this;},then(ok,bad){return Promise.resolve({data,error}).then(ok,bad);}}};}
+function fake(data,error=null){
+ const calls=[];
+ return {calls,from(table){
+  calls.push(['from',table]);
+  return {
+   select(){return this;},
+   eq(k,v){calls.push([k,v]);return this;},
+   order(){return this;},
+   then(ok,bad){return Promise.resolve({data,error}).then(ok,bad);},
+  };
+ }};
+}
 await test('supplier uses the actual default manual source',async()=>{const db=fake([{id:'local',workspace_id:'w',provider:'manual',is_default:true},{id:'other',workspace_id:'other',provider:'manual',is_default:true}]);assert.equal(await resolveSlimCompanySource(db,'w'),'local');assert(db.calls.some(([k,v])=>k==='workspace_id'&&v==='w'));});
 await test('local legacy source remains compatible without reading original project',async()=>assert.equal(await resolveSlimCompanySource(fake([{id:'legacy',workspace_id:'w',provider:'mkton',is_default:true}]),'w'),'legacy'));
 await test('supplier independent of advertising integration',async()=>assert.equal(await resolveSlimCompanySource(fake([{id:'meta',workspace_id:'w',provider:'meta',is_default:true}]),'w'),null));
