@@ -1,5 +1,4 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 const root = new URL('../', import.meta.url);
 const MARK = '// SLIM_DASHBOARD_DATA_CONTRACT_V1';
 const plans = [];
@@ -9,22 +8,27 @@ function edit(path, transform) {
   if (before.includes(MARK)) return;
   let code = before;
   const once = (from, to, label) => {
+    // Do not modify the similarly named condition in the preferences editor.
+    if (label === 'forms unavailable') {
+      const start = code.indexOf('<Panel widgetId="forms"');
+      const end = code.indexOf('</Panel>', start);
+      if (start < 0 || end < 0) throw new Error('Forms widget anchor missing');
+      const panel = code.slice(start, end);
+      if (panel.split(from).length - 1 !== 1) throw new Error('Forms widget condition changed');
+      code = code.slice(0, start) + panel.replace(from, () => to) + code.slice(end);
+      modifications++; return;
+    }
     const hits = typeof from === 'string' ? code.split(from).length - 1 : [...code.matchAll(new RegExp(from.source, from.flags.includes('g') ? from.flags : from.flags + 'g'))].length;
     if (hits !== 1) throw new Error(`[Slim dashboard] ${path}: ${label} expected 1 anchor, found ${hits}`);
     code = code.replace(from, () => to); modifications++;
   };
-  const all = (from, to, count, label) => {
-    const hits = code.split(from).length - 1;
-    if (hits !== count) throw new Error(`[Slim dashboard] ${path}: ${label} expected ${count}, found ${hits}`);
-    code = code.split(from).join(to); modifications++;
-  };
-  transform(once, all, () => code);
+  transform(once);
   plans.push([path, `${MARK}\n${code}`]);
 }
 const imports = 'import { readDashboardRows, readDashboardRpc, dashboardIssues, classifyDashboardLead, type DashboardIssue } from "@/lib/slim-dashboard-data.core";\n';
 const call = (ws,table,cols,options='') => `readDashboardRows(sb, ${ws}, "${table}", "${cols}"${options ? ', '+options : ''})`;
 
-edit('src/lib/dashboard.functions.ts',(once,all)=>{
+edit('src/lib/dashboard.functions.ts',(once)=>{
   once('import { createServerFn }', imports+'import { createServerFn }','imports');
   once('type DbLead = {\n id: string;', 'type DbLead = {\n status?: string;\n id: string;', 'lead status type');
   once(/ const \[\{ data: pipelines, error: pipelinesError \}, \{ data: stages, error: stagesError \}, \{ data: leads, error: leadsError \}\] = await Promise\.all\(\[[\s\S]*?\n \]\);/,
@@ -58,7 +62,7 @@ edit('src/lib/dashboard.functions.ts',(once,all)=>{
   if (optionalIssue) return { ...emptyKpi(key, humanizeKpiKey(key), "count", optionalIssue.message), source_label: sourceLabel };`, 'optional KPI null states');
 });
 
-edit('src/lib/dashboard-v4-live.functions.ts',(once,all)=>{
+edit('src/lib/dashboard-v4-live.functions.ts',(once)=>{
   once('import { createServerFn }',imports+'import { createServerFn }','imports');
   once('type LeadRow = {\n  id: string;', 'type LeadRow = {\n  status?: string;\n  id: string;', 'lead status');
   once('export type DashboardV4LiveResponse = {',`export type DashboardV4LiveResponse = {
