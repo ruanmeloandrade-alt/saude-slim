@@ -1,9 +1,14 @@
 export const INTEGRATION_VAULT_UNAVAILABLE_MESSAGE =
-  "Cofre de integrações indisponível. A configuração segura do ambiente precisa ser corrigida pelo administrador da MKTOn.";
+  "Cofre de integrações da Saúde Slim indisponível. A configuração segura do servidor precisa ser verificada.";
 
 export function integrationVaultFailure(scope: string, detail?: unknown): Error {
-  if (typeof console !== "undefined") {
-    console.error(`[integration-vault] ${scope}`, detail ?? "sem detalhe");
-  }
+  // Never log a provider response, plaintext credential, or encryption key.
+  const value = detail && typeof detail === "object" && "code" in detail
+    ? (detail as { code?: unknown }).code
+    : undefined;
+  const code = typeof value === "string" && /^(?:PGRST\d{3}|[0-9A-Z]{5})$/.test(value)
+    ? value
+    : "vault_error";
+  console.error(`[integration-vault] ${scope}`, { code });
   return new Error(INTEGRATION_VAULT_UNAVAILABLE_MESSAGE);
 }

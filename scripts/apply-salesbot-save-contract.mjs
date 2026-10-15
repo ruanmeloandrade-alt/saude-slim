@@ -4,3 +4,4 @@ import './apply-inbox-automation-contract.mjs';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 execFileSync(process.execPath, ['--experimental-strip-types', fileURLToPath(new URL('./test-inbox-automation-controls.mjs', import.meta.url))], { stdio: 'inherit' });
+execFileSync(process.execPath, ['--experimental-strip-types', fileURLToPath(new URL('./test-saude-slim-ai-vault.mjs', import.meta.url))], { stdio: 'inherit' });
