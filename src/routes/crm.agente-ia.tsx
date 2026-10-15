@@ -29,7 +29,7 @@ function BrainPage() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [url, setUrl] = useState("");
-  const [kind, setKind] = useState<SourceType>("text");
+  const [kind, setKind] = useState<SourceType | "blocked">("text");
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -139,22 +139,14 @@ function BrainPage() {
         <section className="w-full rounded-lg border bg-card p-5">
           <h2 className="mb-4 font-semibold">Adicionar conhecimento</h2>
           <div className="mb-4 flex flex-wrap gap-2">
-            {([{ id: "text", label: "Informação", icon: FileText }, { id: "document", label: "Documento", icon: Upload }, { id: "url", label: "Link", icon: Link2 }, { id: "promotion", label: "Promoção", icon: Megaphone }] as const).map(option => (
+            {([{ id: "text", label: "Informação", icon: FileText }, { id: "document", label: "Documento", icon: Upload }, { id: "url", label: "Link", icon: Link2 }, { id: "promotion", label: "Promoção", icon: Megaphone }, { id: "blocked", label: "Palavras proibidas", icon: FileText }] as const).map(option => (
               <button key={option.id} type="button" onClick={() => setKind(option.id)}
                 className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm ${kind === option.id ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>
                 <option.icon size={15} />{option.label}
               </button>
             ))}
           </div>
-          <label className="block text-sm">Título<input className="mt-1 mb-3 w-full rounded-md border bg-background p-2" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex.: Política comercial" /></label>
-          {(kind === "text" || kind === "promotion") && <label className="block text-sm">Conteúdo<textarea className="mt-1 mb-3 min-h-36 w-full rounded-md border bg-background p-2" value={content} onChange={e => setContent(e.target.value)} /></label>}
-          {kind === "url" && <label className="block text-sm">Endereço da página<input className="mt-1 mb-3 w-full rounded-md border bg-background p-2" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." /></label>}
-          {kind === "document" && <label className="block text-sm">PDF, DOCX, TXT ou Markdown (até 20 MB)<input type="file" accept=".pdf,.docx,.txt,.md" className="mt-2 mb-3 block" onChange={e => setFile(e.target.files?.[0] ?? null)} /></label>}
-          <button type="button" disabled={busy || !workspaceId} onClick={addSource} className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"><Plus size={16} /> {busy ? "Salvando..." : "Adicionar fonte"}</button>
-          {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
-          {notice && <p className="mt-3 text-sm text-muted-foreground">{notice}</p>}
-        </section>
-        <section className="w-full rounded-lg border bg-card p-5">
+          {kind === "blocked" ? (<div className="mt-4 rounded-lg border bg-muted/20 p-4">
           <h2 className="mb-2 font-semibold">Palavras proibidas</h2>
           <p className="mb-3 text-xs text-muted-foreground">Termos que os agentes não devem usar. O bloqueio automático antes do envio ainda precisa ser integrado ao backend.</p>
           <div className="flex gap-2">
@@ -162,6 +154,16 @@ function BrainPage() {
             <button type="button" onClick={addBlockedTerm} className="rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground">Adicionar</button>
           </div>
           <ul className="mt-3 space-y-2">{blockedTerms.map(item=><li key={item.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"><span>{item.term}</span><button type="button" aria-label={`Remover ${item.term}`} onClick={()=>removeBlockedTerm(item.id)}><Trash2 size={15}/></button></li>)}</ul>
+        </div>
+          ) : (<>
+          <label className="block text-sm">Título<input className="mt-1 mb-3 w-full rounded-md border bg-background p-2" value={title} onChange={e => setTitle(e.target.value)} placeholder="Ex.: Política comercial" /></label>
+          {(kind === "text" || kind === "promotion") && <label className="block text-sm">Conteúdo<textarea className="mt-1 mb-3 min-h-36 w-full rounded-md border bg-background p-2" value={content} onChange={e => setContent(e.target.value)} /></label>}
+          {kind === "url" && <label className="block text-sm">Endereço da página<input className="mt-1 mb-3 w-full rounded-md border bg-background p-2" value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." /></label>}
+          {kind === "document" && <label className="block text-sm">PDF, DOCX, TXT ou Markdown (até 20 MB)<input type="file" accept=".pdf,.docx,.txt,.md" className="mt-2 mb-3 block" onChange={e => setFile(e.target.files?.[0] ?? null)} /></label>}
+          <button type="button" disabled={busy || !workspaceId} onClick={addSource} className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"><Plus size={16} /> {busy ? "Salvando..." : "Adicionar fonte"}</button>
+          {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
+          {notice && <p className="mt-3 text-sm text-muted-foreground">{notice}</p>}
+          </>)}
         </section>
         <section className="w-full rounded-lg border bg-card p-5">
           <h2 className="mb-2 font-semibold">Links autorizados</h2>
