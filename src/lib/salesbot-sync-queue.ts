@@ -1,217 +1,150 @@
 /**
- * Gerenciador de salvamento dos SalesBots.
- *
- * Regras que este módulo garante:
- *  - Debounce: agrupa alterações rápidas (digitação) num único envio.
- *  - Coalescência: envia sempre o estado MAIS RECENTE do bot.
- *  - Fila por bot: nunca há dois envios simultâneos do mesmo bot.
- *  - Nunca fica "salvando" para sempre: toda task tem prazo máximo e todo
- *    fluxo termina em "saved" ou "error" — jamais num limbo.
- *  - Falha não bloqueia a fila: a task vai para "pendências com falha" e pode
- *    ser reenviada com retrySalesbotSave().
+ * Pending edits stay in memory. Only an explicit flush or the two-minute
+ * deadline sends them to the database. The server is the source of truth.
  */
-
-export type SalesbotSaveStatus = "idle" | "saving" | "saved" | "error";
-
+export type SalesbotSaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 type Task<T = unknown> = () => Promise<T>;
-
-const DEBOUNCE_MS = 700;
-const MAX_ATTEMPTS = 3;
-/** Bots grandes levam vários segundos no servidor: prazo generoso, mas finito. */
+export const SALESBOT_AUTOSAVE_MS = 120_000;
 const TASK_TIMEOUT_MS = 45_000;
-const TASK_TIMEOUT_MESSAGE = "O salvamento demorou demais. Verifique a conexão e tente novamente.";
-
+const TIMEOUT_MESSAGE = "O servidor ainda não confirmou o salvamento. Aguarde antes de tentar novamente.";
 const pendingSyncs = new Map<string, Promise<unknown>>();
+// A timeout cannot cancel a server write. Keep its lock until it really settles.
+const unresolvedRequests = new Map<string, Promise<unknown>>();
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
-/** Última task pendente por bot (coalescida: só a mais nova importa). */
 const latestTask = new Map<string, Task>();
-/** Tasks que falharam e aguardam nova tentativa (não bloqueiam a fila). */
 const failedTasks = new Map<string, Task>();
-
+const errors = new Map<string, string>();
+const listeners = new Set<(s: SalesbotSaveStatus, err: string | null) => void>();
 let status: SalesbotSaveStatus = "idle";
 let lastError: string | null = null;
-const listeners = new Set<(s: SalesbotSaveStatus, err: string | null) => void>();
+let confirmedSave = false;
 
-function setStatus(next: SalesbotSaveStatus, err: string | null = null) {
-  status = next;
-  lastError = err;
-  for (const l of listeners) l(status, lastError);
+function publish(): void {
+  lastError = errors.values().next().value ?? null;
+  status = errors.size ? "error" : pendingSyncs.size ? "saving"
+    : latestTask.size || timers.size ? "dirty" : confirmedSave ? "saved" : "idle";
+  for (const listener of listeners) listener(status, lastError);
 }
-
-export function getSalesbotSaveStatus(): { status: SalesbotSaveStatus; error: string | null } {
-  return { status, error: lastError };
-}
-
-export function subscribeSalesbotSaveStatus(
-  listener: (s: SalesbotSaveStatus, err: string | null) => void,
-): () => void {
+export function getSalesbotSaveStatus() { return { status, error: lastError }; }
+export function subscribeSalesbotSaveStatus(listener: (s: SalesbotSaveStatus, err: string | null) => void): () => void {
   listeners.add(listener);
   listener(status, lastError);
-  return () => listeners.delete(listener);
+  return () => { listeners.delete(listener); };
 }
-
-function sleep(ms: number) {
-  return new Promise<void>((r) => setTimeout(r, ms));
+function clearTimer(id: string): void {
+  const timer = timers.get(id);
+  if (timer !== undefined) clearTimeout(timer);
+  timers.delete(id);
 }
-
-/** Uma requisição pode ficar pendente para sempre sem rejeitar; a fila
- * precisa recuperar o controle para informar a falha e liberar a UI. */
-async function runWithTimeout<T>(task: Task<T>, ms = TASK_TIMEOUT_MS): Promise<T> {
+async function runWithTimeout<T>(id: string, task: Task<T>): Promise<T> {
+  if (unresolvedRequests.has(id)) throw new Error(TIMEOUT_MESSAGE);
+  const actual = Promise.resolve().then(task);
+  unresolvedRequests.set(id, actual);
+  const release = () => { if (unresolvedRequests.get(id) === actual) unresolvedRequests.delete(id); };
+  void actual.then(release, release);
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(TASK_TIMEOUT_MESSAGE)), ms);
+    timer = setTimeout(() => reject(new Error(TIMEOUT_MESSAGE)), TASK_TIMEOUT_MS);
   });
-  try {
-    return await Promise.race([task(), timeout]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
+  try { return await Promise.race([actual, timeout]); }
+  finally { if (timer !== undefined) clearTimeout(timer); }
 }
-
-function settleIdle() {
-  if (latestTask.size === 0 && timers.size === 0 && pendingSyncs.size === 0) {
-    setStatus(failedTasks.size > 0 ? "error" : "saved", failedTasks.size > 0 ? lastError : null);
-  }
+function serial<T>(id: string, task: Task<T>): Promise<T> {
+  const previous = pendingSyncs.get(id) ?? Promise.resolve();
+  const job = previous.catch(() => undefined).then(task);
+  pendingSyncs.set(id, job);
+  publish();
+  const done = () => {
+    if (pendingSyncs.get(id) === job) pendingSyncs.delete(id);
+    publish();
+  };
+  void job.then(done, done);
+  return job;
 }
-
-/** Executa a task mais recente do bot com retry; roda serialmente por bot. */
-function runQueued(botId: string): Promise<void> {
-  const previous = pendingSyncs.get(botId) ?? Promise.resolve();
-  const job = previous.catch(() => undefined).then(async () => {
-    for (;;) {
-      const task = latestTask.get(botId);
-      if (!task) return;
-      latestTask.delete(botId);
-      setStatus("saving");
-      let attempt = 0;
-      for (;;) {
-        attempt += 1;
-        try {
-          await runWithTimeout(task);
-          failedTasks.delete(botId);
-          break;
-        } catch (err) {
-          if (attempt >= MAX_ATTEMPTS) {
-            // Guarda para nova tentativa, mas NÃO deixa a fila presa nela.
-            if (!latestTask.has(botId)) failedTasks.set(botId, task);
-            setStatus("error", err instanceof Error ? err.message : "Falha ao salvar");
-            return;
-          }
-          await sleep(400 * attempt);
-        }
-      }
+/** One requested save, not an endless drain: edits made during it wait again. */
+function runQueued(id: string): Promise<void> {
+  return serial(id, async () => {
+    const task = latestTask.get(id);
+    if (!task) return;
+    clearTimer(id);
+    latestTask.delete(id);
+    errors.delete(id);
+    publish();
+    try {
+      await runWithTimeout(id, task);
+      confirmedSave = true;
+      failedTasks.delete(id);
+      errors.delete(id);
+    } catch (error) {
+      if (!latestTask.has(id)) failedTasks.set(id, task);
+      errors.set(id, error instanceof Error ? error.message : "Falha ao salvar no servidor.");
+      throw error;
     }
   });
-  pendingSyncs.set(botId, job);
-  const done = () => {
-    if (pendingSyncs.get(botId) === job) pendingSyncs.delete(botId);
-    settleIdle();
-  };
-  void job.then(done, done);
-  return job;
 }
-
-/** Agenda o salvamento (com debounce). Substitui qualquer envio pendente. */
-export function scheduleSalesbotSave(botId: string, task: Task): void {
-  latestTask.set(botId, task);
-  failedTasks.delete(botId);
-  setStatus("saving");
-  const existing = timers.get(botId);
-  if (existing) clearTimeout(existing);
-  timers.set(
-    botId,
-    setTimeout(() => {
-      timers.delete(botId);
-      void runQueued(botId).catch(() => undefined);
-    }, DEBOUNCE_MS),
-  );
+/** First pending edit starts the deadline. Further typing does not restart it. */
+export function scheduleSalesbotSave(id: string, task: Task): void {
+  latestTask.set(id, task);
+  failedTasks.delete(id);
+  errors.delete(id);
+  if (!timers.has(id)) {
+    timers.set(id, setTimeout(() => {
+      timers.delete(id);
+      void runQueued(id).catch(() => undefined);
+    }, SALESBOT_AUTOSAVE_MS));
+  }
+  publish();
 }
-
-/** Reenfileira imediatamente o que falhou (botão "Tentar novamente"). */
-export function retrySalesbotSave(botId?: string): void {
-  const ids = botId ? [botId] : [...failedTasks.keys()];
-  for (const id of ids) {
-    const task = failedTasks.get(id);
-    if (!task) continue;
-    failedTasks.delete(id);
-    latestTask.set(id, task);
-    setStatus("saving");
-    void runQueued(id).catch(() => undefined);
+/** Manual Save / retry, or an explicit operation that requires persisted data. */
+export async function flushSalesbotSave(id: string): Promise<void> {
+  clearTimer(id);
+  const failed = failedTasks.get(id);
+  if (failed && !latestTask.has(id)) latestTask.set(id, failed);
+  if (latestTask.has(id)) await runQueued(id);
+  else {
+    const pending = pendingSyncs.get(id);
+    if (pending) await pending;
   }
+  if (unresolvedRequests.has(id) || errors.has(id)) throw new Error(errors.get(id) ?? TIMEOUT_MESSAGE);
 }
-
-/** Envia imediatamente o que estiver pendente do bot e aguarda concluir. */
-export async function flushSalesbotSave(botId: string): Promise<void> {
-  const timer = timers.get(botId);
-  if (timer) {
-    clearTimeout(timer);
-    timers.delete(botId);
-  }
-  const failed = failedTasks.get(botId);
-  if (failed && !latestTask.has(botId)) {
-    failedTasks.delete(botId);
-    latestTask.set(botId, failed);
-  }
-  if (latestTask.has(botId)) {
-    await runQueued(botId).catch(() => undefined);
-  }
-  // Operações avulsas (duplicar/excluir) também não podem prender a UI.
-  const inflight = pendingSyncs.get(botId);
-  if (inflight) {
-    await runWithTimeout(() => inflight as Promise<unknown>).catch(() => undefined);
-  }
-}
-
-/** Envia e aguarda TODOS os bots com alterações pendentes. */
 export async function flushAllSalesbotSaves(): Promise<void> {
-  for (let round = 0; round < 3; round += 1) {
-    const ids = new Set<string>([
-      ...timers.keys(),
-      ...latestTask.keys(),
-      ...failedTasks.keys(),
-      ...pendingSyncs.keys(),
-    ]);
-    if (ids.size === 0) break;
-    await Promise.all([...ids].map((id) => flushSalesbotSave(id)));
-    if (!hasPendingSalesbotSaves() && failedTasks.size === 0) break;
-    if (failedTasks.size > 0) break; // falha real: não adianta girar em círculo
+  const ids = new Set([...latestTask.keys(), ...failedTasks.keys(), ...timers.keys(), ...pendingSyncs.keys()]);
+  const outcomes = await Promise.allSettled([...ids].map(flushSalesbotSave));
+  publish();
+  const failure = outcomes.find((r) => r.status === "rejected");
+  if (failure?.status === "rejected") throw failure.reason;
+  if (errors.size) throw new Error(lastError ?? "Falha ao salvar no servidor.");
+}
+export function retrySalesbotSave(id?: string): void {
+  for (const key of id ? [id] : [...failedTasks.keys()]) {
+    void flushSalesbotSave(key).catch(() => undefined);
   }
-  settleIdle();
 }
-
+/** Failed edits are also unsaved: closing/reloading must warn about them. */
 export function hasPendingSalesbotSaves(): boolean {
-  return timers.size > 0 || latestTask.size > 0 || pendingSyncs.size > 0;
+  return latestTask.size > 0 || failedTasks.size > 0 || timers.size > 0
+    || pendingSyncs.size > 0 || unresolvedRequests.size > 0;
 }
-
-export function hasFailedSalesbotSaves(): boolean {
-  return failedTasks.size > 0;
+export function hasFailedSalesbotSaves(): boolean { return errors.size > 0 || failedTasks.size > 0; }
+export async function waitForSalesbotSync(id: string): Promise<void> { await flushSalesbotSave(id); }
+export function clearSalesbotSync(id: string): void {
+  clearTimer(id);
+  latestTask.delete(id);
+  failedTasks.delete(id);
+  errors.delete(id);
+  // Never unlock an actual request that is still running.
+  publish();
 }
-
-/** Compat: aguarda o bot terminar de salvar (inclui debounce pendente). */
-export async function waitForSalesbotSync(botId: string): Promise<void> {
-  await flushSalesbotSave(botId);
-}
-
-/** Descarta qualquer trabalho pendente do bot (usado após excluir). */
-export function clearSalesbotSync(botId: string): void {
-  const timer = timers.get(botId);
-  if (timer) clearTimeout(timer);
-  timers.delete(botId);
-  latestTask.delete(botId);
-  failedTasks.delete(botId);
-  pendingSyncs.delete(botId);
-  if (!hasPendingSalesbotSaves() && status === "saving") setStatus("idle");
-}
-
-/** Enfileira uma operação única (ex.: exclusão) respeitando a ordem do bot. */
-export function enqueueSalesbotSync<T>(botId: string, task: () => Promise<T>): Promise<T> {
-  const previous = pendingSyncs.get(botId) ?? Promise.resolve();
-  const job = previous.catch(() => undefined).then(() => runWithTimeout(task));
-  pendingSyncs.set(botId, job);
-  const done = () => {
-    if (pendingSyncs.get(botId) === job) pendingSyncs.delete(botId);
-    settleIdle();
-  };
-  void job.then(done, done);
-  return job;
+export function enqueueSalesbotSync<T>(id: string, task: Task<T>): Promise<T> {
+  return serial(id, async () => {
+    try {
+      const result = await runWithTimeout(id, task);
+      confirmedSave = true;
+      errors.delete(id);
+      return result;
+    } catch (error) {
+      errors.set(id, error instanceof Error ? error.message : "Falha na operação do SalesBot.");
+      throw error;
+    }
+  });
 }
