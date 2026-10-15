@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {execFileSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {createAudienceRequestTracker} from '../src/lib/slim-audience-request.ts';
+const root=new URL('../',import.meta.url);const read=p=>fs.readFileSync(new URL(p,root),'utf8');let n=0;
+function check(name,fn){fn();n++;console.log('PASS audience integration: '+name);}
+check('same intent retains its request ID across retries',()=>{const r=createAudienceRequestTracker();assert.equal(r({a:1}),r({a:1}));});
+check('changed intent gets another request ID',()=>{const r=createAudienceRequestTracker();assert.notEqual(r({a:1}),r({a:2}));});
+check('acknowledged intent permits a new intentional send',()=>{const r=createAudienceRequestTracker();const id=r({a:1});r.reset();assert.notEqual(id,r({a:1}));});
+const files=['src/lib/crm-audiences.functions.ts','src/lib/stage-automation-engine.server.ts','src/lib/stage-automations.functions.ts','src/server.ts','src/routes/disparo-em-massa.tsx','src/routes/crm.publicos.tsx','src/lib/security-settings.functions.ts','src/lib/settings.functions.ts'];
+const before=files.map(read);
+check('real sources contain the checked patch',()=>assert(before.every(s=>s.startsWith('// SLIM_AUDIENCE_OPERATIONS_V1'))));
+execFileSync(process.execPath,[fileURLToPath(new URL('./apply-slim-audience-contract.mjs',import.meta.url))],{stdio:'inherit'});
+check('patch is idempotent',()=>assert.deepEqual(files.map(read),before));
+check('audience matching never uses SQL-array overlap on JSON tags',()=>{assert(!before[0].includes('.overlaps("tags"'));assert(before[0].includes('querySlimAudience(sb,wsId,f,limit)'));});
+check('three outbound handlers enqueue using authenticated context',()=>{assert.equal((before[0].match(/return enqueueSlimAudience\(sb,wsId,data,rows,/g)||[]).length,3);assert(!before[0].includes('await sendEvolutionText('));assert.equal((before[0].match(/requestId: z.string\(\).uuid\(\).optional\(\)/g)||[]).length,3);});
+check('manual and scheduled jobs share an atomic claim',()=>{assert(before[1].includes('admin.rpc("slim_claim_stage_job"'));assert(before[1].includes('await runJobById(admin,job.id)'));assert(before[1].includes('Automação desabilitada ou removida.'));});
+check('worker boot and progress UI are wired',()=>{assert(before[3].includes('ensureSlimAudienceWorker();'));for(const code of [before[4],before[5]])assert(code.includes('<SlimAudienceQueue />'));});
+check('security and invitation errors are not false success',()=>{assert(before[6].includes('if(saveError||!row)throw'));assert(before[6].includes('Configurações de segurança indisponíveis'));assert(before[7].includes('Serviço de convites indisponível'));});
+check('provider path uses own session credentials and a timeout',()=>{const s=read('src/lib/slim-audience-runtime.server.ts');assert(s.includes('get_evolution_credentials_service'));assert(s.includes('apikey:s.api_key'));assert(s.includes('AbortSignal.timeout(25000)'));assert(s.includes(".eq('active_conversation_agent_version',version)"));});
+console.log(`${n}/${n} audience integration checks passed; no production mutations or delivery test performed.`);
