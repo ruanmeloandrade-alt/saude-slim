@@ -1,3 +1,4 @@
+import { dbWorkerMayRun, recordDbError, recordDbRecovery } from './slim-db-worker-backoff.core';
 import { supabaseAdmin } from '@/integrations/supabase/client.server';
 import { deliverAudienceItem } from './slim-audience-delivery.core';
 import { normalizeInternationalPhone, directWhatsappJidFromCanonicalDigits } from './whatsapp-identity';
@@ -38,9 +39,12 @@ async function activate(c:any,l:any){
  }};
 }
 export async function processSlimAudienceQueue():Promise<void>{
- if(state.busy)return;state.busy=true;
+ if(state.busy||!dbWorkerMayRun())return;state.busy=true;
  try{
-  const item=checked(await db.rpc('slim_claim_audience_delivery'),'queue claim');if(!item)return;
+  const claim=await db.rpc('slim_claim_audience_delivery');
+  if(claim.error){recordDbError(claim.error);throw new Error('Fila de entregas temporariamente indisponível.');}
+  recordDbRecovery();
+  const item=claim.data;if(!item)return;
   const c=item.campaign;
   const outcome=await deliverAudienceItem({
    campaign:c,workspaceId:c.workspace_id,expectedPhone:item.phone,
@@ -76,15 +80,18 @@ export async function processSlimAudienceQueue():Promise<void>{
   });
   checked(await db.from('slim_audience_deliveries').update({status:outcome.state,message_id:outcome.messageId??null,last_error:outcome.code??null,finished_at:new Date().toISOString()})
     .eq('id',item.id).eq('workspace_id',c.workspace_id).eq('status','running'),'delivery result');
- }finally{state.busy=false;}
+ }catch(error){recordDbError(error);throw error;}
+ finally{state.busy=false;}
 }
 async function processStageJobs(){
- if(state.stageBusy||Date.now()-state.lastStage<15000)return;state.stageBusy=true;state.lastStage=Date.now();
- try{const {tickStageAutomationJobs}=await import('./stage-automation-engine.server');await tickStageAutomationJobs(db,10);}finally{state.stageBusy=false;}
+ if(state.stageBusy||Date.now()-state.lastStage<15000||!dbWorkerMayRun())return;state.stageBusy=true;state.lastStage=Date.now();
+ try{const {tickStageAutomationJobs}=await import('./stage-automation-engine.server');await tickStageAutomationJobs(db,10);recordDbRecovery();}
+ catch(error){recordDbError(error);throw error;}
+ finally{state.stageBusy=false;}
 }
 export function ensureSlimAudienceWorker(){
  if(state.timer)return;
- state.timer=setInterval(()=>{void processSlimAudienceQueue().catch(report);void processStageJobs().catch(report);},1000);
+ state.timer=setInterval(()=>{void processSlimAudienceQueue().catch(report);void processStageJobs().catch(report);},5000);
  state.timer.unref?.();
 }
 export function kickSlimAudienceWorker(){ensureSlimAudienceWorker();void processSlimAudienceQueue().catch(report);}

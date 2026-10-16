@@ -1,3 +1,4 @@
+import { dbWorkerMayRun, recordDbError, recordDbRecovery } from "./slim-db-worker-backoff.core";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { executeRun, tickWaitingTimers } from "@/lib/salesbot-runtime.server";
 
@@ -7,11 +8,12 @@ const state = root.__slimInboxWorker ??= { busy: false };
 const db = supabaseAdmin as any;
 
 export async function processInboxAutomationQueue(): Promise<void> {
-  if (state.busy) return;
+  if (state.busy || !dbWorkerMayRun()) return;
   state.busy = true;
   try {
     const { data: runs, error } = await db.rpc("slim_claim_inbox_salesbots");
-    if (error) throw new Error(`Inbox runtime claim: ${error.message}`);
+    if (error) {recordDbError(error);throw new Error("Não foi possível reservar a fila do Inbox.");}
+    recordDbRecovery();
     await Promise.all((runs ?? []).map(async (run: any) => {
       try { await executeRun(db, run); }
       catch (error) {
@@ -21,7 +23,8 @@ export async function processInboxAutomationQueue(): Promise<void> {
       }
     }));
     await tickWaitingTimers(db);
-  } finally { state.busy = false; }
+  } catch(error) {recordDbError(error);throw error;}
+  finally { state.busy = false; }
 }
 
 export function ensureInboxAutomationWorker(): void {
