@@ -54,11 +54,11 @@ async function executeRunUnchecked(supabaseAdmin: AnySb, runInput: string | RunR
 `async function runAiAgentTurn(
   supabaseAdmin: AnySb,`,
 `async function runAiAgentTurn(
-  supabaseAdmin: AnySb, workspaceId: string, leadId: string, phone: string, agentId: string, extraUserMessage?: string,
+  supabaseAdmin: AnySb, workspaceId: string, leadId: string, phone: string, agentId: string, extraUserMessage?: string, expectedVersion?: number,
 ): Promise<{ reply: string; handoff: boolean; error?: string }> {
   try {
     return await withAgentGuard(supabaseAdmin, workspaceId, leadId,
-      () => runAiAgentTurnUnchecked(supabaseAdmin, workspaceId, leadId, phone, agentId, extraUserMessage));
+      () => runAiAgentTurnUnchecked(supabaseAdmin, workspaceId, leadId, phone, agentId, extraUserMessage), agentId, expectedVersion);
   } catch (error) {
     return { reply: "", handoff: false, error: error instanceof Error ? error.message : "Agente IA interrompido." };
   }

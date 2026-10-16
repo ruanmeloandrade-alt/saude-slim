@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 type Db = { from: (table: string) => any };
-type AgentFence = { leadId: string; version: number; assignedId: string | null };
+type AgentFence = { leadId: string; version: number; assignedId: string | null; expectedAgentId?: string };
 type Scope = { db: Db; workspaceId?: string; runId?: string; agent?: AgentFence };
 const scopes = new AsyncLocalStorage<Scope>();
 
@@ -27,6 +27,12 @@ export async function assertAutomationMayContinue(): Promise<void> {
     if (error) throw new Error("Não foi possível confirmar o estado do Agente IA.");
     if (!data || data.ai_paused || Number(data.active_conversation_agent_version) !== scope.agent.version
       || (data.active_conversation_agent_id ?? null) !== scope.agent.assignedId) throw new AutomationStoppedError();
+    if (scope.agent.expectedAgentId) {
+      const current = await scope.db.from("conversation_ai_agents").select("id,enabled")
+        .eq("workspace_id", scope.workspaceId).eq("id", scope.agent.expectedAgentId).maybeSingle();
+      if (current.error) throw new Error("Não foi possível confirmar se o Agente IA está habilitado.");
+      if (!current.data || current.data.enabled !== true) throw new AutomationStoppedError();
+    }
   }
 }
 
@@ -39,14 +45,18 @@ export async function withSalesbotGuard<T>(db: Db, input: string | { id: string;
   });
 }
 
-export async function withAgentGuard<T>(db: Db, workspaceId: string, leadId: string, task: () => Promise<T>): Promise<T> {
+export async function withAgentGuard<T>(db: Db, workspaceId: string, leadId: string, task: () => Promise<T>, expectedAgentId?: string, expectedVersion?: number): Promise<T> {
   const { data, error } = await db.from("leads")
     .select("ai_paused,active_conversation_agent_id,active_conversation_agent_version")
     .eq("id", leadId).eq("workspace_id", workspaceId).maybeSingle();
   if (error || !data) throw new Error("Conversa do Agente IA não encontrada.");
   if (data.ai_paused) throw new AutomationStoppedError();
+  const version = Number(data.active_conversation_agent_version);
+  if (!Number.isSafeInteger(version) || version < 0) throw new Error("Versão do Agente IA inválida.");
+  if (expectedAgentId !== undefined && data.active_conversation_agent_id !== expectedAgentId) throw new AutomationStoppedError();
+  if (expectedVersion !== undefined && version !== expectedVersion) throw new AutomationStoppedError();
   return scopes.run({ ...scopes.getStore(), db, workspaceId,
-    agent: { leadId, version: Number(data.active_conversation_agent_version), assignedId: data.active_conversation_agent_id ?? null } },
+    agent: { leadId, version, assignedId: data.active_conversation_agent_id ?? null, expectedAgentId } },
     async () => { await assertAutomationMayContinue(); return task(); });
 }
 
