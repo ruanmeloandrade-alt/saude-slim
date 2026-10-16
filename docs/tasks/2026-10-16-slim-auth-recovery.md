@@ -11,3 +11,12 @@ Validação esperada: 10 testes de funções puras e contratos das telas; regres
 Recuperação de infraestrutura: reinicialização do projeto Supabase pelo Dashboard é recurso oficial, mas não há ação de restart disponível no conector desta sessão. Pausar/restaurar o projeto NÃO é substituto equivalente e não foi executado. Não apagar dados, mudar DNS, alterar credenciais ou usar outro backend. Se o projeto continuar sem SELECT 1 após a redução de carga, é necessário utilizar o controle oficial de reinicialização e/ou suporte da Supabase, com avaliação de workloads e métricas.
 
 A fila de gatilhos SalesBot por etapa continua bloqueada até a migração ser confirmada; preservar `scripts/slim-stage-move-release.json` desativado.
+
+
+## Resultado efetivo desta rodada
+
+Código `e2dabf6d8c49377f71430c33fe44d3f6c6060d34`, Railway `8220a268-065e-481c-96f8-ee9927bc8cd7` SUCCESS, healthcheck 1/1; serviço online, uma réplica, DNS do domínio principal propagado e certificado válido. Dez testes novos de Auth passaram no build. O guard protege as páginas internas e permite renderizar /auth independentemente do getSession remoto. Browser limita password a 12 segundos (uma tentativa) e refresh_token a 20 segundos. Não foram alterados dados de contas.
+
+Uma consulta SELECT 1 após o deploy ainda expirou com Connection terminated due to connection timeout. Portanto login funcional de verdade e reinstalação do gatilho SalesBot continuam bloqueados pela instância gerenciada. Não foram feitos restart, Pause/Restore, reconfiguração de compute, rotação de token, alteração DNS ou mudança de backend. O usuário pode usar o painel oficial Restart project para recuperação da instância; o conector desta sessão não dispõe dessa ação. Uma reinicialização encerra conexões ativas e pode abortar transações em curso, sem excluir tabelas. Após a recuperação, reavaliar Auth, SQL, esquema do gatilho e somente então habilitar o worker transacional; evitar repetição de pedidos/WhatsApps incertos.
+
+Resumo técnico e texto do chamado: docs/incidents/2026-10-16-supabase-login-timeout.md.

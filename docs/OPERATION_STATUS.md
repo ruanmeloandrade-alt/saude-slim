@@ -1,3 +1,24 @@
+# Saúde Slim: checkpoint prioritário do login em 16/10/2026
+
+**Deploy funcional confirmado:** commit `e2dabf6d8c49377f71430c33fe44d3f6c6060d34`, Railway `8220a268-065e-481c-96f8-ee9927bc8cd7` SUCCESS, healthcheck aprovado. Serviço `saude-slim-web` online com 1 réplica rodando e 0 travadas. Domínios `slimesaude.com` e `www.slimesaude.com` associados ao serviço; DNS do domínio principal propagado, certificado válido. Nenhum dado de produção foi escrito durante os testes.
+
+| Frente | Semáforo | Evidência e limite |
+|---|---|---|
+| Página de login /auth | 🟢 Mitigação publicada | Renderização sem aguardar o getSession inicial bloqueado; continua exigindo autenticação para rotas internas. |
+| HTTP de autenticação | 🟢 Mitigação publicada | Senha com deadline de 12s sem retry automático; refresh_token com deadline de 20s; cancelamento respeitado e erros de infraestrutura explicados sem afirmar senha inválida. |
+| Testes | 🟢 10/10 | Cenários de timeout, abort, senha, escopo de requisição, persistência de sessão e rotas passaram, além do build/healthcheck. Nenhuma autenticação real executada. |
+| Autenticação REAL do Supabase | 🔴 Indisponível | Após a publicação, até SELECT 1 no banco do projeto vyzvfcgpjjzvcjegzzza continua com Connection terminated due to connection timeout. Edge logs registraram HTTP 504/522 em password, refresh_token e RPCs. A interface não pode autenticar enquanto Auth/DB não responderem. |
+| Saúde pública do serviço / projeto | 🟡 Contraditória | Dashboard Management retorna ACTIVE_HEALTHY, mas SQL/Auth não atendem. Status público regional operacional não equivale à saúde deste projeto específico. Plano da organização: Free. |
+| Recuperação da instância gerenciada | 🔴 Depende do provedor | Conector Supabase não tem ação Restart project. Não foi executado Pause/Restore nem mudança de backend, chaves ou compute. Abrir https://supabase.com/dashboard/project/vyzvfcgpjjzvcjegzzza/settings/general para Restart project; caso falhe, abrir ticket no suporte. |
+| SalesBot de gatilho no Funil | 🔴 Bloqueado anterior | A fila transacional de movimentos ainda não foi confirmada no banco; recurso permanece desabilitado com fidelidade. |
+| Inbox, PDF/áudio, histórico/ERP | 🟡 Mitigações anteriores preservadas | Melhoras de timeouts e listas publicadas; atendimento real aguarda restauração do Supabase e E2E autenticado. |
+
+**A restauração do banco não foi declarada concluída.** O site responder no Railway não prova que o Supabase Auth/PostgREST voltou a operar.
+
+O detalhamento da ocorrência, links e instrução para suporte está em `docs/incidents/2026-10-16-supabase-login-timeout.md`. Restante do semáforo previamente aprovado e registrado abaixo.
+
+---
+
 # Saúde Slim | Semáforo de produção
 
 **Checkpoint de 16/10/2026.** Projeto exclusivo `ruanmeloandrade-alt/saude-slim`, branch `restauracao/sistema-completo-20261014`, Supabase `vyzvfcgpjjzvcjegzzza`. Nenhum domínio, credencial, cliente, pedido, mensagem ou negócio externo foi alterado nesta sessão.
