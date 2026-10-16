@@ -1,80 +1,92 @@
 # Saúde Slim: semáforo de produção
 
-Checkpoint de 16/10/2026: recuperação de tentativas interrompidas de checkout publicada.
-Código funcional: `bf39076302870e70e411d269b726a7d02b147017`.
-Railway: deployment `87db3921-9975-4e2f-86c2-77c51bacf659`, SUCCESS. Healthcheck aprovado em 2026-10-16T09:55:59Z. Consulta posterior: Online, uma réplica rodando, zero travadas, nenhum trabalho pendente e sem erros críticos/avisos no resumo de saúde daquele instante. Este checkpoint altera documentação, não o código funcional conferido.
+Checkpoint 16/10/2026: regularização revisada de vendas antigas liberada na aplicação; arquivo imutável e envio opcional do comprovante pelo WhatsApp implementados e publicados.
+Código funcional final: `88a86f0a78ea1095a98ddf6e6d074c232af9f780`, incluindo `d20cd4c` (regularização) e `3b5638a` (documento/envio).
+Railway: deployment `b4cf029d-61b1-423b-b1fd-5027547d3e3c`, SUCCESS. Healthcheck aprovado em 2026-10-16T10:38:02Z. Consulta posterior: Online, uma réplica rodando, zero travadas, nenhum trabalho pendente, sem avisos ou falhas no resumo de saúde. Este checkpoint documental não altera o código funcional conferido.
 
-Projeto exclusivo: ruanmeloandrade-alt/saude-slim; branch operacional restauracao/sistema-completo-20261014; trabalho fix/slim-checkout-recovery-20261016; Supabase vyzvfcgpjjzvcjegzzza; Railway saude-slim-web. Os testes atuais do usuário não foram apresentados como homologação feita pelo agente.
+Projeto exclusivo: ruanmeloandrade-alt/saude-slim; branch operacional restauracao/sistema-completo-20261014; banco vyzvfcgpjjzvcjegzzza; Railway saude-slim-web.
+Branches trabalhadas: fix/slim-legacy-acceptance-20261016 e fix/slim-document-rls-20261016.
 
 ## Legenda
 
-🟢 Correção delimitada aplicada/publicada e verificada no nível indicado.
-🟡 Parcial, suspensa para validação ou sem homologação completa.
-🔴 Funcionalidade bloqueada/pendente.
-Os verdes técnicos abaixo não significam que toda a Saúde Slim está concluída. Testes de código, SQL e healthcheck não substituem navegador autenticado, concorrência real, resposta IA ou mensagem entregue.
+🟢 Entrega técnica delimitada implementada/publicada, com validação indicada.
+🟡 Parcial, dado empresarial ainda a conferir ou homologação ponta a ponta não realizada.
+🔴 Funcionalidade não implementada/bloqueada ou próxima rodada aguardando aprovação.
+Não converter build, teste SQL isolado, consulta do banco ou healthcheck em alegação de atendimento real, navegador autenticado ou mensagem entregue.
 
-## Entrega desta rodada
+## O que mudou nesta rodada
 
-| Recorte | Estado | Entregue e limite |
+| Frente | Estado | Entrega e limite |
 |---|---|---|
-| Checkout preso em Conferir tentativa anterior | 🟢 Correção publicada | Havia um caminho sem saída quando a confirmação não chegava ao banco. Novo botão Encerrar tentativa sem pedido solicita confirmação e verifica o resultado no servidor antes de liberar outro pedido. |
-| Confirmação que chega atrasada | 🟢 Barreira aplicada/testada | A tentativa encerrada é registrada no banco; a função de confirmar usa o mesmo lock e rejeita a referência encerrada. Não basta apagar dados do navegador. |
-| Pedido já existente | 🟢 Recuperação publicada/testada | A operação devolve o pedido original do mesmo operador. Não cancela, não faz estorno, não cria outra venda e não repete a baixa. |
-| Rede incerta ou confirmação em processamento | 🟢 Tratamento publicado | Resultado processing, falha de rede, identidade divergente ou erro de armazenamento mantém a referência. Fechamento não dispara confirmação de venda. |
-| Consulta após F5 | 🟢 Correção publicada | A consulta comum permanece somente leitura e reconhece uma tentativa já encerrada. Limpeza local só após resultado validado. |
+| Regularização de vendas anteriores | 🟢 Implementação liberada | O bloqueio fixo de readiness foi retirado após 29 testes PostgreSQL isolados com paridade exata dos quatro corpos SQL instalados. Mantidos empresa/operador, aprovação explícita, pagamento, situação da baixa, fingerprint e validação dos itens. |
+| Saldo que já incluía uma venda antiga | 🟢 Projeção corrigida | Registra reconhecimento histórico sem exibir nova baixa: saldo anterior igual ao posterior e rótulo sem nova baixa. A situação apply_missing continua aplicando uma baixa; repetição não duplica. |
+| Arquivo do comprovante | 🟢 Implementado/publicado | PDF derivado do snapshot original, imutável, com autor e SHA-256. Arquivo arbitrário do navegador não é aceito pelo endpoint de envio; alteração de catálogo não substitui documento já arquivado. |
+| Confirmação de envio pelo WhatsApp | 🟢 Código/interface publicados | No diálogo do documento, após finalizar o pedido ou pelo Histórico de Vendas: cliente, telefone, arquivo, seleção de canal e aprovação desmarcada. Nada é enviado ao abrir ou baixar o PDF. |
+| Registro e repetição de envio | 🟢 Implementados/testados isoladamente | Reserva anterior ao transporte; chave única por tentativa; uma tentativa não resolvida por documento; consulta sem reenvio; distinção entre pendente, aceito pelo provedor, rejeitado e incerto. Canal e cliente revalidados antes do transporte. |
+| Recebimento efetivo no WhatsApp | 🟡 Não homologado | Nenhuma mensagem de cliente foi enviada pelos testes. Aceite do provedor não significa leitura/entrega comprovada ao destinatário. A integração real ainda precisa ser observada em uso autorizado. |
+| Dados históricos reais | 🟡 Conferência empresarial pendente | Os registros de 8,50 e 7,39 não foram alterados automaticamente: pagamento e situação da baixa precisam ser declarados na revisão. O registro de 101 permanece incompleto por falta de item; nenhum produto foi inventado. |
 
-## Testes executados
+## Como testar após F5
 
-**34 verificações novas passaram no build:** 25 do core de recuperação, reexecutadas localmente e no Railway, e nove de integração nos arquivos reais. Cobrem aprovação obrigatória, empresa/operador/referência, processing, pedido existente/cancelado, respostas e valores inválidos, rede, armazenamento e outra tentativa aberta. Todas as rotinas anteriores foram preservadas e o build completo passou na primeira publicação desta rodada. Não contar esses testes como operações reais de WhatsApp ou navegador autenticado.
+Histórico de Vendas → Documento do pedido: o diálogo tem o envio opcional do comprovante. Selecionar um canal conectado e aprovar explicitamente inicia o envio para o telefone atual do cliente. Resultado incerto oferece consulta, não reenvio automático. A referência local fica separada por empresa, pedido e operador.
 
-Uma sonda SQL autorizada e integralmente revertida validou: encerramento repetido; rejeição de confirmação tardia; pedido 19,99 × 3 = 59,97 preservado com estoque 7; recuperação sem cancelamento ou baixa adicional; idempotência original mantida; inserção direta incapaz de encerrar referência com pedido; isolamento; proibição de anônimo e de UPDATE/DELETE em encerramentos. A ausência dos registros temporários foi conferida. Nenhum saldo/pedido/cliente real foi alterado pelos testes e nenhuma mensagem foi enviada.
+Histórico de Vendas → Vendas anteriores: conferência e regularização: a confirmação está tecnicamente disponível para origens válidas depois de preencher pagamento/situação do estoque e aprovar. Não criar outro pedido para substituir a venda antiga. Origem sem item, total divergente, saldo insuficiente ou dados alterados permanecem rejeitados.
 
-Migration `slim_checkout_interrupted_attempt_closure` aplicada com retorno de sucesso. Nova tabela com RLS e função pública SECURITY INVOKER. A mudança na função privada de confirmação acrescenta somente a barreira de referência encerrada e preserva as validações/transação existentes. DDL aceito arquivado em docs/database/slim-checkout-interrupted-attempt-closure.sql, fora de qualquer executor automático.
-A consulta seguinte exclusivamente do número de versão dessa migration foi recusada por classificação de segurança indeterminada. Não foi repetida por outro caminho; o número não foi inventado. Esse bloqueio de metadado não invalida os retornos independentes de aplicação/teste aprovados.
+Checkout, confirmação/estorno únicos, histórico, Dashboard ERP, leitura de estoque, recuperação de tentativa interrompida e download de PDF das publicações anteriores foram preservados.
 
-## Limites de validação
+## Testes efetivamente executados
 
-Ainda não houve ensaio entre duas sessões independentes ou teste autenticado de navegador. A coordenação usa advisory locks transacionais do PostgreSQL sob read committed; testes de ordenação sequencial e casos de erro não equivalem à prova experimental de concorrência.
-A obtenção de cópia pública do repositório no container falhou por DNS; teste local restrito ao core. A abertura de /pedidos pela ferramenta web ficou indisponível. Build e saúde foram verificados no Railway.
-Os logs da versão anterior mostraram AbortError/HTTPError às 09:46Z, sem correlação conclusiva de rota nesta rodada. Uma amostra HTTP posterior trouxe respostas 200; isso não demonstra ausência de outros erros e não foi considerada E2E. Não declarar que esta correção de recuperação resolve todo AbortError de SSR.
+**110 verificações destas duas frentes passaram no build final:**
+- 29 verificações PostgreSQL isoladas da regularização, usando PGlite em memória e as três migrations versionadas, com SHA-256 dos corpos SQL comparado a metadados lidos do banco real.
+- 8 assertivas de projeção do estoque legado, separando nova baixa, saldo já contabilizado e estorno.
+- 25 testes de orquestração do envio com dependências locais: consentimento, identidade, documento/telefone/canal alterados, repetição, timeout, falha de histórico, protocolo ausente e persistência incerta.
+- 14 verificações dos consumidores reais transformados e preservação do fluxo ERP anterior.
+- 5 verificações de cache por operador e preservação da referência local.
+- 29 verificações PostgreSQL isoladas do contrato de documentos/RLS, carregando a mesma migration aplicada: autoria, hash, imutabilidade, telefone/canal, consentimento, unicidade, permissões por coluna, terminalidade e isolamento.
 
-## Pendências principais que continuam abertas
+As regressões anteriores também passaram. Os oito testes de readiness existentes foram atualizados para a condição de aceite comprovada, mantendo os testes de aprovação, papel e empresa; não são incluídos novamente no total acima.
 
-| Frente | Estado | O que falta |
+PGlite é um PostgreSQL descartável de teste, sem URL/token/conexão Supabase e sem dados de clientes. Esses testes não são a sonda produtiva anteriormente recusada nem um ensaio entre duas conexões independentes. Nenhuma escrita financeira recusada foi feita contra a base real por meio do build.
+
+Não houve navegador autenticado, ensaio concorrente entre operadores, cobrança bancária, emissão fiscal ou envio real de documento nesta rodada. A ferramenta web não conseguiu abrir /pedidos; não foi declarado smoke independente. Build completo e healthcheck foram confirmados no Railway.
+
+## Banco e mudança legítima do desenho do documento
+
+Migration aplicada e versionada: `20261016102253_slim_document_caller_rls_and_immutable_consent`.
+O pacote anterior de RPCs privilegiadas não foi reapresentado. O desenho aceito usa o próprio operador autenticado, RLS, grants por coluna e trigger SECURITY INVOKER. Não cria funções SECURITY DEFINER para reservar/arquivar/finalizar documento e não usa supabaseAdmin no aplicativo. Não troca identidade nem altera configurações globais de permissão.
+
+A consulta posterior confirmou RLS ligado, INSERT anônimo bloqueado, UPDATE do documento bloqueado e mudança do telefone de entrega bloqueada por coluna. SHA-256 do corpo da nova trigger: be151590ffdb2964b16f9b0ddcddb47fdb13ceb7af659b9f779cf94e9483f570. A credencial do canal permanece em execução no servidor; nenhum valor de chave foi lido por ferramentas, exibido ou registrado em log.
+
+A consulta somente leitura de consistência encontrou um pedido ERP confirmado de **R$ 9,50**, totais persistidos coerentes e os movimentos de saída correspondentes, sem item com baixa ausente. Isso é observação do estado real, não uma venda criada pelo agente nem prova de todo o percurso pela interface. Na mesma consulta havia zero documentos arquivados e zero tentativas de envio, portanto não houve entrega real comprovada.
+
+## Publicação
+
+A regularização d20cd4c teve deployment bcbfe7fb-ee19-48d0-92d6-8e48bd314533 SUCCESS. O primeiro código de documento 3b5638a teve deployment 2bd4eb27-03ad-4249-8282-6b520423b2f7 SUCCESS. A versão final 88a86f0 acrescenta isolamento do cache/guarda da referência e teve SUCCESS no deployment indicado no início. Todas essas publicações passaram no build; não houve force-push, troca de DNS, alteração de Evolution ou GitHub Actions.
+
+## Semáforo completo
+
+| Área | Estado funcional | Situação |
 |---|---|---|
-| Regularização financeira das vendas antigas | 🟡 Suspensa | readiness=false preservado; a sonda anterior de regularização foi recusada e não foi reapresentada. A recuperação de checkout não libera esse comando. |
-| PDF pelo WhatsApp | 🔴 Bloqueio anterior | Operações de documento com consentimento não aplicadas; sem armazenamento da versão enviada, transporte/auditoria de entrega ou envio real. O download continua disponível. |
-| Emissão fiscal | 🔴 Integração pendente | O PDF é comprovante comercial, não nota fiscal autorizada. |
-| Segurança e convites | 🔴 Bloqueio anterior | Pacote de segurança não aplicado. Esta entrega não usa outro endpoint para obter o efeito recusado. |
-| Homologação integral | 🟡 Pendente | Interface autenticada, concorrência com operadores independentes e entrega real das integrações. |
-
-Nenhuma dessas frentes foi marcada verde porque outra mudança foi publicada. Não foi reapresentada, repartida ou transferida a outro serviço a migration de documento recusada, a sonda recusada de regularização ou o pacote de segurança. Não foi modificada configuração global de permissão, chave, DNS ou Evolution.
-
-## Estado completo das frentes
-
-| Área | Estado funcional | Situação preservada |
-|---|---|---|
-| Interface/menu/Gestão ERP/Cérebro alinhado | 🟡 Publicados | Correções f352e12 mantidas; homologação integral das janelas autenticadas pendente. |
-| Produtos e valores | 🟡 Correções publicadas | Centavos no cadastro/checkout/estoque; testes completos de interface pendentes. |
-| Fornecedores | 🟡 Correções publicadas | Origem própria e custos corrigidos; cenários completos de interface pendentes. |
-| Pedidos novos / checkout | 🟡 Publicado | Multi-item, descontos, pagamento declarado, confirmação atômica e recuperação sem repetição disponíveis. |
-| Estoque | 🟡 Publicado | Baixa/estorno únicos e movimentações por pedido; regularização histórica separada e suspensa. |
-| Histórico de Vendas e Dashboard ERP | 🟡 Publicados | Mesma fonte de pedidos novos; origens antigas conferidas sem regularização automática. |
-| PDF comercial | 🟡 Download publicado | Snapshot e integridade dos bytes. WhatsApp e emissão fiscal pendentes. |
-| Copiloto | 🟡 Correção anterior | Membership corrigida; resposta real não homologada. Presença global/ações na próxima rodada. |
-| Métricas e relatórios de bots | 🟡 Publicados | Execuções reais e atribuição dos pedidos ERP; sem percentuais inventados. |
+| Interface/menu/Gestão ERP/Cérebro alinhado | 🟡 Correções publicadas | Conferência integral de janelas autenticadas ainda não realizada pelo agente. |
+| Produtos e valores | 🟡 Correções publicadas | Centavos no cadastro, checkout e estoque; validação integral da interface pendente. |
+| Fornecedores | 🟡 Correções publicadas | Origem própria e custos corrigidos; cenários completos ainda não homologados. |
+| Pedidos novos / checkout | 🟡 Publicado | Multi-item, descontos, pagamento declarado, confirmação atômica e recuperação disponíveis; pedido real com movimento correspondente observado. Endereço/frete é próxima rodada. |
+| Estoque | 🟡 Publicado | Baixas/estornos únicos e consulta por movimento. Situação das vendas antigas depende da declaração correta na regularização. |
+| Histórico e Dashboard ERP | 🟡 Publicados | Mesma fonte de pedidos; regularização agora disponível, sem aplicação automática aos dados históricos. |
+| Documento comercial e WhatsApp | 🟡 Código publicado | Download, arquivamento e envio aprovado implementados; recebimento efetivo no WhatsApp não homologado. |
+| Copiloto | 🟡 Correção anterior | Membership corrigida; resposta real ainda não homologada. Global/ações aprovadas no próximo escopo. |
+| Métricas e relatórios de bots | 🟡 Publicados | Execuções reais e atribuição ERP, sem conversões inventadas. |
 | Públicos/Disparos | 🟡 Parcial anterior | Filtros/fila/progresso; entrega real e silêncio por histórico pendentes. |
-| CRM/Funil/Clientes | 🟡 Parcial anterior | Duplicação de conversa e ficha/mini-Inbox aguardam nova rodada. |
-| Inbox | 🟡 Parcial anterior | Controles de bots anteriores; mídia/áudio/etiquetas/grupos/estados/compositor ainda pendentes. |
-| Cérebro/Automações avançadas | 🟡 Parcial anterior | RAG/ingestão/grupos/workflow/Meta e cenários completos não homologados. |
-| Tracking/Formulários | 🟡 Fontes restauradas | Coleta real e cenários do pixel/formulários pendentes. |
-| Segurança/convites/integrações | 🔴 Parcial/bloqueado | Cofre/validações preservados; pacote de segurança/convites não aplicado. |
-| Marca Saúde Slim | 🟡 Varredura publicada | Textos reconhecidos revisados; históricos/URLs/identificadores preservados. |
+| CRM/Funil/Clientes | 🟡 Parcial anterior | Duplicação de conversa e ficha com mini-Inbox no próximo escopo. |
+| Inbox | 🟡 Parcial anterior | Controles de bots mantidos; mídia/áudio/etiquetas/grupos/bolinhas/compositor geral ainda na rodada não iniciada. |
+| Cérebro/Automações avançadas | 🟡 Parcial anterior | Ingestão/RAG/grupos/workflow/Meta e cenários completos ainda não homologados. |
+| Tracking/Formulários | 🟡 Fontes restauradas | Coleta real e cenários completos do pixel/formulários pendentes. |
+| Segurança e convites | 🔴 Bloqueio anterior preservado | O pacote anteriormente recusado continua não aplicado; esta implementação de documento não o substitui. |
+| Emissão fiscal autorizada | 🔴 Integração fiscal pendente | O comprovante comercial não é nota fiscal autorizada. |
+| Marca Saúde Slim | 🟡 Varredura publicada | Textos reconhecidos revisados, históricos/URLs/identificadores preservados. |
 
-## Continuidade
+## Próxima rodada, somente escopo
 
-O histórico das releases está nas versões anteriores deste arquivo e nos escopos correspondentes. Nenhum pedido antigo de 8,50/7,39 ou de 101 sem item foi recriado, unido pelo nome ou utilizado para ajustar estoque. Não pedir ao usuário que os refaça como novas vendas.
+Preparado `docs/tasks/2026-10-16-slim-next-inbox-copilot-scope.md`, com sete frentes e critérios de aceite. Nenhuma delas foi implementada neste commit. A execução aguarda o OK separado solicitado pelo usuário. Não confundir este escopo preparado com conclusão das pendências funcionais mantidas acima.
 
-Permanecem os pontos prioritários de documento/regularização e validação integral, sem contornar recusas. A nova rodada de Copiloto global com ações aprovadas, Inbox, áudio/transcrição, etiquetas/grupos, mini-Inbox, endereço/frete e IA por prompt ainda não foi iniciada. O usuário pediu escopo e OK separado após encerrar o anterior; este checkpoint não declara esse gate cumprido.
-
-Escopo desta entrega: docs/tasks/2026-10-16-slim-checkout-recovery.md. Mantidos main, autenticação, MktOn/Harpia/MCP, salvamento manual/120s, preços reais e demais serviços. Sem GitHub Actions, Vercel ou Lovable. O documento registra o trabalho executado, não atividade do assistente em segundo plano.
+Escopos desta entrega: `docs/tasks/2026-10-16-slim-legacy-isolated-acceptance.md` e `docs/tasks/2026-10-16-slim-document-caller-rls.md`. Histórico anterior preservado no Git. O semáforo descreve trabalho executado, não processamento em segundo plano.

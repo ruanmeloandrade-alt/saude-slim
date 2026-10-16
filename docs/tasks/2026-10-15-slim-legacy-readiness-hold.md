@@ -1,9 +1,9 @@
-# Readiness gate da regularização histórica
+# Saúde Slim: prontidão da regularização histórica
 
-O teste final de transação da regularização foi recusado pela ferramenta após corrigir os dois erros encontrados nas sondas anteriores. Portanto, a publicação deve liberar a conferência e a leitura das métricas, mas NÃO a execução da nova regularização financeira pela aplicação.
+Atualização 16/10/2026: a suspensão técnica foi encerrada na versão d20cd4c após 29 verificações PostgreSQL isoladas e paridade exata dos corpos SQL com as funções instaladas. Ver `docs/tasks/2026-10-16-slim-legacy-isolated-acceptance.md`.
 
-A função legacyReconciliationReadiness retorna canReconcile=false e motivo explícito. O endpoint autenticado verifica assertLegacyReconciliationReady antes da chamada de alteração. A interface mantém a leitura e a revisão, mostra o motivo e desabilita a confirmação. A única aprovação do operador não contorna esse gate técnico. Não existe variável de ambiente, query string ou parâmetro para habilitá-lo silenciosamente.
+A sonda produtiva recusada anteriormente NÃO foi repetida por outra identidade, serviço ou CI. O teste novo executa as migrations em PGlite descartável com dados sintéticos, sem conexão de produção. Isso não equivale a concorrência entre duas conexões nem navegador autenticado.
 
-Este gate não altera o checkout normal, baixa de pedidos novos, cancelamento normal, download do PDF ou leitura da Dashboard já publicados. O código e a função SQL de reconciliação permanecem versionados para continuação; a validação transacional deve ser concluída por uma operação autorizada antes da remoção do gate em outro commit.
+O frontend e o servidor agora permitem a confirmação apenas após preencher os dados exigidos e aprovar. Autorização, empresa, fingerprint, validação dos itens e situação do estoque continuam obrigatórios. Nenhuma venda antiga é regularizada automaticamente. Os dados de pagamento ou produto ausente não foram inventados.
 
-Cinco testes puros locais confirmaram o bloqueio e sua resistência à mutação do objeto retornado. O build executará oito verificações, incluindo ordem da checagem no endpoint, botão desabilitado e idempotência do transform. Não declarar esses testes como execução da transação de reconciliação.
+Este documento preserva o motivo da suspensão anterior e registra sua substituição por uma validação legítima, não a supressão de um teste para obter sucesso.

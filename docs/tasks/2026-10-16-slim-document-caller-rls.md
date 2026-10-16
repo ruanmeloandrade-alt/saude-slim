@@ -1,23 +1,25 @@
 # Saúde Slim: documento imutável e envio por operador autenticado
 
-Base d20cd4c. Branch fix/slim-document-rls-20261016. Somente Saúde Slim; destino operacional restauracao/sistema-completo-20261014; banco vyzvfcgpjjzvcjegzzza. Estado: 🟡 implementação e validação de build em andamento.
+Checkpoint final 16/10/2026. Código 88a86f0 publicado no deployment b4cf029d-61b1-423b-b1fd-5027547d3e3c, SUCCESS e healthcheck aprovado às 10:38:02Z. Estado técnico 🟢 implementação publicada; estado de entrega WhatsApp real 🟡 não homologado. Apenas Saúde Slim, banco vyzvfcgpjjzvcjegzzza.
 
-## Pedido existente
-Finalizar o envio opcional do comprovante PDF após confirmação explícita, com cliente, número, canal, arquivo e registro do resultado. Não é emissão fiscal. Não enviar a clientes durante testes.
+## Entrega
 
-## Desenho aplicado
-A migration anterior de operações privilegiadas de documento não foi reapresentada. Esta implementação NÃO cria RPC SECURITY DEFINER de armazenamento/reserva/finalização nem usa cliente administrativo. Usa as tabelas existentes com o próprio usuário autenticado, políticas RLS e permissões por coluna. Não permite apagar o histórico, trocar destinatários em uma tentativa existente ou modificar o PDF arquivado.
+O diálogo do comprovante, após pedido confirmado ou pelo histórico, mostra cliente, telefone, arquivo, canais conectados e aprovação inicialmente desmarcada. O envio não ocorre ao abrir/baixar o PDF. A tentativa fica vinculada a operador/empresa/pedido/documento/hash/canal/destino, preservando referência opaca no navegador antes da chamada. Cache separado por operador. Referência local inválida não é apagada para liberar envio.
 
-Migration 20261016102253 slim_document_caller_rls_and_immutable_consent aplicada com sucesso e número conferido. DDL versionado com o conteúdo aceito. Nenhuma mensagem, documento de cliente ou saldo foi criado pelos testes.
+O servidor gera o PDF a partir do snapshot, arquiva uma versão imutável e confere os bytes. Não aceita arquivo arbitrário do cliente nem consulta preços atuais para refazer uma venda antiga. O cliente, a situação do pedido e o canal são revalidados antes da chamada Evolution sendMedia. MIME application/pdf e nome do arquivo seguem o documento; timeout de 30 segundos e protocolo real do provedor. Sem protocolo ou com resultado incerto não há repetição automática.
 
-O servidor gera o comprovante a partir do snapshot persistido, valida sua assinatura SHA-256 e arquiva uma versão imutável. O navegador não pode mandar um arquivo arbitrário para esse endpoint. Aprovação vincula pedido, arquivo/hash, canal, telefone atual e referência única da tentativa. O registro pendente antecede o transporte; concorrência/repetição usa as restrições de unicidade já instaladas.
+O histórico da conversa recebe referência do documento/pedido. Uma falha desse registro não transforma um envio aceito em outro envio; aparece diagnóstico. Os estados são pendente, aceito pelo provedor, rejeitado e incerto. Aceito não equivale a leitura pelo destinatário. Cancelar o pedido não recolhe uma mensagem que já saiu.
 
-A sessão Evolution é consultada sob a identidade do operador. A credencial permanece somente no servidor. O envio usa sendMedia com mediatype=document, mimetype=application/pdf, fileName e conteúdo base64, timeout e protocolo real do provedor. Sem protocolo ou diante de resultado incerto não há repetição automática. O histórico da conversa recebe uma referência do pedido e do documento sem armazenar chaves nem resposta bruta do provedor.
+## Banco aceito
 
-## Interface
-No diálogo do PDF, após pedido confirmado e pelo Histórico de Vendas, aparece a confirmação do envio com cliente, telefone, arquivo, seleção de canal e aprovação desmarcada. Fechar o diálogo não envia. O resultado diferencia pendente, aceito pelo provedor, rejeitado e incerto. A referência opaca da tentativa é preservada no navegador; resultado incerto permite consulta, não reenvio automático. Um envio já iniciado não pode ser recolhido por cancelar o pedido.
+Migration 20261016102253 slim_document_caller_rls_and_immutable_consent aplicada e versionada. Revisão material em relação ao pacote anteriormente recusado: não há nova RPC SECURITY DEFINER de armazenamento/reserva/resultado, cliente administrativo ou contorno de autenticação. São operações sob o usuário, RLS, grants por coluna e trigger SECURITY INVOKER. Arquivo não pode ser atualizado; histórico não pode ser apagado; identificadores/destinatário da tentativa não podem ser trocados.
 
-## Validação
-Novos testes de orquestração usam dependências locais; testes de integração inspecionam os consumidores reais transformados; testes PostgreSQL descartáveis carregam a mesma migration aceita e verificam RLS, autoria, hash, imutabilidade, canal, telefone, consentimento, unicidade e estados terminais. Eles não usam Supabase nem transporte real. O resultado efetivo de build precisa ser obtido nos logs antes de declarar estes testes aprovados.
+Consulta do banco vivo confirmou RLS, bloqueio anônimo, imutabilidade e restrição de atualização do telefone. O hash do corpo da trigger é be151590ffdb2964b16f9b0ddcddb47fdb13ceb7af659b9f779cf94e9483f570. Nenhuma chave foi lida pelas ferramentas nem devolvida ao navegador. A conexão e as variáveis existentes de Evolution foram preservadas.
 
-A entrega efetiva a WhatsApp real não foi testada e não será declarada comprovada só pelo build. O PDF continua sendo documento comercial não fiscal. Sem mudanças na conexão Evolution, DNS, credenciais ou autenticação global. A próxima rodada de Inbox/Copiloto segue aguardando escopo/OK separado.
+## Validação realmente feita
+
+25 testes de orquestração, 14 verificações dos consumidores reais, cinco de cache/referência e 29 testes PostgreSQL isolados do documento/RLS passaram no build final, além das regressões anteriores. O teste SQL usa a mesma migration aplicada num PGlite descartável, com dados sintéticos. Não se conecta ao Supabase e não chama WhatsApp.
+
+Consulta produtiva somente leitura encontrou um pedido confirmado de 9,50, sem itens com baixa ausente; zero documentos e envios naquele momento. Não foi criado pelo agente. Nenhuma mensagem real foi enviada nesta auditoria. Navegador autenticado, recebimento WhatsApp, concorrência entre sessões e emissão fiscal permanecem não comprovados.
+
+O PDF é comprovante comercial não fiscal. A geração visual anterior não foi redesenhada nesta entrega. Novos ajustes de Inbox/Copiloto seguem em escopo separado aguardando OK.
