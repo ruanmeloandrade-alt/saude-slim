@@ -5,3 +5,4 @@ if(!before.includes(replacement)){assert.equal(before.split(old).length,2,'Media
 const after=fs.readFileSync(path,'utf8');assert(!after.includes('from "@/lib/slim-media-file.client"'));assert(after.includes(replacement));
 const bridge=fs.readFileSync(new URL('../src/lib/slim-media-io.ts',import.meta.url),'utf8');assert(bridge.includes('createIsomorphicFn'));assert.equal(bridge.split('.client(').length-1,2);assert.equal(bridge.split('.server(').length-1,2);
 console.log('Media IO boundary verified: explicit client loading and server rejection; import-protection remains enabled.');
+await import('./apply-slim-media-receipt.mjs');
