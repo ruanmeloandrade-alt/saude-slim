@@ -1,4 +1,5 @@
-import { dbWorkerMayRun, recordDbError, recordDbRecovery } from './slim-db-worker-backoff.core';
+import { recordDbError, recordDbRecovery } from './slim-db-worker-backoff.core';
+import { dbReadyForQueue } from './slim-db-readiness.server';
 import { supabaseAdmin } from '@/integrations/supabase/client.server';
 import { deliverAudienceItem } from './slim-audience-delivery.core';
 import { normalizeInternationalPhone, directWhatsappJidFromCanonicalDigits } from './whatsapp-identity';
@@ -39,8 +40,9 @@ async function activate(c:any,l:any){
  }};
 }
 export async function processSlimAudienceQueue():Promise<void>{
- if(state.busy||!dbWorkerMayRun())return;state.busy=true;
+ if(state.busy)return;state.busy=true;
  try{
+  if(!await dbReadyForQueue(db))return;
   const claim=await db.rpc('slim_claim_audience_delivery');
   if(claim.error){recordDbError(claim.error);throw new Error('Fila de entregas temporariamente indisponível.');}
   recordDbRecovery();
@@ -84,8 +86,9 @@ export async function processSlimAudienceQueue():Promise<void>{
  finally{state.busy=false;}
 }
 async function processStageJobs(){
- if(state.stageBusy||Date.now()-state.lastStage<15000||!dbWorkerMayRun())return;state.stageBusy=true;state.lastStage=Date.now();
- try{const {tickStageAutomationJobs}=await import('./stage-automation-engine.server');await tickStageAutomationJobs(db,10);recordDbRecovery();}
+ if(state.stageBusy||Date.now()-state.lastStage<15000)return;state.stageBusy=true;state.lastStage=Date.now();
+ try{if(!await dbReadyForQueue(db))return;
+ const {tickStageAutomationJobs}=await import('./stage-automation-engine.server');await tickStageAutomationJobs(db,10);recordDbRecovery();}
  catch(error){recordDbError(error);throw error;}
  finally{state.stageBusy=false;}
 }

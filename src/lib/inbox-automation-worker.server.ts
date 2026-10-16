@@ -1,4 +1,5 @@
-import { dbWorkerMayRun, recordDbError, recordDbRecovery } from "./slim-db-worker-backoff.core";
+import { recordDbError, recordDbRecovery } from "./slim-db-worker-backoff.core";
+import { dbReadyForQueue } from "./slim-db-readiness.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { executeRun, tickWaitingTimers } from "@/lib/salesbot-runtime.server";
 
@@ -8,9 +9,10 @@ const state = root.__slimInboxWorker ??= { busy: false };
 const db = supabaseAdmin as any;
 
 export async function processInboxAutomationQueue(): Promise<void> {
-  if (state.busy || !dbWorkerMayRun()) return;
+  if (state.busy) return;
   state.busy = true;
   try {
+    if (!await dbReadyForQueue(db)) return;
     const { data: runs, error } = await db.rpc("slim_claim_inbox_salesbots");
     if (error) {recordDbError(error);throw new Error("Não foi possível reservar a fila do Inbox.");}
     recordDbRecovery();
