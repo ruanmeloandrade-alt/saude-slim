@@ -1,13 +1,7 @@
-import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';
-// Repository source inspection only. No network, environment variables, credentials or customer records.
+import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {execFileSync} from 'node:child_process';
+// Source inspection and a disposable database only. No production credentials or external side effects.
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const files=[];function walk(dir){if(!fs.existsSync(dir))return;for(const e of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,e.name);if(e.isDirectory())walk(p);else if(/\.(?:ts|tsx|js|mjs)$/.test(e.name))files.push(p);}}
-walk(path.join(root,'src'));walk(path.join(root,'supabase/functions'));walk(path.join(root,'services'));
-for(const file of files){const name=path.relative(root,file),code=fs.readFileSync(file,'utf8'),lines=code.split('\n');
- for(const match of code.matchAll(/\.from\(["']leads["']\)[\s\S]{0,160}?\.(?:insert|upsert)\(/g)){
-  const line=code.slice(0,match.index).split('\n').length;
-  console.log('[SLIM-IDENTITY-WRITER] '+JSON.stringify({file:name,line,source:lines.slice(Math.max(0,line-6),line+28).join('\n')}));
- }
- if(/whatsapp|lead.*(?:identity|dedup|sync)|pipeline.*server/i.test(name))console.log('[SLIM-IDENTITY-FILE] '+name);
-}
-console.log('[SLIM-IDENTITY-AUDIT] Source-only scan complete. No runtime changes or database calls.');
+const paths=['src/lib/saude-slim-orders-client.ts','src/lib/saude-slim-funnel-client.ts','src/routes/crm.leads.tsx','src/routes/inbox.leads.$leadId.tsx','src/routes/api/public/evolution/webhook.$secret.ts','src/lib/leads.functions.legacy.ts'];
+for(const file of paths){if(!fs.existsSync(path.join(root,file)))throw new Error('Missing identity consumer: '+file);}
+execFileSync(process.execPath,['--experimental-strip-types',path.join(root,'scripts/test-slim-contact-identity-postgres.mjs')],{stdio:'inherit'});
+console.log('[SLIM-IDENTITY-AUDIT] Contact consumers located; isolated database verification completed.');
