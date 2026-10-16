@@ -1,63 +1,47 @@
-import { useMemo, useState } from 'react';
-import { buildOrderReadModel, formatOrderCents, type OrderFilters, type OrderSnapshot } from '../../lib/slim-order-read.core';
-type Props = {
-  workspaceId: string; response: unknown; loading: boolean; error?: string;
-  onDocument: (order: OrderSnapshot) => void | Promise<void>;
-  onCancel?: (order: OrderSnapshot) => void | Promise<void>; cancelBusy?: string | null;
-};
-export function SlimOrderHistory({ workspaceId, response, loading, error, onDocument, onCancel, cancelBusy }: Props) {
-  const [query, setQuery] = useState('');
-  const [status, setStatus] = useState<NonNullable<OrderFilters['status']>>('all');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [page, setPage] = useState(1);
-  const [documentBusy, setDocumentBusy] = useState<string | null>(null);
-  const [documentError, setDocumentError] = useState('');
-  const result = useMemo(() => {
-    if (loading || error) return { model: null, error: '' };
-    try { return { model: buildOrderReadModel(response, workspaceId, { query, status, from, to }), error: '' }; }
-    catch (e) { return { model: null, error: e instanceof Error ? e.message : 'Não foi possível conferir o histórico.' }; }
-  }, [loading, error, response, workspaceId, query, status, from, to]);
-  async function openDocument(order: OrderSnapshot) {
-    if (documentBusy) return;
-    setDocumentBusy(order.orderId); setDocumentError('');
-    try { await onDocument(structuredClone(order)); }
-    catch { setDocumentError('O documento não pôde ser aberto. O pedido continua registrado; não finalize outra venda.'); }
-    finally { setDocumentBusy(null); }
-  }
-  const model = result.model;
-  const pages = model ? Math.max(1, Math.ceil(model.rows.length / 20)) : 1;
-  const safePage = Math.min(page, pages);
-  const fields = 'rounded-md border border-input bg-background p-2 text-sm';
-  return <section className="space-y-4" aria-busy={loading}>
-    <header><h2 className="text-xl font-semibold">Histórico de pedidos</h2><p className="text-sm text-muted-foreground">Valores da venda confirmada, sem reconsultar o preço atual do catálogo. Datas no horário de Brasília.</p></header>
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <label className="grid gap-1 text-sm">Buscar cliente, pedido ou produto<input className={fields} value={query} onChange={e => { setQuery(e.target.value); setPage(1); }} /></label>
-      <label className="grid gap-1 text-sm">Situação<select className={fields} value={status} onChange={e => { setStatus(e.target.value as typeof status); setPage(1); }}><option value="all">Todos</option><option value="confirmed">Confirmados</option><option value="cancelled">Cancelados</option></select></label>
-      <label className="grid gap-1 text-sm">De<input className={fields} type="date" value={from} onChange={e => { setFrom(e.target.value); setPage(1); }} /></label>
-      <label className="grid gap-1 text-sm">Até<input className={fields} type="date" value={to} onChange={e => { setTo(e.target.value); setPage(1); }} /></label>
-    </div>
-    {loading ? <p role="status">Carregando os pedidos registrados...</p> : error || result.error ? <p role="alert" className="rounded-md border border-destructive/30 p-4 text-sm text-destructive">{error || result.error}</p> : model && <>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric label="Pedidos confirmados no filtro" value={String(model.totals.confirmedCount)} />
-        <Metric label="Valor dos pedidos confirmados" value={formatOrderCents(model.totals.totalCents)} />
-        <Metric label="Recebimento informado" value={formatOrderCents(model.totals.receivedDeclaredCents)} />
-        <Metric label="Pagamento pendente" value={formatOrderCents(model.totals.pendingPaymentCents)} />
-      </div>
-      <p className="text-xs text-muted-foreground">Recebimento informado pelo operador não é confirmação bancária. Cancelados: {model.totals.cancelledCount}, fora dos totais de vendas. Baixas e estornos são registrados por pedido no servidor.</p>
-      {documentError && <p role="alert" className="text-sm text-destructive">{documentError}</p>}
-      <div className="divide-y rounded-xl border border-border">
-        {!model.rows.length ? <p className="p-6 text-sm text-muted-foreground">Nenhum pedido corresponde aos filtros.</p> : model.rows.slice((safePage - 1) * 20, safePage * 20).map(order => <article key={order.orderId} className="space-y-3 p-4">
-          <div className="flex flex-wrap justify-between gap-3"><div><h3 className="font-semibold">{order.number} · {order.customer.name}</h3><p className="text-xs text-muted-foreground">{new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(order.confirmedAt))} · {order.status === 'cancelled' ? 'Cancelado' : 'Confirmado'}</p></div><strong className="tabular-nums">{formatOrderCents(order.totalCents)}</strong></div>
-          <ul className="space-y-1 text-sm">{order.items.map(item => <li key={item.productId}>{item.quantity} × {item.name} · {formatOrderCents(item.unitPriceCents)} por unidade · Total: {formatOrderCents(item.totalCents)}</li>)}</ul>
-          {order.status === 'cancelled' && <p className="text-sm">Motivo: {order.cancellationReason}</p>}
-          <p className="text-xs text-muted-foreground">Subtotal {formatOrderCents(order.subtotalCents)} · Desconto {formatOrderCents(order.discountCents)} · {order.payment.status === 'paid' ? 'Recebimento informado' : 'Pagamento pendente'}</p>
-          <button type="button" className="rounded-md border border-border px-3 py-2 text-sm disabled:opacity-50" disabled={Boolean(documentBusy)} onClick={() => void openDocument(order)}>{documentBusy === order.orderId ? 'Abrindo...' : 'Documento do pedido'}</button>
-          {order.status === 'confirmed' && onCancel && <button type="button" disabled={Boolean(cancelBusy)} onClick={() => void onCancel(order)} className="ml-3 rounded-md border border-destructive/40 px-3 py-2 text-sm text-destructive disabled:opacity-40">{cancelBusy === order.orderId ? 'Cancelando...' : 'Cancelar e estornar estoque'}</button>}
-        </article>)}
-      </div>
-      <div className="flex items-center justify-between gap-3 text-sm"><span>{model.filteredRecords} registros · Página {safePage} de {pages}</span><div className="flex gap-2"><button type="button" className={fields} disabled={safePage <= 1} onClick={() => setPage(safePage - 1)}>Anterior</button><button type="button" className={fields} disabled={safePage >= pages} onClick={() => setPage(safePage + 1)}>Próxima</button></div></div>
-    </>}
-  </section>;
+import {Fragment,useMemo,useState} from 'react';
+import {buildOrderReadModel,formatOrderCents,type OrderSnapshot} from '../../lib/slim-order-read.core';
+import {applyHistorySearch,emptyHistorySearch,type HistorySearch} from '../../lib/slim-history-filter.core';
+type Props={workspaceId:string;response:unknown;loading:boolean;error?:string;onDocument:(order:OrderSnapshot)=>void|Promise<void>;onCancel?:(order:OrderSnapshot)=>void|Promise<void>;cancelBusy?:string|null;onEdit?:(order:OrderSnapshot)=>void;onDelete?:(order:OrderSnapshot)=>void|Promise<void>};
+const field='rounded-md border border-input bg-background px-3 py-2 text-sm';
+const when=(value:string)=>new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',dateStyle:'short',timeStyle:'short'}).format(new Date(value));
+export function SlimOrderHistory({workspaceId,response,loading,error,onDocument,onCancel,cancelBusy,onEdit,onDelete}:Props){
+ const [draft,setDraft]=useState<HistorySearch>(emptyHistorySearch),[applied,setApplied]=useState<Readonly<HistorySearch>>(()=>applyHistorySearch(emptyHistorySearch()));
+ const [filterError,setFilterError]=useState(''),[page,setPage]=useState(1),[expanded,setExpanded]=useState<string|null>(null),[documentBusy,setDocumentBusy]=useState<string|null>(null),[documentError,setDocumentError]=useState('');
+ const result=useMemo(()=>{if(loading||error)return {model:null,error:''};try{return {model:buildOrderReadModel(response,workspaceId,applied),error:''};}catch(e){return {model:null,error:e instanceof Error?e.message:'Não foi possível conferir o histórico.'};}},[loading,error,response,workspaceId,applied]);
+ function search(){try{const next=applyHistorySearch(draft);setApplied(next);setPage(1);setExpanded(null);setFilterError('');}catch(e){setFilterError(e instanceof Error?e.message:'Filtros inválidos.');}}
+ function clear(){const empty=emptyHistorySearch();setDraft(empty);setApplied(applyHistorySearch(empty));setPage(1);setExpanded(null);setFilterError('');}
+ async function openDocument(order:OrderSnapshot){if(documentBusy)return;setDocumentBusy(order.orderId);setDocumentError('');try{await onDocument(structuredClone(order));}catch{setDocumentError('Não foi possível abrir o documento. O pedido continua registrado.');}finally{setDocumentBusy(null);}}
+ const model=result.model,pages=Math.max(1,Math.ceil((model?.rows.length??0)/20)),safePage=Math.min(page,pages),dirty=JSON.stringify(draft)!==JSON.stringify(applied);
+ return <section className="space-y-4" aria-busy={loading}>
+  <header><h2 className="text-xl font-semibold">Histórico de Vendas</h2><p className="mt-1 text-sm text-muted-foreground">Lista de pedidos, com valores registrados na venda. Datas no horário de Brasília.</p></header>
+  <form onSubmit={e=>{e.preventDefault();search();}} className="rounded-lg border bg-card p-4 space-y-3">
+   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <label className="grid gap-1 text-sm">Cliente, pedido ou produto<input className={field} value={draft.query} maxLength={300} onChange={e=>setDraft(v=>({...v,query:e.target.value}))}/></label>
+    <label className="grid gap-1 text-sm">Situação<select className={field} value={draft.status} onChange={e=>setDraft(v=>({...v,status:e.target.value as HistorySearch['status']}))}><option value="all">Todos</option><option value="confirmed">Confirmados</option><option value="cancelled">Cancelados</option></select></label>
+    <label className="grid gap-1 text-sm">De<input type="date" className={field} value={draft.from} onChange={e=>setDraft(v=>({...v,from:e.target.value}))}/></label>
+    <label className="grid gap-1 text-sm">Até<input type="date" className={field} value={draft.to} onChange={e=>setDraft(v=>({...v,to:e.target.value}))}/></label>
+   </div>
+   <div className="flex flex-wrap items-center gap-3"><button type="submit" className="rounded-md bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground">Pesquisar</button><button type="button" className={field} onClick={clear}>Limpar filtros</button>{dirty&&<span role="status" className="text-xs text-muted-foreground">Clique em Pesquisar ou pressione Enter para aplicar os filtros.</span>}</div>
+   {filterError&&<p role="alert" className="text-sm text-destructive">{filterError} Os resultados anteriores foram mantidos.</p>}
+  </form>
+  {loading?<p role="status">Carregando os pedidos registrados...</p>:error||result.error?<p role="alert" className="rounded-lg border border-destructive/30 p-4 text-sm text-destructive">{error||result.error}</p>:model&&<>
+   <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Pedidos confirmados no filtro" value={String(model.totals.confirmedCount)}/><Metric label="Total dos pedidos confirmados" value={formatOrderCents(model.totals.totalCents)}/><Metric label="Recebimento informado" value={formatOrderCents(model.totals.receivedDeclaredCents)}/><Metric label="Pagamento pendente" value={formatOrderCents(model.totals.pendingPaymentCents)}/></div>
+   <p className="text-xs text-muted-foreground">Recebimento informado pelo operador não é confirmação bancária. {model.totals.cancelledCount} cancelados, fora dos totais. Baixas e estornos são registrados por pedido.</p>
+   {documentError&&<p role="alert" className="text-sm text-destructive">{documentError}</p>}
+   <div className="overflow-x-auto rounded-lg border bg-card"><table className="w-full min-w-[800px] text-left text-sm"><caption className="sr-only">Lista de vendas com detalhes e ações por pedido</caption><thead className="bg-muted/40 text-xs"><tr><th className="p-3">Pedido / data</th><th className="p-3">Cliente</th><th className="p-3">Situação</th><th className="p-3 text-right">Total</th><th className="p-3">Ações</th></tr></thead><tbody>
+    {!model.rows.length?<tr><td colSpan={5} className="p-6 text-muted-foreground">Nenhum pedido corresponde aos filtros.</td></tr>:model.rows.slice((safePage-1)*20,safePage*20).map(order=><Fragment key={order.orderId}>
+     <tr className="border-t align-top"><td className="p-3"><strong>{order.number}</strong><p className="mt-1 text-xs text-muted-foreground">{when(order.confirmedAt)}</p></td><td className="p-3"><strong className="font-medium">{order.customer.name}</strong><p className="mt-1 text-xs text-muted-foreground">{order.customer.phone||order.customer.email}</p></td><td className="p-3"><span className={order.status==='cancelled'?'text-destructive':'text-foreground'}>{order.status==='cancelled'?'Cancelado':'Confirmado'}</span><p className="mt-1 text-xs text-muted-foreground">{order.payment.status==='paid'?'Recebimento informado':'Pagamento pendente'}</p></td><td className="p-3 text-right font-semibold tabular-nums whitespace-nowrap">{formatOrderCents(order.totalCents)}</td><td className="p-3"><div className="flex flex-wrap gap-2">
+      <button type="button" className={field} aria-expanded={expanded===order.orderId} onClick={()=>setExpanded(v=>v===order.orderId?null:order.orderId)}>Detalhes</button>
+      <button type="button" className={field} disabled={Boolean(documentBusy)} onClick={()=>void openDocument(order)}>{documentBusy===order.orderId?'Abrindo...':'Documento'}</button>
+      {onEdit&&<button type="button" className={field} disabled={Boolean(cancelBusy)||order.status!=='confirmed'} onClick={()=>onEdit(structuredClone(order))}>Editar</button>}
+      {onDelete&&<button type="button" className={`${field} text-destructive`} disabled={Boolean(cancelBusy)} onClick={()=>void onDelete(structuredClone(order))}>Excluir</button>}
+      {!onDelete&&order.status==='confirmed'&&onCancel&&<button type="button" className={`${field} text-destructive`} disabled={Boolean(cancelBusy)} onClick={()=>void onCancel(order)}>{cancelBusy===order.orderId?'Cancelando...':'Cancelar e estornar'}</button>}
+     </div></td></tr>
+     {expanded===order.orderId&&<tr className="border-t bg-muted/10"><td colSpan={5} className="p-4"><div className="grid gap-4 lg:grid-cols-[2fr_1fr]"><div className="space-y-2">{order.items.map(item=><p key={item.productId}>{item.quantity} × {item.name} <span className="text-muted-foreground">· {formatOrderCents(item.unitPriceCents)} por unidade · {formatOrderCents(item.totalCents)}</span></p>)}</div><div className="space-y-2 text-sm"><p>Subtotal: {formatOrderCents(order.subtotalCents)}</p><p>Desconto: {formatOrderCents(order.discountCents)}</p>{order.notes&&<p>Observações: {order.notes}</p>}{order.status==='cancelled'&&<p className="text-destructive">Motivo: {order.cancellationReason}</p>}</div></div></td></tr>}
+    </Fragment>)}
+   </tbody></table></div>
+   <div className="flex flex-wrap items-center justify-between gap-3 text-sm"><span>{model.filteredRecords} registros · Página {safePage} de {pages}</span><div className="flex gap-2"><button type="button" className={field} disabled={safePage<=1} onClick={()=>setPage(safePage-1)}>Anterior</button><button type="button" className={field} disabled={safePage>=pages} onClick={()=>setPage(safePage+1)}>Próxima</button></div></div>
+  </>}
+ </section>;
 }
-function Metric({ label, value }: { label: string; value: string }) { return <div className="rounded-lg border bg-card p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-lg font-semibold tabular-nums">{value}</p></div>; }
+function Metric({label,value}:{label:string;value:string}){return <div className="rounded-lg border bg-card p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-lg font-semibold tabular-nums">{value}</p></div>;}
