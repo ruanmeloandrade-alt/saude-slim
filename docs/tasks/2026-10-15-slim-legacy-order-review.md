@@ -1,34 +1,33 @@
-# Saúde Slim: regularização explícita de vendas anteriores
+# Saúde Slim: conferência das vendas anteriores e atribuição ERP
 
-Checkpoint: implementação preparada para build. Base cb9869f, somente ruanmeloandrade-alt/saude-slim, branch operacional restauracao/sistema-completo-20261014, Supabase vyzvfcgpjjzvcjegzzza.
+Checkpoint: leitura de conferência e métricas publicadas; aplicação da regularização financeira suspensa até concluir validação transacional.
+Código final 4fc2200a928e764507b1beb9804c1e974f32c784, incluindo a754294. Deployment 17d4a97a-0cb7-4dfe-9e35-985803d62b56 SUCCESS, healthcheck 2026-10-16T00:13:16Z e estado Online confirmados. Somente ruanmeloandrade-alt/saude-slim, produção restauracao/sistema-completo-20261014 e Supabase vyzvfcgpjjzvcjegzzza.
 
-## Escopo e limite
+## Entregue
 
-Exibir conferência de vendas anteriores no Histórico, sem criar outra negociação nem alterar estoque por suposição. Operador informa pagamento e declara se a baixa ainda falta ou se o saldo atual já considera a venda. Servidor verifica fonte/saldo novamente, vincula uma única origem a um pedido e mantém os registros originais. Registro sem item não pode ser importado. Atualizar atribuição dos bots para ler ERP confirmado e excluir cancelados/duplicação de origem regularizada.
+Histórico de Vendas mostra um bloco de conferência com valores/itens registrados, referências e inconsistências. Duas origens completas: 8,50 e 7,39; uma de 101 sem produto. Nenhuma origem foi convertida, nenhum cliente unido por nome e nenhum saldo real ajustado.
 
-Este recorte é independente da tentativa de documento com consentimento rejeitada nesta sessão. O SQL rejeitado não é incluído, repartido ou executado por este pacote. Nenhuma credencial, transporte de documento ou cliente privilegiado foi adicionado.
+O fluxo preparado permite informar pagamento e declarar se a baixa está ausente ou já contabilizada. Campos começam vazios; o servidor recalcula e revalida origem/saldo, preserva o cliente por ID, usa valor líquido histórico em vez do preço atual e impede outra importação da mesma origem. A referência histórica fica no pedido e a origem permanece intacta. Dados faltantes não são inventados.
 
-## Banco instalado
+Como o teste financeiro final foi bloqueado, a release final expõe a conferência, mas desabilita a confirmação e rejeita a chamada do endpoint antes do RPC financeiro. O gate está em slim-legacy-readiness.core.ts, é aplicado no servidor e na interface, e não tem parâmetro/variável de ambiente para liberação silenciosa. Isso não bloqueia o checkout normal ou o cancelamento de pedidos novos. Ver docs/tasks/2026-10-15-slim-legacy-readiness-hold.md.
 
-20261015235236 adiciona legacy_lead_id único por empresa/origem, fonte de revisão, leitura autenticada e regularização explícita por RPC, com bloqueios de linha e validação da impressão digital da origem. Preserva preço líquido registrado e cliente pelo ID; pagamento e situação de estoque vêm da revisão do operador. Descrição não histórica é identificada como tal. Não existe importação automática no deploy.
-20261015235330 corrige quantidade numérica 1.000 para aceitar uma unidade sem arredondar frações.
-20261015235409 qualifica a coluna snapshot para remover conflito com a variável local.
-As três migrations foram aplicadas e depois confirmadas por leitura, sem modificar pedidos/produtos reais.
+As métricas agora também leem slim_orders. Pedidos confirmados entram na regra de atribuição ao último SalesBot do cliente nos trinta dias anteriores; cancelados são excluídos. Origem já regularizada não soma novamente seu vínculo antigo, mesmo após cancelamento. Duas compras genuínas do mesmo cliente continuam independentes. Falha de uma das fontes torna conversão indisponível, não cria um total parcial enganoso.
 
-## Testes e limitações reais
+## Migrations instaladas e versionadas
 
-Primeira sonda transacional falhou na validação de quantity numeric 1.000; toda a transação abortou. A correção acima foi aplicada. Segunda sonda detectou referência ambígua à coluna snapshot; também abortou e foi corrigida. A terceira sonda completa foi BLOQUEADA pela segurança da ferramenta, não executou nem passou, e não foi repetida por outro método.
-Leitura posterior confirmou as três versões, a expressão numérica e a coluna qualificada, zero pedidos, zero movimentações e zero produtos temporários. Isso é verificação de instalação/limpeza, não PASS da transação completa. Não há teste aprovado de concorrência ou navegação autenticada deste novo fluxo.
+20261015235236 slim_reviewed_legacy_sales_reconciliation: legacy_lead_id único, fonte/consulta de revisão e regularização autenticada, bloqueios de linha e impressão digital.
+20261015235330 slim_legacy_integral_numeric_quantity: numeric 1.000 aceito como uma unidade, sem arredondar fração.
+20261015235409 slim_legacy_snapshot_column_qualification: qualificação de saved.snapshot remove ambiguidade com variável local.
+Nenhuma migration executa importação automática de dados existentes.
 
-38/38 testes locais do core passaram: valores históricos/centavos, quantidades integrais/frações, dados ausentes, origem inválida/mesclada, saldo, aprovação explícita, pagamento não presumido, atribuição de ERP, cancelamentos, duas compras independentes e deduplicação da origem. Dados sintéticos; nenhuma escrita no banco.
-O core passou em TypeScript strict sem emissão. UI e funções passaram na transpilação/sintaxe. Os onze testes de integração sobre os arquivos reais serão executados no build; não são considerados aprovados antes dos logs.
+## Evidências e limites
 
-## Dados reais observados, não alterados
+Primeira sonda SQL falhou na quantidade numeric. Segunda falhou na referência ambígua snapshot. Ambas foram abortadas e revertidas. As correções foram aplicadas. A terceira sonda foi recusada pela ferramenta e NÃO passou; não foi repetida por outro caminho. Leitura posterior confirmou instalação e limpeza, zero pedidos/movimentações e nenhum produto temporário. Não chamar essa leitura de validação da transação completa.
 
-Duas compras (8,50 e 7,39), cada uma com um item, saldo do produto 950; terceira origem de 101 sem item. A interface identifica as duas como revisáveis e a terceira como incompleta. Nenhuma forma de pagamento, baixa manual histórica, item ou cliente canônico foi inventado. Os dados reais permanecem aguardando revisão; não pedir que o usuário refaça as vendas.
+Build final: 38/38 testes de core, 11/11 integração nos arquivos reais, 8/8 readiness, total 57. Regressões anteriores preservadas e aprovadas. Localmente, 38 do core foram reexecutados; cinco testes puros do gate passaram; core e gate passaram em TypeScript strict sem emissão. UI/funções tiveram análise de sintaxe. Não houve typecheck integral nem teste de navegador autenticado.
 
-## Publicação
+Ambos os deployments desta rodada chegaram a SUCCESS. A versão final mantém a nova regularização financeira suspensa e deixa claro o motivo. Tentativa de smoke independente em /saude-slim pela web não conseguiu acesso. Nenhum WhatsApp/OpenAI acionado durante os testes, nenhum pedido antigo alterado.
 
-Aguardar o resultado real do build/deploy e atualizar docs/OPERATION_STATUS.md. A ação financeira exige confirmação na interface; a existência do endpoint e os testes locais não são homologação da regularização transacional. O checkout normal e o download PDF anteriores permanecem intactos. O envio de PDF por WhatsApp ainda está bloqueado e não foi implantado.
+## Fora desta entrega
 
-Nova rodada de Copiloto global/Inbox/áudio/etiquetas/grupos/frete/prompt não iniciada. Sem GitHub Actions, Lovable, mudanças de DNS, permissões globais ou projetos originais.
+O pacote de documento com consentimento foi recusado e não faz parte desta implementação. Não houve reuso desse pacote por outra rota. Envio PDF, emissor fiscal e nova rodada Inbox/Copiloto/áudio/etiquetas/grupos/frete/prompt continuam pendentes conforme a ordem aprovada. Sem alterações em main, DNS, Evolution, segredos, projetos originais, GitHub Actions ou Lovable.
