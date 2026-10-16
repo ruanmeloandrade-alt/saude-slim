@@ -13,11 +13,13 @@ function edit(path,run){
 }
 edit('src/lib/leads.functions.legacy.ts',once=>{
  once('  productIds: string[];\n  conversationStatus:', '  productIds: string[];\n  readStateUnavailable?: boolean;\n  conversationStatus:');
+ once('  let unreadByLead = new Map<string, number>();','  let unreadByLead = new Map<string, number>();\n  let activityUnavailable=false;\n  let activityTruncated=false;');
  once('    const activityLimit = Math.min(2_000, Math.max(400, pageLeadIds.length * 20));','    const activityLimit = Math.min(160, Math.max(30, pageLeadIds.length * 4));');
  once('      .limit(activityLimit);\n    if (recentActsError) throw new Error(recentActsError.message);',
-  '      .limit(activityLimit)\n      .abortSignal(AbortSignal.timeout(4_000));\n    const activityUnavailable=Boolean(recentActsError);\n    if(activityUnavailable)console.warn("[Inbox] Leitura de prévias indisponível. Conversas preservadas.");');
+  '      .limit(activityLimit)\n      .abortSignal(AbortSignal.timeout(4_000));\n    activityUnavailable=Boolean(recentActsError);\n    if(activityUnavailable)console.warn("[Inbox] Leitura de prévias indisponível. Conversas preservadas.");');
+ once('    const { computeUnreadCountsFromActivities } = await import("@/lib/inbox-read-state");','    activityTruncated = recentRows.length >= activityLimit;\n    const { computeUnreadCountsFromActivities } = await import("@/lib/inbox-read-state");');
  once('      lastMessagePreview: preview?.text ?? "Sem mensagens ainda.",','      lastMessagePreview: preview?.text ?? (activityUnavailable ? "Prévia indisponível. Abra a conversa." : "Sem mensagens ainda."),');
- once('      unreadCount: unreadByLead.get(row.id) ?? 0,','      unreadCount: unreadByLead.get(row.id) ?? 0,\n      readStateUnavailable: activityUnavailable || (recentRows.length >= activityLimit && !previews.has(row.id)),');
+ once('      unreadCount: unreadByLead.get(row.id) ?? 0,','      unreadCount: unreadByLead.get(row.id) ?? 0,\n      readStateUnavailable: activityUnavailable || (activityTruncated && !previews.has(row.id)),');
 });
 edit('src/lib/inbox-mock.ts',once=>{
  once(' unreadCount?: number;\n lastMessageFrom:', ' unreadCount?: number;\n readStateUnavailable?: boolean;\n lastMessageFrom:');
