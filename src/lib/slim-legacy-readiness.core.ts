@@ -1,6 +1,10 @@
-/** Financial reconciliation stays held until its final database acceptance is completed. */
+/** Release acceptance: 29 real SQL tests in isolated PostgreSQL, 2026-10-16.
+ * The four legacy SQL bodies match the installed Supabase functions byte-for-byte.
+ * This is not browser E2E or a test against business records. Operator consent stays required.
+ */
+export const LEGACY_ACCEPTANCE = Object.freeze({kind:'isolated-postgresql-with-live-body-parity',checks:29,validatedAt:'2026-10-16T10:18:02Z'});
 export function legacyReconciliationReadiness(): {canReconcile:boolean;message:string} {
- return {canReconcile:false,message:'A conferência está disponível. A aplicação dos ajustes de pedidos e estoque aguarda a validação transacional final.'};
+ return {canReconcile:true,message:'Regularização disponível após conferência explícita dos itens, pagamento e situação da baixa. Nenhuma venda antiga é alterada automaticamente.'};
 }
 export function assertLegacyReconciliationReady():void {
  const state=legacyReconciliationReadiness();

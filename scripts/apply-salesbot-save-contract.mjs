@@ -1,4 +1,4 @@
-// Preserve existing regression gates; this script never executes SQL or publishes a deployment.
+// Preserve regression gates. Build scripts do not connect to production databases.
 export { patchSalesbotSaveContract } from './apply-salesbot-save-contract.base.mjs';
 import './apply-inbox-automation-contract.mjs';
 import './apply-slim-dashboard-contract.mjs';
@@ -14,8 +14,9 @@ import './apply-slim-legacy-review.mjs';
 import './apply-slim-legacy-readiness.mjs';
 import './apply-slim-stock-visibility.mjs';
 import './apply-slim-checkout-recovery.mjs';
+import './apply-slim-legacy-acceptance.mjs';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
-for(const file of ['test-inbox-automation-controls.mjs','test-saude-slim-ai-vault.mjs','test-saude-slim-sales-read.mjs','test-slim-dashboard-data.mjs','test-slim-dashboard-contract.mjs','test-slim-audience-core.mjs','test-slim-audience-delivery.mjs','test-slim-audience-contract.mjs','test-slim-stage-permissions.mjs','test-slim-settings-validation.mjs','test-slim-settings-contract.mjs','test-slim-tracking-overview.mjs','test-slim-tracking-loader.mjs','test-slim-tracking-contract.mjs','test-slim-money-source.mjs','test-slim-approved-integration.mjs','test-slim-chat-membership.mjs','test-slim-bot-metrics.mjs','test-slim-visible-brand.mjs','test-slim-metrics-integration.mjs','test-slim-checkout-preparation.mjs','test-slim-erp-release.mjs','test-slim-erp-release-source.mjs','test-slim-legacy-review.mjs','test-slim-legacy-contract.mjs','test-slim-legacy-readiness.mjs','test-slim-stock-visibility.mjs','test-slim-stock-contract.mjs','test-slim-checkout-recovery.mjs','test-slim-checkout-recovery-contract.mjs']){
+for(const file of ['test-inbox-automation-controls.mjs','test-saude-slim-ai-vault.mjs','test-saude-slim-sales-read.mjs','test-slim-dashboard-data.mjs','test-slim-dashboard-contract.mjs','test-slim-audience-core.mjs','test-slim-audience-delivery.mjs','test-slim-audience-contract.mjs','test-slim-stage-permissions.mjs','test-slim-settings-validation.mjs','test-slim-settings-contract.mjs','test-slim-tracking-overview.mjs','test-slim-tracking-loader.mjs','test-slim-tracking-contract.mjs','test-slim-money-source.mjs','test-slim-approved-integration.mjs','test-slim-chat-membership.mjs','test-slim-bot-metrics.mjs','test-slim-visible-brand.mjs','test-slim-metrics-integration.mjs','test-slim-checkout-preparation.mjs','test-slim-erp-release.mjs','test-slim-erp-release-source.mjs','test-slim-legacy-review.mjs','test-slim-legacy-contract.mjs','test-slim-legacy-readiness.mjs','test-slim-stock-visibility.mjs','test-slim-stock-contract.mjs','test-slim-checkout-recovery.mjs','test-slim-checkout-recovery-contract.mjs','test-slim-legacy-stock-acceptance.mjs']){
  execFileSync(process.execPath,['--experimental-strip-types',fileURLToPath(new URL('./'+file,import.meta.url))],{stdio:'inherit'});
 }
