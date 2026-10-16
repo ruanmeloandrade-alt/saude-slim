@@ -64,7 +64,7 @@ edit('src/lib/stage-automation-engine.server.ts',({once})=>{
 });
 edit('src/lib/slim-audience-runtime.server.ts',({once})=>{
  once('import { supabaseAdmin }','import {tickSlimStageMoveEvents} from "./slim-stage-move-worker.server";\nimport { supabaseAdmin }');
- once('state.timer=setInterval(()=>{void processSlimAudienceQueue().catch(report);void processStageJobs().catch(report);},1000);','state.timer=setInterval(()=>{void tickSlimStageMoveEvents();void processSlimAudienceQueue().catch(report);void processStageJobs().catch(report);},1000);');
+ once(" const {tickStageAutomationJobs}=await import('./stage-automation-engine.server');await tickStageAutomationJobs(db,10);recordDbRecovery();", " await tickSlimStageMoveEvents();\n const {tickStageAutomationJobs}=await import('./stage-automation-engine.server');await tickStageAutomationJobs(db,10);recordDbRecovery();");
 });
 for(const[path,code]of plans){if(!/\.tsx?$/.test(path))continue;const source=ts.createSourceFile(path,code,ts.ScriptTarget.Latest,true,path.endsWith('.tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS);if(source.parseDiagnostics.length)throw new Error('[Slim hotfix] Invalid syntax '+path+': '+source.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText,' ')).join('; '));}
 for(const[path,code]of plans)fs.writeFileSync(new URL(path,root),code);

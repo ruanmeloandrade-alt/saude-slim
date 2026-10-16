@@ -1011,7 +1011,7 @@ function CrmFunisPage() {
  return {...s, leads: s.leads.filter((l) => l.id!== leadId) };
  });
  if (!moving) return f;
- const moved: CrmLead = {...moving, lastMessageFrom: "us", unreadCount: 0 };
+ const moved: CrmLead = {...moving}; // Mover etapa não equivale a ler ou responder uma mensagem.
  return {
 ...f,
  stages: stages.map((s) =>
@@ -1024,11 +1024,15 @@ function CrmFunisPage() {
   try {
     const moveResult = (await moveLeadServer({ data: { leadId, toStageId } })) as {
       automations?: Array<{ actionId: string; title: string; ok: boolean; error?: string; skipped?: boolean }>;
+      automationQueued?: boolean;
+      backendPending?: boolean;
+      moved?: boolean;
     };
     // Os gatilhos são enfileirados e executados no servidor — funcionam mesmo
     // com o navegador fechado. Aqui só mostramos o retorno da execução imediata.
     const results = moveResult?.automations ?? [];
-    if ((moveResult as { backendPending?: boolean })?.backendPending) toast.info("Etapa salva. Gatilhos automáticos ainda dependem da integração de execução.");
+    if (moveResult?.backendPending) toast.info("Etapa salva. Gatilhos automáticos ainda dependem da integração de execução.");
+    if (moveResult?.automationQueued) toast.success("Etapa atualizada. Gatilhos enviados à fila de execução.");
     if (results.length > 0) {
      const failed = results.filter((r) => !r.ok && !r.skipped);
      if (failed.length > 0) {
@@ -1039,10 +1043,12 @@ function CrmFunisPage() {
       if (executed > 0) toast.success(`${executed} gatilho(s) executado(s).`);
       if (queued > 0) toast.info(`${queued} gatilho(s) agendado(s) no servidor.`);
      }
-     if (crmSourceId) await reloadFunnels(crmSourceId);
     }
+    if (crmSourceId) await reloadFunnels(crmSourceId);
   } catch (e) {
    console.error("moveLead", e);
+   toast.error(e instanceof Error ? e.message : "Não foi possível confirmar a movimentação. O funil será atualizado.");
+   if (crmSourceId) void reloadFunnels(crmSourceId).catch((err) => console.error("moveLead rollback", err));
   }
  })();
  }
