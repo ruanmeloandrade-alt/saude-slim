@@ -2,32 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { resolveBrowserSupabaseEnv } from './saude-slim-env';
+import {fetchSlimAuthWithDeadline} from '@/lib/slim-auth-network.core';
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
-}
-
-const AUTH_LOGIN_MAX_ATTEMPTS = 3;
-const AUTH_LOGIN_RETRY_DELAYS_MS = [350, 900];
-
-function requestUrl(input: RequestInfo | URL): string {
-  if (typeof input === 'string') return input;
-  if (typeof URL !== 'undefined' && input instanceof URL) return input.toString();
-  if (typeof Request !== 'undefined' && input instanceof Request) return input.url;
-  return String(input);
-}
-
-function isPasswordLoginRequest(input: RequestInfo | URL): boolean {
-  const url = requestUrl(input);
-  return url.includes('/auth/v1/token') && url.includes('grant_type=password');
-}
-
-function isRetryableAuthStatus(status: number): boolean {
-  return status === 502 || status === 503 || status === 504;
-}
-
-function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function createSupabaseFetch(supabaseKey: string): typeof fetch {
@@ -47,24 +25,10 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
 
     headers.set('apikey', supabaseKey);
 
-    const passwordLogin = isPasswordLoginRequest(input);
-    const attempts = passwordLogin ? AUTH_LOGIN_MAX_ATTEMPTS : 1;
-
-    for (let attempt = 0; attempt < attempts; attempt += 1) {
-      try {
-        const response = await fetch(input, { ...init, headers });
-        if (!passwordLogin || !isRetryableAuthStatus(response.status) || attempt === attempts - 1) {
-          return response;
-        }
-      } catch (error) {
-        if (!passwordLogin || attempt === attempts - 1) throw error;
-      }
-
-      await sleep(AUTH_LOGIN_RETRY_DELAYS_MS[attempt] ?? 900);
-    }
-
-    // Unreachable, but keeps the fetch contract explicit for TypeScript.
-    throw new TypeError('Failed to fetch');
+    // One bounded password request; refreshing an existing session is also bounded,
+    // so stale refresh locks cannot keep the login form blocked indefinitely.
+    // Never retry auth automatically: a prior request may have been accepted.
+    return fetchSlimAuthWithDeadline(input, { ...init, headers });
   };
 }
 

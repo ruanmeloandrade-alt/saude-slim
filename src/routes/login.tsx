@@ -3,12 +3,13 @@ import { useEffect, useState } from "react";
 import { Loader2, LogIn } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import { supabase } from "@/integrations/supabase/client";
+import {slimAuthFailureMessage} from "@/lib/slim-auth-network.core";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Entrar · MKTOn" },
-      { name: "description", content: "Entre em uma conta MKTOn existente." },
+      { title: "Entrar · Saúde Slim" },
+      { name: "description", content: "Entre na sua conta Saúde Slim existente." },
     ],
   }),
   component: LoginPage,
@@ -74,7 +75,7 @@ function LoginPage() {
       // Login de conta existente termina aqui. Cadastro/onboarding pertence a /auth?mode=signup.
       navigate({ to: "/contas", replace: true });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Não foi possível entrar.";
+      const message = slimAuthFailureMessage(err);
       setError(/invalid login credentials|e-mail ou senha inválidos/i.test(message) ? "E-mail ou senha inválidos." : message);
     } finally {
       setLoading(false);
@@ -87,7 +88,7 @@ function LoginPage() {
         <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <LogIn className="h-5 w-5" />
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight">Entrar na MKTOn</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Entrar na Saúde Slim</h1>
         <p className="mt-1 text-sm text-muted-foreground">Use os dados da sua conta existente para acessar a plataforma.</p>
 
         <form className="mt-5 space-y-3" onSubmit={submit}>

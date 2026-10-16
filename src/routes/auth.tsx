@@ -17,6 +17,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {slimAuthFailureMessage} from "@/lib/slim-auth-network.core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -149,11 +150,18 @@ function AuthPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [slowLogin, setSlowLogin] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmationPending, setConfirmationPending] = useState(false);
   const [recoverySent, setRecoverySent] = useState(false);
   const [secondStepEmail, setSecondStepEmail] = useState<string | null>(null);
   const [passwordUpdated, setPasswordUpdated] = useState(false);
+
+  useEffect(() => {
+    if (!loading || mode !== 'login') { setSlowLogin(false); return; }
+    const timeout = window.setTimeout(() => setSlowLogin(true), 4_000);
+    return () => window.clearTimeout(timeout);
+  }, [loading, mode]);
 
   const goOn = () => {
     if (back) window.location.href = back;
@@ -181,10 +189,12 @@ function AuthPage() {
 
   useEffect(() => {
     let active = true;
-    supabase.auth.getSession().then(async ({ data }) => {
+    void supabase.auth.getSession().then(async ({ data }) => {
       if (!active || !data.session || mode === "recovery") return;
       await syncCurrentSignup(data.session.access_token);
       goOn();
+    }).catch(() => {
+      // Keep the login form usable when a stored session cannot be refreshed.
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -345,7 +355,7 @@ function AuthPage() {
         return;
       }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao autenticar.";
+      const msg = slimAuthFailureMessage(err);
       if (/User already registered/i.test(msg)) setError("Este e-mail já está cadastrado. Entre na sua conta.");
       else if (/Invalid login credentials/i.test(msg)) setError("E-mail ou senha inválidos.");
       else setError(msg);
@@ -490,6 +500,11 @@ function AuthPage() {
                   {mode === "login" && <button type="button" onClick={() => { setError(null); setMode("forgot"); }} className="-mt-1 block w-full text-right text-xs font-semibold text-emerald-700 hover:underline">Esqueci minha senha</button>}
 
                   {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs leading-5 text-red-700">{error}</div>}
+                  {mode === 'login' && slowLogin && !error && (
+                    <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
+                      O servidor de login está demorando mais que o normal. Não é necessário clicar novamente; aguardamos uma única resposta.
+                    </p>
+                  )}
 
                   <Button type="submit" disabled={loading} className="group h-12 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-[0_14px_32px_rgba(5,150,105,.18)] hover:bg-emerald-700">
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : mode === "signup" ? <AtSign className="mr-2 h-4 w-4" /> : <LogIn className="mr-2 h-4 w-4" />}

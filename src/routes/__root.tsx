@@ -184,7 +184,9 @@ function RootComponent() {
 function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const path = useRouterState({ select: (state) => state.location.pathname });
-  const isPublicRoute = isPublicPath(path);
+  // The login page must render even if a stored session refresh waits on a down Supabase.
+  // All non-public operational pages retain the existing authentication gate.
+  const isPublicRoute = isPublicPath(path) || path === '/auth' || path.startsWith('/auth/');
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
