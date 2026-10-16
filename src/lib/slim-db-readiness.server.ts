@@ -1,4 +1,4 @@
-import {dbWorkerMayRun,recordDbError,recordDbRecovery} from './slim-db-worker-backoff.core';
+import {dbWorkerMayRun,recordDbError,recordDbRecovery} from './slim-db-worker-backoff.core.ts';
 
 /** Only a cheap SELECT may verify DB readiness; never attempt to claim/send from the probe. */
 export type SlimDbProbeState = {

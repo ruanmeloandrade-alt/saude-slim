@@ -1,4 +1,4 @@
-import { recordDbError, recordDbRecovery } from "./slim-db-worker-backoff.core";
+import { dbWorkerMayRun, recordDbError, recordDbRecovery } from "./slim-db-worker-backoff.core";
 import { dbReadyForQueue } from "./slim-db-readiness.server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { executeRun, tickWaitingTimers } from "@/lib/salesbot-runtime.server";
@@ -9,7 +9,7 @@ const state = root.__slimInboxWorker ??= { busy: false };
 const db = supabaseAdmin as any;
 
 export async function processInboxAutomationQueue(): Promise<void> {
-  if (state.busy) return;
+  if (state.busy || !dbWorkerMayRun()) return;
   state.busy = true;
   try {
     if (!await dbReadyForQueue(db)) return;

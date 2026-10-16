@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import ts from 'typescript';
 import {newSlimDbProbeState,probeSlimDbReadiness} from '../src/lib/slim-db-readiness.server.ts';
-let n=0;async function check(label,fn){await fn();n++;console.log('PASS slim DB readiness: '+label);}
+import {sharedSlimDbBackoff,noteDbSuccess} from '../src/lib/slim-db-worker-backoff.core.ts';
+let n=0;async function check(label,fn){noteDbSuccess(sharedSlimDbBackoff());await fn();n++;console.log('PASS slim DB readiness: '+label);}
 function fakeDb(impl){
   const calls={select:0,limit:0,abortSignal:0,queries:0};
   const db={from(table){
@@ -60,10 +61,10 @@ await check('normal operation automatically resumes following successful read',a
  let fail=true;const f=fakeDb(async()=>fail?{error:{message:'timeout'}}:{data:[],error:null});
  assert.equal(await probeSlimDbReadiness(f.db,s,()=>1000),false);
  fail=false;
- // The local cooldown ends at 16000; shared transport cooldown ends before 16000.
- assert.equal(await probeSlimDbReadiness(f.db,s,()=>16001),false);
- // Shared cooldown from the real Date.now() clock is checked separately;
- // no false success is claimed until the actual circuit allows the probe.
+ // The shared transport cooldown is cleared when an independent DB read succeeds.
+ noteDbSuccess(sharedSlimDbBackoff());
+ assert.equal(await probeSlimDbReadiness(f.db,s,()=>16001),true);
+ assert.equal(f.calls.queries,2);
 });
 await check('worker source gates Inbox, audiences and stage jobs',async()=>{
  const inbox=fs.readFileSync(new URL('../src/lib/inbox-automation-worker.server.ts',import.meta.url),'utf8');

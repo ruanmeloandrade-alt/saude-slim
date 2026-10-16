@@ -1,4 +1,4 @@
-import { recordDbError, recordDbRecovery } from './slim-db-worker-backoff.core';
+import { dbWorkerMayRun, recordDbError, recordDbRecovery } from './slim-db-worker-backoff.core';
 import { dbReadyForQueue } from './slim-db-readiness.server';
 import { supabaseAdmin } from '@/integrations/supabase/client.server';
 import { deliverAudienceItem } from './slim-audience-delivery.core';
@@ -40,7 +40,7 @@ async function activate(c:any,l:any){
  }};
 }
 export async function processSlimAudienceQueue():Promise<void>{
- if(state.busy)return;state.busy=true;
+ if(state.busy||!dbWorkerMayRun())return;state.busy=true;
  try{
   if(!await dbReadyForQueue(db))return;
   const claim=await db.rpc('slim_claim_audience_delivery');
@@ -86,7 +86,7 @@ export async function processSlimAudienceQueue():Promise<void>{
  finally{state.busy=false;}
 }
 async function processStageJobs(){
- if(state.stageBusy||Date.now()-state.lastStage<15000)return;state.stageBusy=true;state.lastStage=Date.now();
+ if(state.stageBusy||Date.now()-state.lastStage<15000||!dbWorkerMayRun())return;state.stageBusy=true;state.lastStage=Date.now();
  try{if(!await dbReadyForQueue(db))return;
  const {tickStageAutomationJobs}=await import('./stage-automation-engine.server');await tickStageAutomationJobs(db,10);recordDbRecovery();}
  catch(error){recordDbError(error);throw error;}
