@@ -38,7 +38,8 @@ edit('src/components/automations/CentralDeGrupos.tsx',({once,between})=>{
  once('title="Objetivo do agente no grupo"','title="Encerramento do atendimento no grupo"');
  once('subtitle="Sem um destino claro o moderador conversa pra sempre. Diga o que ele faz quando cumpre o objetivo ou bate no limite de interações."','subtitle="Defina o encaminhamento ao concluir o atendimento ou atingir o limite de interações."');
  once('<ObjectiveTreeEditor value={tree} onChange={setTree} scope="grupo" fullscreen workspaceId={workspaceId} onTest={() => setTestOpen(true)} />','<p>O editor de objetivos foi retirado. Utilize o prompt.</p>');
- once('<button onClick={onClose} className="text-xs px-3 py-1.5 rounded border border-border">','<button onClick={closeEditor} disabled={saving} className="text-xs px-3 py-1.5 rounded border border-border">');
+ // Scope the Close anchor by its neighboring save handler; other group dialogs have a Close button too.
+ once('<button onClick={onClose} className="text-xs px-3 py-1.5 rounded border border-border">\n            Fechar\n          </button>\n          <button\n            onClick={() => void doSave(false)}','<button onClick={closeEditor} disabled={saving} className="text-xs px-3 py-1.5 rounded border border-border">\n            Fechar\n          </button>\n          <button\n            onClick={() => void doSave(false)}');
  once('            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Salvar','            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />} {saving?"Salvando...":"Salvar"}');
  once('        <div className="flex items-center justify-end gap-3 pt-2">','        <div className="flex flex-wrap items-center justify-end gap-3 pt-2">\n          <span className="mr-auto text-xs text-muted-foreground">{payloadSignature!==lastSyncedRef.current?"Alterações não salvas":"Sem alterações pendentes"}</span>\n          <button type="button" className="rounded border px-3 py-1.5 text-xs" disabled={saving||Boolean(promptReadinessError(form.systemPrompt))} onClick={()=>setTestOpen(true)}>Testar prompt</button>');
  once('  if (q.isLoading) return <div className="p-5 text-xs text-muted-foreground text-center">Carregando relatório...</div>;','  if (q.isLoading) return <div className="p-5 text-xs text-muted-foreground text-center">Carregando relatório...</div>;\n  if(q.isError)return <div role="alert" className="p-5 text-sm text-destructive">Relatório de grupos indisponível. A falha de consulta não representa ausência de atendimentos.</div>;');
@@ -81,7 +82,6 @@ edit('src/routes/api/agent-test-chat.ts',({once})=>{
         }
         let provider;`);
 });
-// Parse actual TS/TSX before any transformed file is written.
 for(const [path,code]of plans){const source=ts.createSourceFile(path,code,ts.ScriptTarget.Latest,true,path.endsWith('.tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS);if(source.parseDiagnostics.length)throw new Error(`[Group prompt] Invalid syntax ${path}: ${source.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText,' ')).join('; ')}`);}
 for(const [path,code]of plans)fs.writeFileSync(new URL(path,root),code);
 console.log(`[Group prompt] ${plans.length} consumers updated. No live agent, group, message or order changed.`);
