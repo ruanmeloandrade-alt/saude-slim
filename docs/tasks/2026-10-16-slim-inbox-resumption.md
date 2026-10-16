@@ -1,31 +1,47 @@
 # Retomada Saúde Slim em 16/10/2026
 
-Status: EM EXECUÇÃO, sem aprovação adicional pendente do usuário para o escopo já solicitado. Último commit confirmado na retomada: 36f45852977c68722bc0f3a861815cd30e54bf6f.
+## Estado deste bloco
 
-## Ambiente e limites
+Código funcional do bloco: 28a1a376675ff474423f783e3c9598b7b125c292, integrado em restauracao/sistema-completo-20261014. Deploy Railway 68ccab6a-18c5-4dc4-a53c-bab8b9655818 confirmado SUCCESS, uma réplica online, sem pendências de aplicação, em 16/10/2026 às 12:19 UTC. A revisão posterior deste documento alinha o nome da migração ao registro real do Supabase e seu teste, sem mudar a UI.
 
-Somente ruanmeloandrade-alt/saude-slim; Supabase vyzvfcgpjjzvcjegzzza. Continuar a branch de correção existente e a branch operacional restauracao/sistema-completo-20261014. Não alterar DNS, infraestrutura, chaves, outros projetos, Lovable ou GitHub Actions.
+Projeto exclusivo: ruanmeloandrade-alt/saude-slim; banco vyzvfcgpjjzvcjegzzza. Nenhuma alteração de DNS, infraestrutura, credenciais, outros projetos, Lovable ou GitHub Actions.
 
-A chamada apply_migration para slim_order_reviewed_edit_delete foi bloqueada pela ferramenta. A migração NÃO está instalada; não tentar contornar o bloqueio por outro endpoint ou transporte. Não ativar botões de edição/exclusão dependentes dela e não declarar essa frente concluída.
+## Corrigido e publicado
 
-## Evidências da retomada
+Erro de compilação da etapa anterior: a remoção do bloco de regularização deixava uma chave JSX extra. Corrigida a transformação e adicionada análise sintática dos arquivos transformados. O deploy 0bc0d2ec-7481-41d9-9c93-c40d403fc856 confirmou a retomada do serviço. Histórico em lista, Pesquisar/Enter e Copiloto nas páginas internas foram preservados.
 
-Build Railway d00ec90a-0216-412a-9a9c-495d78ef64f4 falhou: chave JSX extra gerada por apply-slim-global-history.mjs em SlimErpWorkspace.tsx. Corrigir a transformação e acrescentar checagem sintática antes de novo build. Os 28 testes SQL isolados passaram, mas isso não é deploy nem E2E autenticado.
+Inbox: campo de texto permanece habilitado enquanto a mensagem anterior é enviada. O envio continua protegido contra clique duplicado; não é uma fila ilimitada de mensagens. A conclusão de upload não apaga o próximo rascunho. Legenda é capturada no início do upload e falhas aparecem na tela. Retirados o botão de formulário, a consulta e seus manipuladores.
 
-Diagnóstico anterior confirmado por leitura: faltam inbox_labels, inbox_label_assignments, whatsapp_groups e bucket inbox-outgoing no banco independente. Composer desabilita escrita enquanto sendMut está pendente; gravação assume audio/webm; criação de etiqueta limpa campo antes da resposta; mídia ainda usa telefone em lugar do roteamento canônico usado por texto.
+Áudio: seleção de formato suportado pelo navegador; gravação com limpeza do microfone ao fechar/trocar conversa; prévia para revisar, descartar e confirmar o envio. Botão separado ao lado do microfone para ditar e transcrever para o campo de texto. O ditado não envia áudio ao lead. A transcrição utiliza a rota autenticada existente e exige uma chave OpenAI da própria empresa.
 
-## Entrega deste bloco
+Indicadores: amarelo para mensagem não lida; vermelho para conversa lida sem resposta; sem bolinha quando a última mensagem é nossa e não há automação ativa; azul-marinho para SalesBot ativo; branco para IA ativa. IA tem prioridade quando o Bot delega para ela. Bots pausados/finalizados não são sinalizados como ativos. Leitura de estado em lote, isolada por empresa e operador.
 
-1. Corrigir build da entrega anterior sem desfazer a lista/Pesquisar/Copiloto global.
-2. Corrigir composer contínuo, retirar formulário, separar áudio de ditado para texto, preservar rascunhos e mostrar falhas de mídia.
-3. Restaurar dependências próprias de etiquetas, grupos e mídia com RLS e sem enviar mensagens de teste a clientes. Migração do Inbox é independente da migração de pedidos bloqueada.
-4. Corrigir leitura dos indicadores conforme mensagem lida/não lida e estados reais de Bot/IA.
-5. Continuar identidade Cliente/Inbox e drawer do Funil e retirar fluxo de objetivos, conforme viabilidade e evidência.
+Etiquetas: criação aguarda confirmação do servidor, impede clique duplo, mantém o nome em caso de falha e exibe o nome da etiqueta em vez do UUID. Atualização de etiqueta inexistente não retorna sucesso falso.
 
-## Validação
+Anexos: mídia usa o mesmo destino canônico de sessão/JID usado pelo envio de texto. Limite de 16 MB validado no servidor e erro de upload mostrado ao operador. Grupo: empresa e sessão são verificadas antes da chamada externa; cadastro local precisa existir e resposta sem JID válido não é tratada como criação confirmada.
 
-Checagens de sintaxe dos arquivos transformados, testes focados de estados e gravação, regressão dos contratos existentes, build e status pós-deploy. Não confundir teste sintético, simulação, HTTP ou build com uso autenticado, entrega ao WhatsApp ou recuperação de mensagens históricas. Não fazer pedidos, editar vendas nem acionar bots de clientes durante testes.
+## Banco instalado e verificado
+
+Migração independente slim_inbox_labels_groups_media aplicada com sucesso, versão real 20261016121810. Criadas inbox_labels, inbox_label_assignments e whatsapp_groups com isolamento RLS e sem leitura anônima. Criado bucket privado inbox-outgoing, limite 16777216 bytes, com duas políticas de upload/leitura autenticada. Verificação posterior confirmou tabelas, RLS, negação de leitura anônima e bucket privado. Nenhuma mensagem, grupo real ou pedido de teste foi criado.
+
+A migração de pedidos slim_order_reviewed_edit_delete NÃO foi instalada. A chamada foi bloqueada pela ferramenta; não foi contornada por outra API. A verificação posterior confirmou slim_order_changes ausente. Os botões Editar/Excluir ainda não estão conectados ao fluxo completo.
+
+## Validação executada
+
+19/19 testes de regras de UI/áudio/identidade, executados localmente e incluídos no build. 17/17 verificações de integração/sintaxe/idempotência dos arquivos reais no build. 20/20 testes de etiquetas, grupos e políticas de mídia em PostgreSQL isolado PGlite no build. Total: 56 verificações focadas, além dos gates de regressão existentes, que foram mantidos. Build e publicação concluídos.
+
+Limites: não foi executado teste de microfone em navegador autenticado, entrega real de anexo/áudio ao WhatsApp, criação externa de grupo ou chamada real ao provedor de transcrição. Testes isolados de SQL e fonte não equivalem a esses E2E. Não rotular o sistema completo como finalizado.
+
+## Duplicidade e histórico: ainda não concluído
+
+A lista agora elimina repetições do MESMO ID entre páginas, sem mesclar pessoas pelo nome. Isso não resolve sozinho duplicados reais no banco.
+
+Diagnóstico agregado, somente leitura: um grupo de telefone repetido envolvendo quatro registros de lead ativos/não mesclados; 162 atividades de mensagem; zero atividades de mensagem órfãs de lead. Esse diagnóstico não prova que o histórico específico relatado foi recuperado. A consulta detalhada para classificar os quatro registros e seus vínculos com pedidos foi bloqueada pela ferramenta. Não foi repetida por outro caminho; nenhum registro foi mesclado ou apagado.
+
+## Continuação pendente
+
+Resolver identidade Cliente/Inbox e exibição integral das mensagens sem fundir registros de pedido indevidamente. Concluir drawer do Funil com mini-Inbox e botões externos. Implementar aprovação executável no servidor para ações do Copiloto, não apenas instrução no prompt. Concluir entrega/endereço/frete e validação autenticada do fluxo pedido/estoque/Dashboard. Retirar fluxo de objetivos da configuração e execução da IA, mantendo IA por prompt. Concluir instalação autorizada e UI de Editar/Excluir pedidos quando o bloqueio da ferramenta estiver resolvido.
 
 ## Rollback
 
-Novos commits de reversão apenas para os arquivos desta frente; sem force-push. Preservar pedidos, mensagens, documentos e rastreabilidade. Ao encerrar registrar exatamente entregue, bloqueado e pendente.
+Reverter por novos commits somente os arquivos do bloco, sem force-push. Não apagar novas tabelas com dados nem mensagens, pedidos ou documentos. A migração do Inbox é aditiva e independente da migração de pedidos bloqueada.
