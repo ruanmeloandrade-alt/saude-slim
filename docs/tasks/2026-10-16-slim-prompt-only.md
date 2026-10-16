@@ -1,17 +1,41 @@
 # Saúde Slim: IA de conversa individual por prompt
 
-Estado: implementação independente em revisão/build, não homologada. Base 94d74b1, branch fix/slim-prompt-only-20261016. Somente repo ruanmeloandrade-alt/saude-slim, banco vyzvfcgpjjzvcjegzzza. A integração bloqueada da ficha do Funil NÃO faz parte deste código; ela permanece WIP em fix/slim-funnel-prompt-20261016, commit d6d84a5, sem publicar.
+## Publicação confirmada
 
-## Mudança solicitada
+Código funcional 3c40c7812786b9e0e71bd87805cf4c398090f200. Branch de trabalho fix/slim-prompt-only-20261016, integrada em restauracao/sistema-completo-20261014. Railway deployment 3b738710-bd49-4e71-900e-1962b5fc92b1: SUCCESS; healthcheck aprovado em 2026-10-16T13:50:45Z. Consulta posterior: Online, uma réplica rodando, zero travadas e nenhum trabalho pendente. Duas falhas antigas de builds continuam no histórico, sem falha desta publicação. Este checkpoint documental não muda o código funcional.
 
-Retirar fluxo de objetivos dos agentes individuais, mantendo prompt, fontes, ações configuradas, dados e histórico. Criar agente abre modelos de prompt diretamente. A tela antiga de árvore não é montada. Agente antigo com modo objetivos exibe aviso de revisão; o primeiro salvamento precisa ser manual e ter prompt preenchido. Nenhum prompt é inventado e nenhuma árvore é transformada automaticamente em comandos.
+Projeto exclusivo ruanmeloandrade-alt/saude-slim, Supabase vyzvfcgpjjzvcjegzzza. Não houve alteração de chaves, DNS, infraestrutura, serviços externos, Lovable ou GitHub Actions.
 
-O salvamento só aceita modo prompt, mantém metadata e settings anteriores num merge por nível, retém objective_tree apenas como arquivo histórico. A atualização é verificada por ID/empresa e operador. Não devolve sucesso quando nenhuma linha foi atualizada.
+## Mudança entregue
 
-O carregador efetivo de conversation_ai_agents retira objective_tree da cópia usada na execução. Essa mesma cópia abastece turno de IA e rotinas de tracking/inatividade; o fluxo arquivado não fornece ações, encerramentos ou timers para essas rotinas. Prompt vazio é rejeitado antes da chamada ao provedor ou do transporte WhatsApp. A API de teste individual segue o contrato de prompt. Grupo/central de grupos tem configuração própria e não está sendo declarado migrado nesta entrega.
+Agentes de conversa individuais agora são operados apenas por prompt. Criar agente abre modelos de prompt diretamente, sem a escolha do fluxo de objetivos. A árvore não é montada como editor operacional. Agente antigo salvo como objetivos exibe aviso de revisão: o primeiro salvamento de conversão é manual, com prompt preenchido; o autosave não converte o cadastro só por abrir a tela.
 
-## Preservação e limites
+O salvamento aceita apenas modo prompt. Mantém metadata e settings anteriores por merge de dois níveis, incluindo fontes, idioma e indicação de agente principal. Objective_tree anterior fica armazenada para consulta histórica, mas não é substituída pela árvore vazia do editor. O servidor exige operador autorizado e empresa ativa, e verifica se a atualização realmente retornou o agente daquela empresa.
 
-Não apagar árvores nem históricos. Não alterar definições de SalesBots convencionais, estoque, pedidos, chaves, DNS ou infraestrutura. Nenhuma migração no banco. Consulta de metadados do banco foi bloqueada nesta sessão, sem resultados: não inventar quantos agentes antigos existem ou precisam de revisão.
+O carregador efetivo de conversation_ai_agents fornece uma cópia sem objective_tree para o turno da IA e para as rotinas de tracking/inatividade. Assim, árvore, ações de seus nós, encerramentos e contingências antigos não continuam ativos apenas porque ainda existem no banco. Antes, esses consumidores liam a árvore sem exigir o modo objetivos, inclusive em agentes marcados como prompt.
 
-22 testes puros executados localmente antes do envio ao GitHub. Gates de sintaxe, consumidores e regressões preservados no build. Só marcar publicado após build/deploy bem-sucedidos; não chamar testes de fonte de E2E autenticado ou resposta real da IA. Rollback por novos commits dos arquivos desta frente.
+Prompt vazio ou acima do limite é rejeitado antes de consultar o provedor ou tentar enviar resposta pelo WhatsApp. A API de teste individual também rejeita o modo retirado e descarta árvores no teste de prompt. Prompts escritos pelo operador não foram inventados, reescritos ou preenchidos automaticamente.
+
+## Dados e abrangência
+
+Nenhuma migração ou atualização de cadastros reais executada pelo agente nesta sessão. Árvores, históricos, mensagens, pedidos, estoque e documentos permanecem no armazenamento original. O runtime ignora a árvore arquivada, sem a apagar. SalesBots convencionais e seus blocos não foram removidos.
+
+Agentes que já possuíam prompt continuam usando esse conteúdo. Agente antigo baseado somente em árvore, sem system_prompt, exige que o operador preencha e salve o prompt antes do atendimento. A consulta de metadados do banco foi bloqueada nesta sessão, portanto não foi possível contar quantos cadastros estão nessa situação; nenhum número foi inventado.
+
+Esta entrega cobre agentes individuais de conversation_ai_agents. A Central de Grupos possui configuração própria e sua retirada de objetivos não está sendo declarada concluída aqui. Ações do Copiloto com aprovação são outra frente e não foram implementadas por este patch.
+
+## Validação efetivamente executada
+
+34 verificações focadas passaram no build: 22 testes puros de projeção de runtime, preservação de metadata, mesclagem de settings, validação de prompt e idempotência; 12 verificações dos consumidores reais, análise sintática e preservação dos pontos de execução de SalesBots. Os 22 testes puros também passaram localmente, assim como a checagem estrita TypeScript do módulo independente. Não somar essa repetição ao total.
+
+Gates de regressão anteriores foram mantidos e passaram, seguidos do build completo e do healthcheck. Não houve login/navegação autenticada completa no navegador, chamada real de IA ou mensagem enviada a clientes durante os testes. Testes de fonte e regras não foram apresentados como homologação completa.
+
+## Ficha do Funil: trabalho preservado, não publicado
+
+Os quatro módulos preparados da ficha com mini-Inbox estão na branch fix/slim-funnel-prompt-20261016, commit d6d84a5a7579c64d284a7266124ec013d7a7492c. Incluem base de leitura autenticada/canônica, componente e layout. A gravação que conectaria esses módulos ao Funil e ao ChatThread foi bloqueada pela ferramenta. Essa integração não foi reapresentada por outro endpoint ou payload. Nenhum desses módulos incompletos entrou na branch de produção desta entrega.
+
+O Funil ainda não ganhou o novo painel. Essa pendência permanece explícita no semáforo. As correções de identidade/duplicidade da versão anterior foram preservadas.
+
+## Rollback
+
+Reverter somente os arquivos de prompt por novo commit, sem force-push. Não há migração destrutiva nem transformação de dados a desfazer. A branch WIP da ficha permanece separada e não é substituta da publicação funcional.
