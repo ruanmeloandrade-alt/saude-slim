@@ -40,5 +40,14 @@ await test('actual resumer leaves form wait untouched',async()=>{const f=fixture
 await test('actual loader ignores disabled agents and keeps workspace scope',async()=>{const f=fixture();f.rows.conversation_ai_agents[0].enabled=false;const a=extract(['loadConversationAgent'],{projectPromptAgent:a=>a});assert.equal(await a.loadConversationAgent(f.db,'ws','agent'),null);f.rows.conversation_ai_agents[0].enabled=true;assert.equal((await a.loadConversationAgent(f.db,'ws','agent')).id,'agent');assert.equal(await a.loadConversationAgent(f.db,'other','agent'),null);});
 await test('actual loader read errors cannot impersonate missing agent',async()=>{const f=fixture();f.failures.conversation_ai_agents=true;const a=extract(['loadConversationAgent'],{projectPromptAgent:a=>a});await assert.rejects(a.loadConversationAgent(f.db,'ws','agent'),/carregar/);});
 await test('model wrapper passes requested identity and dispatch version to fence',async()=>{let received;const a=extract(['runAiAgentTurn'],{withAgentGuard:async(...args)=>{received=args;return {reply:'',handoff:false};},runAiAgentTurnUnchecked:async()=>{throw new Error('Not expected');}});await a.runAiAgentTurn({},'ws','lead','phone','agent','text',2);assert.equal(received[4],'agent');assert.equal(received[5],2);});
-await test('new and earlier guard transforms remain idempotent together',()=>{for(const file of ['apply-slim-inbound-owner.mjs','apply-inbox-automation-contract.mjs'])execFileSync(process.execPath,[fileURLToPath(new URL(file,import.meta.url))],{stdio:'inherit'});assert.equal(fs.readFileSync(runtimePath,'utf8'),source);});
+await test('new and earlier guard transforms preserve all three real consumers',()=>{
+ const targets=['src/lib/salesbot-runtime.server.ts','src/server.ts','src/lib/inbox-group-salesbot.functions.ts'];
+ const read=p=>fs.readFileSync(new URL(p,root),'utf8');const before=targets.map(read);
+ for(const file of ['apply-slim-inbound-owner.mjs','apply-inbox-automation-contract.mjs'])execFileSync(process.execPath,[fileURLToPath(new URL(file,import.meta.url))],{stdio:'inherit'});
+ assert.deepEqual(targets.map(read),before);assert.equal(read(targets[0]),source);
+ const server=read('src/server.ts');
+ assert.equal([...server.matchAll(/\bconst\s*\{\s*ensureInboxAutomationWorker\s*\}/g)].length,1);
+ assert.equal([...server.matchAll(/\bensureInboxAutomationWorker\(\s*\)\s*;/g)].length,1);
+ for(const path of targets)assert.equal(ts.createSourceFile(path,read(path),ts.ScriptTarget.Latest,true,ts.ScriptKind.TS).parseDiagnostics.length,0,path);
+});
 console.log(`${passed}/${passed} actual inbound source checks passed; isolated module typecheck included. No authenticated browser or live provider test claimed.`);
