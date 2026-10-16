@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import ts from 'typescript';
 const root=new URL('../',import.meta.url),mark='// SLIM_GLOBAL_HISTORY_V1',plans=[];
 function edit(path,run){let code=fs.readFileSync(new URL(path,root),'utf8');if(code.includes(mark))return;function once(from,to){if(code.split(from).length!==2)throw new Error(`[Global/history] ${path}: missing exact anchor ${from.slice(0,100)}`);code=code.replace(from,()=>to);}run(once);plans.push([path,code+'\n'+mark+'\n']);}
 edit('src/routes/__root.tsx',once=>{
@@ -24,10 +25,24 @@ function ScopedSupportRobot({workspaceId,actorId}:{workspaceId:string;actorId:st
 edit('src/lib/support-robot.functions.ts',once=>{once('active: true as const,','active: true as const,\n      actorId: userId,');});
 edit('src/components/erp/SlimErpWorkspace.tsx',once=>{
  once("import {SlimLegacyOrdersReview} from './SlimLegacyOrdersReview';",'// Historical source data retained; no reconciliation block in the sales list.');
- once("{mode==='history'&&<SlimLegacyOrdersReview workspaceId={workspaceId} actorId={actorId}/>",'{/* One sales list. Historical source data is not deleted. */}');
+ once("{mode==='history'&&<SlimLegacyOrdersReview workspaceId={workspaceId} actorId={actorId}/>}'".slice(0,-1),'{/* One sales list. Historical source data is not deleted. */}');
 });
 edit('scripts/test-slim-legacy-contract.mjs',once=>{
  once("test('history route exposes legacy review',()=>assert(before[0].includes(\"mode==='history'&&<SlimLegacyOrdersReview\")));","test('history has one sales list without the removed reconciliation panel',()=>{assert(!before[0].includes('<SlimLegacyOrdersReview'));assert(before[0].includes('<SlimOrderHistory'));});");
 });
+// Repair build trees already transformed by V1 before running its idempotence check.
+const erpPath='src/components/erp/SlimErpWorkspace.tsx';
+if(!plans.some(([path])=>path===erpPath)){
+ const old=fs.readFileSync(new URL(erpPath,root),'utf8');
+ const repaired=old.replace('{/* One sales list. Historical source data is not deleted. */}}','{/* One sales list. Historical source data is not deleted. */}');
+ if(repaired!==old)plans.push([erpPath,repaired]);
+}
+// Parse the actual transformed sources, not just string contracts. No data/network effects.
+const sources=['src/routes/__root.tsx','src/components/SupportRobot.tsx','src/lib/support-robot.functions.ts',erpPath,'src/components/erp/SlimOrderHistory.tsx'];
+for(const path of sources){
+ const code=plans.find(([name])=>name===path)?.[1]??fs.readFileSync(new URL(path,root),'utf8');
+ const source=ts.createSourceFile(path,code,ts.ScriptTarget.Latest,true,path.endsWith('.tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS);
+ if(source.parseDiagnostics.length)throw new Error(`[Global/history] Invalid transformed syntax in ${path}: ${source.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText,' ')).join('; ')}`);
+}
 for(const[path,code]of plans)fs.writeFileSync(new URL(path,root),code);
-console.log(`[Global/history] ${plans.length} sources updated. No business data was changed.`);
+console.log(`[Global/history] ${plans.length} sources updated; ${sources.length} transformed sources parsed. No business data was changed.`);
