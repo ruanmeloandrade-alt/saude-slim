@@ -1,5 +1,29 @@
 # Saúde Slim: semáforo de produção
 
+## Checkpoint atual: 16/10/2026, consulta do Inbox e indisponibilidade SQL
+
+Versão funcional 70c62aa4cc0f0c4e627a9a7c995d70d9a2b9a49c publicada; Railway deploy 2a5bca4b-1d4f-4316-8f8d-3264d6f593cd: SUCCESS, serviço saude-slim-web Online, uma réplica ativa, nenhuma travada e nenhuma operação de deploy pendente.
+
+Prioridade solicitada: histórico redundante, travamentos com PDF e áudio, gatilho SalesBot no Funil e navegação para o Inbox.
+
+| Frente | Estado | Entrega ou bloqueio comprovado |
+|---|---|---|
+| Histórico de Vendas | 🟢 Publicado | Rota Saúde Slim renderiza somente a lista ERP; o histórico antigo não é montado. Dados anteriores preservados. |
+| PDF e áudio | 🟡 Parcial publicado | Preparação/envio com prazos limites e sem reiniciar sessão ou repetir envio incerto; entrega real e causa exata do relato não homologadas. |
+| Lista de conversas no Inbox | 🟢 Mitigação publicada | Leitura de prévias limitada a até 160 registros e 4 segundos; falha na consulta não derruba a lista; leitura não conferida fica identificada. Sete verificações focadas e build completo aprovados. |
+| Supabase SQL | 🔴 Instabilidade real | Gerenciamento indica ACTIVE_HEALTHY, mas SELECT 1 e listagem de migrations retornam timeout. Logs registram 53 cancelamentos por timeout, requisições PostgREST 500 para lead_activities e Railway 522 do Supabase. |
+| Gatilho SalesBot ao mover lead | 🔴 Ainda sem publicação | Migração transacional de etapas ainda não instalada/confirmada; scripts/slim-stage-move-release.json permanece com enabled:false. Não simular ou executar pela metade. |
+| Funil → Inbox | 🟡 Aguardando homologação | Mitigação das prévias publicada; teste do fluxo real com SQL funcional ainda pendente. |
+| Homologação autenticada | 🟡 Pendente | Não houve envio de teste para clientes, movimentação real de leads, execução real de bot ou resposta de IA. |
+
+A proteção de prévias não recupera a conexão SQL e não prova que o PDF tenha provocado o incidente. Sem a migração confirmada, a etapa do Funil continua podendo ser movida sem acionar o gatilho; o sistema já avisa que a integração está pendente. Não repetir um movimento ou envio para tentar corrigir o passado.
+
+Escopo e validações: docs/tasks/2026-10-16-slim-inbox-timeout-recovery.md. Os demais itens e o checkpoint anterior continuam preservados abaixo.
+
+---
+
+# Saúde Slim: semáforo de produção
+
 ## Checkpoint: 16/10/2026, responsabilidade da mensagem entre SalesBot e IA
 
 Continuação autorizada pelo usuário enquanto testa as versões anteriores. A investigação de grupos encontrou falhas no pré-requisito individual; este bloco corrigiu esse caminho, não implementou atendimento automático da IA nos grupos.
