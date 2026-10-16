@@ -1,0 +1,4 @@
+{
+  "enabled": false,
+  "reason": "Installation not confirmed. Supabase migration initialization and read-only SQL are failing with connection timeouts. Keep existing stage movement intact; do not bind the new RPC or worker before verifying the migration."
+}

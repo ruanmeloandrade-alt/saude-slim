@@ -1,6 +1,8 @@
 import fs from 'node:fs';import ts from 'typescript';
 const root=new URL('../',import.meta.url),MARK='// SLIM_HISTORY_MEDIA_STAGE_HOTFIX_V1',plans=[];
-function edit(path,run){let code=fs.readFileSync(new URL(path,root),'utf8');if(code.includes(MARK))return;
+const stageReady=JSON.parse(fs.readFileSync(new URL('./slim-stage-move-release.json',import.meta.url),'utf8')).enabled===true;
+const stageBindings=new Set(['src/lib/saude-slim-funnel-client.ts','src/lib/slim-audience-runtime.server.ts']);
+function edit(path,run){if(!stageReady&&stageBindings.has(path))return;let code=fs.readFileSync(new URL(path,root),'utf8');if(code.includes(MARK))return;
  const once=(a,b)=>{if(code.split(a).length!==2)throw new Error(`[Slim hotfix] ${path}: ambiguous anchor ${a.slice(0,100)}`);code=code.replace(a,()=>b);};
  const block=(a,b,value)=>{const i=code.indexOf(a),j=code.indexOf(b,i+a.length);if(i<0||j<0||code.split(a).length!==2)throw new Error(`[Slim hotfix] ${path}: missing section ${a}`);code=code.slice(0,i)+value+code.slice(j);};
  const section=(a,b,fn)=>{const i=code.indexOf(a),j=code.indexOf(b,i+a.length);if(i<0||j<0)throw new Error(`[Slim hotfix] missing section ${a}`);code=code.slice(0,i)+fn(code.slice(i,j))+code.slice(j);};
@@ -20,7 +22,6 @@ edit('src/lib/leads.functions.ts',({once,block})=>{
 });
 edit('src/components/inbox/InboxPage.legacy.tsx',({once,block,section,all})=>{
  once('import { cn } from "@/lib/utils";','import { cn } from "@/lib/utils";\nimport {readSlimMediaFile,sendSlimMediaOnce} from "@/lib/slim-media-file.client";');
- // Remove the repeated 50-page warm loops, not the on-demand history or cache.
  block('  // A F2 mantém o primeiro paint paginado.', '  const [olderActivities, setOlderActivities]', '  // Older messages remain available through explicit paginated loading below.\n');
  block('  // Realtime é o caminho principal, mas uma aba pode ficar aberta por horas', '  // Backfill é manutenção defensiva.', '  // Realtime + one query poll are the live refresh paths; no parallel head timer.\n');
  all('    refetchInterval: 8_000,','    refetchInterval: 20_000,\n    retry: 1,',2);
@@ -56,7 +57,7 @@ edit('src/lib/stage-automation-engine.server.ts',({once})=>{
  once('  const seen = new Set<string>();','  if(stageActionsError)throw new Error("Não foi possível consultar os gatilhos da etapa.");\n  const seen = new Set<string>();');
  once('    if (delay === 0) immediate.push({ id: jobId, action });','    if (delay === 0 && !input.deferExecution) immediate.push({ id: jobId, action });');
  once('    if (!passesExecutionRules(lead, action.execution)) {',`    if(String(job.context?.event_id??'').startsWith('slim-stage-move:') && (lead.stageId!==job.stage_id || lead.pipelineId!==job.pipeline_id)){
-      await finishJob(admin,job.id,'skipped','O cliente saiu da etapa antes da execução.',job.attempts??0);
+      await finishJob(admin,job.id,'skipped','O cliente saiu da etapa antes da execução.');
       return {actionId:action.id,title,ok:true,skipped:true};
     }
     if (!passesExecutionRules(lead, action.execution)) {`);
@@ -67,4 +68,4 @@ edit('src/lib/slim-audience-runtime.server.ts',({once})=>{
 });
 for(const[path,code]of plans){if(!/\.tsx?$/.test(path))continue;const source=ts.createSourceFile(path,code,ts.ScriptTarget.Latest,true,path.endsWith('.tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS);if(source.parseDiagnostics.length)throw new Error('[Slim hotfix] Invalid syntax '+path+': '+source.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText,' ')).join('; '));}
 for(const[path,code]of plans)fs.writeFileSync(new URL(path,root),code);
-console.log(`[Slim hotfix] ${plans.length} checked consumers updated. One history, bounded file send, paged Inbox and durable stage events. No business operations executed.`);
+console.log(`[Slim hotfix] ${plans.length} checked consumers updated. Stage RPC bindings enabled: ${stageReady}. No business operations executed.`);
