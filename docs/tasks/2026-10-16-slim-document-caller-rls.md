@@ -1,18 +1,23 @@
 # Saúde Slim: documento imutável e envio por operador autenticado
 
-Base d20cd4c. Branch fix/slim-document-rls-20261016. Somente Saúde Slim; destino operacional restauracao/sistema-completo-20261014; banco vyzvfcgpjjzvcjegzzza. Estado inicial 🟡 projeto em validação.
+Base d20cd4c. Branch fix/slim-document-rls-20261016. Somente Saúde Slim; destino operacional restauracao/sistema-completo-20261014; banco vyzvfcgpjjzvcjegzzza. Estado: 🟡 implementação e validação de build em andamento.
 
 ## Pedido existente
 Finalizar o envio opcional do comprovante PDF após confirmação explícita, com cliente, número, canal, arquivo e registro do resultado. Não é emissão fiscal. Não enviar a clientes durante testes.
 
-## Revisão material do desenho
-A migration anterior de novas operações privilegiadas de documento foi recusada e não será reapresentada. O desenho desta tarefa NÃO cria RPC SECURITY DEFINER de armazenamento/reserva/finalização nem usa cliente administrativo. Usa as tabelas de documentos já instaladas, operações sob o próprio usuário autenticado e políticas RLS restritas a operador, empresa, documento, cliente e canal. As permissões por coluna não permitem trocar os identificadores ou apagar o histórico.
+## Desenho aplicado
+A migration anterior de operações privilegiadas de documento não foi reapresentada. Esta implementação NÃO cria RPC SECURITY DEFINER de armazenamento/reserva/finalização nem usa cliente administrativo. Usa as tabelas existentes com o próprio usuário autenticado, políticas RLS e permissões por coluna. Não permite apagar o histórico, trocar destinatários em uma tentativa existente ou modificar o PDF arquivado.
 
-O PDF é imutável, limitado em tamanho, validado pelo hash dos bytes e gerado somente a partir do snapshot do pedido. O envio revalida o snapshot/arquivo no servidor, não aceita arquivo ou número arbitrário do navegador. A tentativa é registrada antes do transporte e limitada pela chave de requisição e pelo índice existente que impede dois envios não resolvidos do mesmo documento.
+Migration 20261016102253 slim_document_caller_rls_and_immutable_consent aplicada com sucesso e número conferido. DDL versionado com o conteúdo aceito. Nenhuma mensagem, documento de cliente ou saldo foi criado pelos testes.
 
-Consentimento inclui pedido, documento/hash, canal e telefone. Resultado incerto não aciona repetição automática. O servidor usa apenas a credencial da sessão Evolution já autorizada e nunca retorna ou registra a chave. Nenhuma alteração de DNS, canal, credenciais, permissão global, autenticação ou cofre é prevista.
+O servidor gera o comprovante a partir do snapshot persistido, valida sua assinatura SHA-256 e arquiva uma versão imutável. O navegador não pode mandar um arquivo arbitrário para esse endpoint. Aprovação vincula pedido, arquivo/hash, canal, telefone atual e referência única da tentativa. O registro pendente antecede o transporte; concorrência/repetição usa as restrições de unicidade já instaladas.
 
-## Testes e aceite
-Executar testes de orquestração sem rede e testes PostgreSQL descartáveis do novo contrato RLS, incluindo acesso cruzado, falsificação de autor, documento/hash divergente, arquivo mutável, canal errado, repetição e estado incerto. Aplicar a nova alteração somente por ferramenta de migration normal, sem reexecutar o pacote anterior por caminhos alternativos. Se a nova solicitação também for recusada, interromper a escrita correspondente e registrar a limitação.
+A sessão Evolution é consultada sob a identidade do operador. A credencial permanece somente no servidor. O envio usa sendMedia com mediatype=document, mimetype=application/pdf, fileName e conteúdo base64, timeout e protocolo real do provedor. Sem protocolo ou diante de resultado incerto não há repetição automática. O histórico da conversa recebe uma referência do pedido e do documento sem armazenar chaves nem resposta bruta do provedor.
 
-Publicar somente após build aprovado. Informar separadamente código/DDL/teste isolado/publicação e entrega real não executada. Manter checkout, estoque, histórico, documento para download e consentimento por usuário. A nova rodada Inbox/Copiloto não é parte deste escopo.
+## Interface
+No diálogo do PDF, após pedido confirmado e pelo Histórico de Vendas, aparece a confirmação do envio com cliente, telefone, arquivo, seleção de canal e aprovação desmarcada. Fechar o diálogo não envia. O resultado diferencia pendente, aceito pelo provedor, rejeitado e incerto. A referência opaca da tentativa é preservada no navegador; resultado incerto permite consulta, não reenvio automático. Um envio já iniciado não pode ser recolhido por cancelar o pedido.
+
+## Validação
+Novos testes de orquestração usam dependências locais; testes de integração inspecionam os consumidores reais transformados; testes PostgreSQL descartáveis carregam a mesma migration aceita e verificam RLS, autoria, hash, imutabilidade, canal, telefone, consentimento, unicidade e estados terminais. Eles não usam Supabase nem transporte real. O resultado efetivo de build precisa ser obtido nos logs antes de declarar estes testes aprovados.
+
+A entrega efetiva a WhatsApp real não foi testada e não será declarada comprovada só pelo build. O PDF continua sendo documento comercial não fiscal. Sem mudanças na conexão Evolution, DNS, credenciais ou autenticação global. A próxima rodada de Inbox/Copiloto segue aguardando escopo/OK separado.
