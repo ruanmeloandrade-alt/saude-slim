@@ -16,6 +16,6 @@ test('reader and mutation retain authenticated middleware',()=>assert.equal((api
 test('operator and current workspace checked',()=>{assert(api.includes('if(ws!==expected)throw'));assert(api.includes('assertSlimOperator(sb,ws,context.userId)'))});
 test('one explicit consent-based RPC, no direct writes or secret access',()=>{assert(api.includes("sb.rpc('slim_reconcile_legacy_sale'"));assert(api.includes('approved:z.literal(true)'));for(const x of ['supabaseAdmin','.insert(','.update(','.delete(','process.env','fetch('])assert(!api.includes(x))});
 test('payment and stock mode start unselected',()=>{assert(ui.includes("[method,setMethod]=useState('')"));assert(ui.includes("[stockMode,setStockMode]=useState('')"));assert(ui.includes("[paymentStatus,setPaymentStatus]=useState('')"))});
-test('uncertain request only recovers, no automatic replay',()=>{assert(ui.includes('Consultar resultado sem reenviar'));assert(ui.includes('if(!selected||inflight.current||uncertain)return'))});
+test('uncertain request only recovers, no automatic replay',()=>{assert(ui.includes('Consultar resultado sem reenviar'));assert(ui.includes('if(!selected||inflight.current||uncertain||!q.data?.reconciliation.canReconcile)return'))});
 test('download and new checkout preserved',()=>{assert(before[0].includes('getSlimOrderReceipt'));assert(before[0].includes('<SlimCheckout'))});
 console.log(`${n}/${n} real-source legacy integration checks passed. Not a transactional or authenticated browser test.`);
