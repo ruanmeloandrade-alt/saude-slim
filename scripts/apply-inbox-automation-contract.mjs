@@ -29,11 +29,21 @@ edit('src/lib/inbox-group-salesbot.functions.ts', code => once(code,
     }
     const group = await findGroup(sb, workspaceId, data.conversationId);`, 'direct conversation target'));
 
-edit('src/server.ts', code => once(code,
+edit('src/server.ts', code => {
+  // Other transforms add workers between this hook and getServerEntry. Detect
+  // the hook itself rather than requiring those statements to remain adjacent.
+  const declarations = [...code.matchAll(/\bconst\s*\{\s*ensureInboxAutomationWorker\s*\}\s*=\s*await\s+import\(["']\.\/lib\/inbox-automation-worker\.server(?:\.ts)?["']\)/g)].length;
+  const calls = [...code.matchAll(/\bensureInboxAutomationWorker\(\s*\)\s*;/g)].length;
+  if (declarations || calls) {
+    if (declarations !== 1 || calls !== 1) throw new Error('[Inbox] Expected exactly one server worker declaration and call');
+    return code;
+  }
+  return once(code,
 ` const handler = await getServerEntry();`,
 ` const { ensureInboxAutomationWorker } = await import("./lib/inbox-automation-worker.server");
  ensureInboxAutomationWorker();
- const handler = await getServerEntry();`, 'server-owned durable queue worker'));
+ const handler = await getServerEntry();`, 'server-owned durable queue worker');
+});
 
 edit('src/lib/salesbot-runtime.server.ts', code => {
   const imports = 'import { withSalesbotGuard, withAgentGuard, assertAutomationMayContinue, guardedAutomationFetch } from "./inbox-automation-guards.server";';
