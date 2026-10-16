@@ -24,3 +24,11 @@ O Supabase continua recusando inclusive SELECT 1 com conexão encerrada por time
 A migração da fila de mudança de etapa continua preparada apenas em arquivo, não instalada nem verificada. O gatilho do SalesBot continua desativado no novo caminho, para não perder eventos silenciosamente. Não contornar a falha do banco por outro transporte.
 
 Nenhuma mídia foi enviada, nenhum SalesBot foi executado, nenhum lead foi movimentado e nenhum pedido foi alterado durante a auditoria. Ainda faltam banco operacional, gatilho transacional ativo e homologação autenticada dos fluxos.
+
+## Continuação executada após o primeiro hotfix (16/10/2026)
+
+Proteção do processamento automático publicada no commit `1da7460e553b3394d4ca25d9db4f56af04015a6b`, Railway `4e602d58-a79e-4905-8234-d625ac9863ab` SUCCESS. O circuito compartilhado classifica falha SQL/transport 502/503/504/522, timeout e erros de conexão, com cooldown exponencial limitado a 300 segundos. Reduz a frequência normal da fila de disparos de 1 para 5 segundos, interrompe novas verificações durante cooldown e preserva os registros já persistidos. Oito testes focados passaram, além das regressões e build. Um log real no Railway confirmou a ativação do cooldown; edge_logs posteriores mostraram apenas quatro falhas dos dois verificadores na janela consultada. Não é cura do Supabase.
+
+Correção delimitada de movimento individual publicada no commit `d22507cc3198eb5e9a93d3adaf0da1f87cd5132b`, Railway `3b011046-68db-4ecb-9a64-07e83af58368` SUCCESS. O movimento não altera mais toda a empresa pelo `company_id` nem marca `last_message_from=us`. Exige leitura e confirmação de uma linha válida com o ID canônico; movimentação igual à etapa atual não gera pseudoevento. Oito testes focados com contatos controlados passaram; nenhuma movimentação real foi feita.
+
+O Supabase permaneceu sem consultas SQL após esses deploys, inclusive `SELECT 1`; o gerenciador relata `ACTIVE_HEALTHY` apesar dos erros 522/504. A migração de outbox de etapas continua não aplicada/não verificada, e `enabled:false` foi preservado. Portanto o SalesBot por gatilho de movimentação continua indisponível; avisar explicitamente, não afirmar que funciona. A integração de grupo, Copiloto e demais frentes seguem pendentes segundo o semáforo.
