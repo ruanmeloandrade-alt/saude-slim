@@ -1,23 +1,31 @@
 # Saúde Slim: duplicidade de leads, sessão exclusiva
 
-Estado: EM EXECUÇÃO. Pedido do usuário: corrigir duplicatas no Inbox, Clientes e Funil; somente esta demanda nesta sessão. Não implementar Editar/Excluir pedidos, frete, Copiloto, objetivos de IA nem outras frentes.
+Estado: EM EXECUÇÃO. Somente duplicidade e identidade no Inbox, Clientes e Funil. Não executar outras demandas nesta sessão.
 
-Base conferida: 23aa112859396351c08d0fa27b44f14df3fda6b3, branch operacional restauracao/sistema-completo-20261014. Branch desta correção: fix/slim-lead-identity-20261016. Repositório ruanmeloandrade-alt/saude-slim; banco vyzvfcgpjjzvcjegzzza. Sem outros projetos, credenciais, DNS, infraestrutura, Lovable ou Actions.
+Repositório ruanmeloandrade-alt/saude-slim; banco vyzvfcgpjjzvcjegzzza; branch operacional restauracao/sistema-completo-20261014; branch da correção fix/slim-lead-identity-20261016. Sem alterações de credenciais, infraestrutura, DNS, outras plataformas, Lovable ou Actions.
 
-## Diagnóstico preliminar confirmado
+## Diagnóstico comprovado
 
-O gateway createSaudeSlimLead usado em Clientes ainda insere sempre um lead novo com source pedido_saude_slim, sem consultar o contato existente. O índice de unicidade protege somente source whatsapp e phone_normalized preenchido. O backfill syncWhatsAppInbox escolhe o primeiro candidato de telefone sem ordenação canônica, abrindo caminho para dividir as atividades entre os clones.
+Clientes/createSaudeSlimLead e Funil/createSlimLead inserem contatos sem checar identidade. Clientes ainda rotulava cadastro como pedido_saude_slim. Três antigos registros de pedido têm mesmo nome, telefone completo, sessão e os mesmos cinco IDs de mensagens do contato WhatsApp original. Dois têm itens legados e um tem pedido ERP relacionado. Abrir conversa na página Clientes apenas navega: não foi encontrada inserção no próprio clique.
 
-A leitura atual autorizada nesta sessão encontrou três registros antigos de pedido com mesmo nome, telefone e sessão do contato WhatsApp já existente. Dois possuem itens legados, um possui pedido ERP vinculado. Não usar a função genérica saude_slim_merge_leads sem correção: ela transfere lead_products e altera valor do contato, o que pode misturar vendas distintas. Dados financeiros e PDFs precisam permanecer intactos.
+O backfill já comparava telefone exato, porém escolhia o primeiro cadastro retornado sem ordenação nem representação canônica. Isso direcionava o mesmo histórico a representações diferentes. O índice atual protege somente contatos source=whatsapp.
 
-## Solução a validar
+## Limite de banco encontrado
 
-Uma identidade canônica por contato direto e empresa, sem comparar somente nome ou sufixo do telefone. Reutilizar o contato existente na criação/importação e sincronização. Abertura de conversa deve apenas resolver/navegar, sem INSERT de lead. Links para aliases devem apontar ao contato canônico; consultas de Inbox, Clientes e Funil precisam excluir aliases.
+A migração slim_contact_identity proposta foi recusada pela proteção da ferramenta. Não foi instalada. A proposta e seus 23 testes isolados ficam preservados, não representam recursos de produção. Não executar o SQL recusado, nem sua regularização física ou índice complementar por outro transporte. O desenho de correção publicado neste bloco é independente e não depende dessas funções ou de novas permissões.
 
-Corrigir duplicatas já confirmadas com preservação dos registros originais, auditoria, atividades/mídias, itens legados, pedidos, totais e estoque. Não fundir homônimos ou telefones ambíguos. Tratar concorrência e eventos repetidos sem duplicação. Invalidar cache para que a correção apareça nas três telas.
+## Correção da aplicação
 
-## Validação e publicação
+Leitura canônica dos contatos com empresas separadas e telefone completo, sem juntar homônimos ou adivinhar DDI. Somente representações antigas pedido_saude_slim com mesma sessão do contato original são agrupadas na operação. Nenhuma linha de lead, item, pedido, mídia ou mensagem é movida ou apagada para obter essa apresentação.
 
-Rastrear consumidores por auditoria estática do próprio repositório. Testar regras de identidade e SQL em PostgreSQL descartável, repetir cenários de criação, navegação e evento. Comparar contagem/hash de mensagens e dados financeiros antes/depois da regularização. Não enviar mensagens ou bots para clientes. Publicar automaticamente a correção validada e atualizar docs/OPERATION_STATUS.md sem marcar outras frentes concluídas. Build/smoke não equivalem a E2E autenticado.
+Clientes, Funil e Inbox utilizam o mesmo resolvedor. A abertura de conversa resolve o original antes de montar chat/controles. Histórico reúne a família de representações, remove cópias do mesmo ID WhatsApp da apresentação e mantém mensagens únicas e arquivos. Cache antigo do Inbox passa a versão 2, sem limpar dados de pedidos ou mensagens no servidor.
 
-Rollback por novo commit e mapeamento auditável, sem apagar mensagens, pedidos ou histórico Git. Bloqueios anteriores de outras frentes não devem ser contornados nem reaplicados nesta tarefa.
+Criação de Clientes/Funil passa pelo servidor autenticado, confere permissões, origem e etapa, verifica o contato existente e preserva seus dados. Webhook e backfill usam o mesmo resolvedor e criação serializada por telefone no processo da aplicação. Repetições retornam o ID existente. Cadastro manual deixa de se apresentar como pedido. Contato já existente não é movido de etapa ou alterado sem solicitação.
+
+## Concorrência e validação
+
+Teste de 20 chamadas concorrentes ao mesmo telefone no processo deverá produzir uma inserção. Isso não substitui unicidade distribuída no PostgreSQL, cuja proposta ficou não instalada. A operação atual tem uma réplica web; não alegar cobertura de escritores não migrados ou de múltiplos processos. Preservar o índice WhatsApp existente.
+
+Rodar testes comportamentais dos consumidores, mensagens, isolamento e concorrência local ao processo; análise de sintaxe dos fontes reais transformados; regressão e build; conferir deploy e semáforo. Não enviar mensagens de teste nem editar vendas reais. Registrar limites de E2E autenticado.
+
+Rollback: novo commit revertendo somente arquivos deste bloco. Os dados permanecem intactos. Código SQL preparado não é executado pelo build em produção.
