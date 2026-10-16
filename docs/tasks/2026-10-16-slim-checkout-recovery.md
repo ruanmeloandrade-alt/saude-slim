@@ -1,34 +1,34 @@
 # Saúde Slim: recuperação de pedidos interrompidos
 
-Checkpoint: implementação concluída e testes de banco/local aprovados; build e publicação ainda devem ser conferidos antes de afirmar disponível.
-Base ec1e22d303c217a2daf87f0232f0caeeac15eaf8. Trabalho fix/slim-checkout-recovery-20261016; publicação restauracao/sistema-completo-20261014; banco vyzvfcgpjjzvcjegzzza. O usuário pediu continuar a finalização do ERP enquanto testa a versão publicada.
+Estado: correção delimitada publicada, não finalização global do ERP.
+Código bf39076302870e70e411d269b726a7d02b147017. Deployment 87db3921-9975-4e2f-86c2-77c51bacf659: SUCCESS; healthcheck 2026-10-16T09:55:59Z; verificação seguinte Online/uma réplica/zero travadas/sem pendências. A documentação final não muda esse código.
+
+Base ec1e22d303c217a2daf87f0232f0caeeac15eaf8. Trabalho fix/slim-checkout-recovery-20261016; publicação restauracao/sistema-completo-20261014; banco vyzvfcgpjjzvcjegzzza. Escopo registrado antes da implementação em e52c909. O usuário pediu continuar a finalização do ERP enquanto testa a versão publicada.
 
 ## Diagnóstico
 
-A referência da tentativa era preservada antes da rede. Se a confirmação não chegasse ao servidor, a consulta retornava not_found e o checkout podia ficar indefinidamente em Conferir tentativa anterior. Limpar localStorage por tempo decorrido seria incorreto: uma confirmação atrasada poderia aparecer depois. Esta entrega adiciona um fechamento explícito sem pedido, diferente de cancelar venda.
+A referência era preservada antes da rede. Se a confirmação não chegasse ao servidor, a consulta retornava not_found e o checkout podia ficar indefinidamente em Conferir tentativa anterior. Limpar localStorage por tempo decorrido seria incorreto: uma confirmação atrasada poderia aparecer depois. A solução é fechamento explícito sem pedido, diferente de cancelar venda.
 
 ## Implementação
 
-Migration slim_checkout_interrupted_attempt_closure aplicada com sucesso pelo conector Supabase. Tabela de referências encerradas com RLS, somente leitura/inserção autenticada, sem UPDATE/DELETE para o operador. Trigger rejeita alteração de outra empresa/autor e protege contra encerramento direto de referência com pedido. Função pública SECURITY INVOKER usa o mesmo advisory lock transacional da confirmação existente. Confirmação tardia consulta a barreira antes de gravar.
+Migration slim_checkout_interrupted_attempt_closure aplicada normalmente com sucesso. Tabela de referências encerradas com RLS, somente leitura/inserção autenticada, sem UPDATE/DELETE para o operador. Trigger protege autor, empresa e referência com pedido. Função pública SECURITY INVOKER usa o mesmo advisory lock transacional da confirmação existente. Confirmação tardia consulta a barreira antes de gravar.
 
-Se outra confirmação detém o lock, a operação retorna processing, sem bloquear prolongadamente a interface e sem liberar uma nova venda. Se já existe pedido do operador, retorna a referência existente e não cancela nem modifica seu estoque. Sem pedido, cria o encerramento durável. O código da interface pede confirmação, valida empresa/operador/referência e só limpa o registro local após retorno definitivo. Exceção de rede ou resposta divergente preserva a tentativa. A consulta comum permanece somente leitura e reconhece encerramentos existentes.
+Se outra confirmação detém o lock, retorna processing sem liberar a venda. Se já existe pedido do operador, retorna a referência existente sem cancelar ou modificar estoque. Sem pedido, cria o encerramento durável. A interface solicita confirmação, valida empresa/operador/referência e só limpa o registro local após retorno definitivo. Exceções de rede/storage ou resposta divergente preservam a tentativa. A consulta comum permanece somente leitura e reconhece encerramentos existentes.
 
-DDL aceito arquivado em docs/database/slim-checkout-interrupted-attempt-closure.sql. Não é executado por build. A consulta posterior, somente do número da migration, foi recusada por classificação indeterminada; não foi repetida por outro endpoint e não foi inventado número de versão. A aplicação da DDL e os testes de execução são evidências independentes e tiveram retorno de sucesso.
+DDL aceito arquivado em docs/database/slim-checkout-interrupted-attempt-closure.sql. Não é executado pelo build. A consulta posterior, somente do número da migration, foi recusada por classificação indeterminada; não foi repetida nem inventado número de versão. Aplicação da DDL e testes de execução tiveram retornos de sucesso independentes.
 
-## Testes realmente executados
+## Validação
 
-25/25 testes locais do core em Node 22.16: fechamento confirmado, pedido existente, cancelado, processing, ausência de aprovação, identidade divergente, resposta inválida, valores malformados, falha de rede/storage e referência aberta em outra aba. Dublês locais, sem rede.
+25/25 testes locais do core em Node 22.16, novamente aprovados no Railway. Nove verificações de integração aprovadas no build sobre arquivos reais. Total: 34 verificações novas de código. Preservados todos os testes e cabeçalhos de transforms anteriores; build completo aprovado na primeira tentativa desta entrega.
 
-Sonda SQL executada com usuário autenticado e revertida: fechamento repetido; chegada tardia rejeitada; pedido 19,99 x 3 preservado com estoque 7; recuperação de pedido existente sem encerramento ou segunda baixa; idempotência do pedido mantida; inserção direta protegida; leitura/comando não autorizados rejeitados; grants de anônimo/UPDATE/DELETE conferidos. Ausência dos registros temporários verificada ao final. Não alterou estoque real, documento, cliente real ou mensagens.
+Sonda SQL autenticada/revertida: fechamento repetido; chegada tardia rejeitada; pedido 19,99 x 3 preservado com estoque 7; recuperação sem encerramento ou segunda baixa; idempotência mantida; inserção direta protegida; leitura/comando sem vínculo rejeitados; grants anônimo/UPDATE/DELETE bloqueados. Ausência dos registros temporários conferida. Nenhum estoque/pedido/cliente real ou mensagem foi alterado pelo teste.
 
-Nove verificações de integração sobre código real preparadas no prebuild. Ainda não contar como aprovadas sem o resultado do build. Todos os testes anteriores foram preservados; nenhum cabeçalho de transform foi sobrescrito.
+Não houve ensaio com duas sessões independentes no banco ou navegador autenticado. A coordenação usa advisory locks transacionais e função VOLATILE em read committed. Documentação consultada: https://www.postgresql.org/docs/17/explicit-locking.html#ADVISORY-LOCKS e https://www.postgresql.org/docs/16/transaction-iso.html.
 
-Não houve ensaio com duas sessões independentes no banco ou navegador autenticado. A coordenação usa contrato documentado do PostgreSQL: advisory locks transacionais e função VOLATILE em read committed. Referências: https://www.postgresql.org/docs/17/explicit-locking.html#ADVISORY-LOCKS e https://www.postgresql.org/docs/16/transaction-iso.html.
+A tentativa de cópia pública do repositório no container falhou por DNS; a abertura de /pedidos na ferramenta web ficou indisponível. Não houve caminho alternativo para contornar bloqueio de navegador. As chamadas HTTP observadas pertenciam à versão anterior; não foram apresentadas como E2E desta release. Logs anteriores de AbortError não tiveram causa identificada nesta task.
 
-## Limites da finalização
+## Limites
 
-Esta entrega não reabre nem repete a migration de documento recusada, a sonda recusada de regularização histórica ou o pacote de segurança. Não é envio de PDF, NF, reconciliação nem desbloqueio dessas frentes. Os gates existentes permanecem. A nova rodada de Copiloto global/ações, Inbox, endereço/frete e IA por prompt continua sem iniciar.
+Não reabre a migration recusada de documento, a sonda recusada de regularização antiga ou o pacote de segurança. Não é envio de PDF, NF, reconciliação nem desbloqueio dessas frentes. Seus gates permanecem. Copiloto global/ações, Inbox, endereço/frete e IA por prompt seguem aguardando escopo/OK separado.
 
-A tentativa de obter cópia pública do repositório no container falhou por DNS; não foi usado um endpoint alternativo. Testes completos de build usam o pipeline Railway existente sem GitHub Actions. Sem alterar main, DNS, Evolution, chaves, projetos vizinhos ou salvamento manual/120s.
-
-Atualizar docs/OPERATION_STATUS.md após conferir deploy, com recorte entregue, pendências reais e limitações.
+Sem alterações em main, DNS, Evolution, chaves, projetos vizinhos ou salvamento manual/120s. Atualização final do semáforo em docs/OPERATION_STATUS.md mantém explicitamente as pendências.
