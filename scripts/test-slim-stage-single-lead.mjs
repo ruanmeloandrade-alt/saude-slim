@@ -13,8 +13,8 @@ if(!rpc){
    const fn=ast.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='moveSlimLead');assert(fn);
    const js=ts.transpileModule(fn.getText(ast).replace(/^export\s+/,''),
       {compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}}).outputText;
-   const rows=[{id:'l1',company_id:'company',stage_id:'old',pipeline_id:'pipe',merged_into_id:null},{id:'l2',company_id:'company',stage_id:'old',pipeline_id:'pipe',merged_into_id:null}];let updatedIds=[];
-   const db={from(table){let ops=[],patch;const q={select(){return q;},eq(k,v){ops.push(row=>row[k]===v);return q;},is(k,v){ops.push(row=>row[k]===v);return q;},update(v){patch=v;return q;},async maybeSingle(){const list=(table==='pipeline_stages'?[{id:'dest',pipeline_id:'pipe',name:'Next'}]:rows).filter(row=>ops.every(test=>test(row)));if(patch){for(const row of list){Object.assign(row,patch);updatedIds.push(row.id);} }return {data:list[0]??null,error:null};}};return q;}};
+   const rows=[{id:'l1',workspace_id:'ws',company_id:'company',stage_id:'old',pipeline_id:'pipe',merged_into_id:null},{id:'l2',workspace_id:'ws',company_id:'company',stage_id:'old',pipeline_id:'pipe',merged_into_id:null}];let updatedIds=[];
+   const db={from(table){let ops=[],patch;const q={select(){return q;},eq(k,v){ops.push(row=>row[k]===v);return q;},is(k,v){ops.push(row=>row[k]===v);return q;},update(v){patch=v;return q;},async maybeSingle(){const list=(table==='pipeline_stages'?[{id:'dest',workspace_id:'ws',pipeline_id:'pipe',name:'Next'}]:rows).filter(row=>ops.every(test=>test(row)));if(patch){for(const row of list){Object.assign(row,patch);updatedIds.push(row.id);} }return {data:list[0]??null,error:null};}};return q;}};
    const make=new Function('ctx','requiresEditor','resolveSlimContactId','sb',js+'\nreturn moveSlimLead;');
    const move=make(async()=>({ws:'ws',role:'owner'}),()=>undefined,async(_db,_ws,id)=>id,db);
    // An async test runner below uses this selected function to validate scoped effects.
