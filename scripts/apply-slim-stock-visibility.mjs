@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 const root=new URL('../',import.meta.url),mark='// SLIM_STOCK_VISIBILITY_V1',plans=[];
-function edit(path,run){let s=fs.readFileSync(new URL(path,root),'utf8');if(s.startsWith(mark))return;const once=(a,b)=>{if(s.split(a).length!==2)throw new Error(`Stock contract anchor changed: ${path}: ${a.slice(0,80)}`);s=s.replace(a,()=>b);};run(once);plans.push([path,mark+'\n'+s]);}
+function edit(path,run){let s=fs.readFileSync(new URL(path,root),'utf8');if(s.split(/\r?\n/).includes(mark))return;const once=(a,b)=>{if(s.split(a).length!==2)throw new Error(`Stock contract anchor changed: ${path}: ${a.slice(0,80)}`);s=s.replace(a,()=>b);};run(once);plans.push([path,s+'\n'+mark+'\n']);}
 edit('src/routes/crm.estoque.tsx',once=>{
  once('import { createFileRoute, Link }','import {SlimStockWorkspace} from "@/components/erp/SlimStockWorkspace";\nimport { createFileRoute, Link }');
  once('  component: EstoquePage,','  component: EstoqueErpPage,');

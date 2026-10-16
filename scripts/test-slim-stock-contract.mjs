@@ -6,7 +6,8 @@ const root=new URL('../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root
 function check(name,fn){fn();n++;console.log('PASS stock integration: '+name);}
 const paths=['src/routes/crm.estoque.tsx','src/components/erp/SlimCheckout.tsx','src/components/erp/SlimErpWorkspace.tsx'];const before=paths.map(read);
 const ui=read('src/components/erp/SlimStockWorkspace.tsx'),server=read('src/lib/slim-stock-view.functions.ts');
-check('three actual source consumers wired',()=>assert(before.every(s=>s.startsWith('// SLIM_STOCK_VISIBILITY_V1'))));
+check('three actual source consumers wired',()=>assert(before.every(s=>s.split(/\r?\n/).includes('// SLIM_STOCK_VISIBILITY_V1'))));
+check('previous transform header retained',()=>assert(before[2].startsWith('// SLIM_LEGACY_REVIEW_V1')));
 check('active stock route mounts new ledger component',()=>{assert(before[0].includes('component: EstoqueErpPage'));assert(before[0].includes('<SlimStockWorkspace/>'));assert(before[0].includes('createFileRoute("/crm/estoque")'));});
 check('stock screen does not use whole-real currency helper or legacy catalog',()=>{for(const term of ['crm-mock','listSaudeSlimCatalogs','Math.round','MOCK_'])assert(!ui.includes(term));assert(ui.includes('formatStockCents(p.priceCents)'));});
 check('stock cache separated by company and operator and refreshes',()=>{assert(ui.includes("['slim-stock-catalog',workspaceId,actorId]"));assert(ui.includes("['slim-stock-movements',workspaceId,actorId]"));assert(ui.includes('refetchInterval:15000'));});
