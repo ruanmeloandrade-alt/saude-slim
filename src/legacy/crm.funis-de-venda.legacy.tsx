@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Fragment } from "react";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { listSlimSources, listSlimFunnels, listSlimUsers, moveSlimLead, updateSlimStage, createSlimStage, renameSlimPipeline, createSlimLead, createSlimFunnel, setDefaultSlimSource, reorderSlimStages } from "@/lib/saude-slim-funnel-client";
+import { listSlimSources, listSlimFunnels, listSlimUsers, moveSlimLead, bulkMoveSlimLeads, updateSlimStage, createSlimStage, renameSlimPipeline, createSlimLead, createSlimFunnel, setDefaultSlimSource, reorderSlimStages } from "@/lib/saude-slim-funnel-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
  Search,
@@ -152,6 +152,39 @@ export const Route = createFileRoute("/crm/funis-de-venda")({
 type View = "kanban" | "lista";
 type Mode = "view" | "automatize";
 type StageAutomations = Record<string, AutomationAction[]>;
+type QuickEditValues = {
+  name: string;
+  email: string;
+  phone: string;
+  value: number;
+  responsibleId: string;
+  pipelineId: string;
+  stageId: string;
+  customFields: Record<string, string>;
+};
+type QuickEditBasicValues = {
+  name: string;
+  email: string | null;
+  phone: string | null;
+  value: number;
+  responsibleId: string | null;
+};
+type QuickEditCheckpoint = {
+  basic: QuickEditBasicValues;
+  customFields: Record<string, string>;
+  pipelineId: string;
+  stageId: string;
+  hasConfirmedData: boolean;
+};
+function quickEditBasicValues(data: QuickEditValues): QuickEditBasicValues {
+  return {
+    name: data.name ?? "",
+    email: data.email || null,
+    phone: data.phone || null,
+    value: Number(data.value ?? 0),
+    responsibleId: data.responsibleId || null,
+  };
+}
 const stageAutomationStorageKey = (pipelineId: string) => `saude-slim.stageAutomations.${pipelineId}`;
 const stageAutomationDraftStorageKey = (pipelineId: string) => `saude-slim.stageAutomationsDraft.${pipelineId}`;
 const STAGE_COLOR_SWATCHES = [
@@ -165,6 +198,7 @@ function CrmFunisPage() {
  const [sources, setSources] = useState<CrmSource[]>([]);
  const [crmSourceId, setCrmSourceId] = useState<string>("");
   const [quickEditingLead, setQuickEditingLead] = useState<CrmLead | null>(null);
+  const quickEditCheckpoints = useRef(new Map<string, QuickEditCheckpoint>());
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const onBatchToggleLeads = useCallback((ids: string[], forceState?: boolean) => {
     setSelectedLeadIds(prev => {
@@ -199,7 +233,8 @@ function CrmFunisPage() {
 
    const duplicatePipeFn = useServerFn(duplicatePipelineServer);
     const listUsersFn = listSlimUsers;
-    const bulkMoveLeadsFn = useServerFn(bulkMoveLeads);
+    const bulkMoveLeadsFn = bulkMoveSlimLeads;
+    const bulkMoveRequest = useRef<{key:string;requestId:string}|null>(null);
     const backfillFn = useServerFn(backfillAutomationAction);
 
   const listSources = listSlimSources;
@@ -1061,10 +1096,12 @@ function CrmFunisPage() {
   const [newLeadForm, setNewLeadForm] = useState({ name: "", phone: "", email: "", value: "", stageId: "" });
   const [newLeadSaving, setNewLeadSaving] = useState(false);
   const [newLeadError, setNewLeadError] = useState<string | null>(null);
+  const newLeadRequestId = useRef<string | null>(null);
 
   function openNewLead() {
     if (!crmSourceId || !funnel) return;
     const firstStage = funnel.stages[0]?.id ?? "";
+    newLeadRequestId.current = crypto.randomUUID();
     setNewLeadForm({ name: "", phone: "", email: "", value: "", stageId: firstStage });
     setNewLeadError(null);
     setNewLeadOpen(true);
@@ -1078,6 +1115,7 @@ function CrmFunisPage() {
     if (!stageId) { setNewLeadError("Nenhuma etapa disponível."); return; }
     const rawValue = newLeadForm.value.replace(/[^\d.,-]/g, "").replace(",", ".");
     const numValue = rawValue ? Number(rawValue) : 0;
+    if (!newLeadRequestId.current) newLeadRequestId.current = crypto.randomUUID();
     setNewLeadSaving(true);
     setNewLeadError(null);
     try {
@@ -1090,14 +1128,17 @@ function CrmFunisPage() {
           email: newLeadForm.email.trim(),
           phone: newLeadForm.phone.trim(),
           value: Number.isFinite(numValue) ? numValue : 0,
+          requestId: newLeadRequestId.current,
         },
-      })) as { id?: string; leadId?: string; lead?: { id?: string } } | undefined;
-      const createdId = created?.id ?? created?.leadId ?? created?.lead?.id;
-      if (createdId) {
-        // Gatilhos precisam do runtime de automações e não são executados aqui.
-      }
+      }));
+      newLeadRequestId.current = null;
       setNewLeadOpen(false);
-      await reloadFunnels(crmSourceId);
+      toast.success(created.automationQueued ? "Cliente criado. Gatilhos registrados para execução." : "Cliente criado com sucesso.");
+      try {
+        await reloadFunnels(crmSourceId);
+      } catch {
+        toast.info("Cliente criado. Atualize o funil para ver o cartão.");
+      }
     } catch (e) {
       setNewLeadError(e instanceof Error ? e.message : "Falha ao criar lead.");
     } finally {
@@ -1418,20 +1459,33 @@ onConfigureTrigger={(stageId, actionId) => setConfiguring({ stageId, actionId })
     onConfirm={async (targetPipelineId: string, targetStageId: string) => {
       setBulkMoving(true);
       try {
-        await bulkMoveLeadsFn({
+        const leadIds = Array.from(selectedLeadIds).sort();
+        const key = JSON.stringify([targetPipelineId,targetStageId,leadIds]);
+        if (!bulkMoveRequest.current || bulkMoveRequest.current.key !== key) {
+          bulkMoveRequest.current = {key,requestId:crypto.randomUUID()};
+        }
+        const result = await bulkMoveLeadsFn({
           data: {
-            leadIds: Array.from(selectedLeadIds),
+            leadIds,
             targetPipelineId,
             targetStageId,
+            requestId: bulkMoveRequest.current.requestId,
           }
         });
-        toast.success("Leads movidos com sucesso");
+        bulkMoveRequest.current = null;
+        toast.success(result.movedCount > 0
+          ? `${result.movedCount} cliente(s) movido(s).${result.unchangedCount ? ` ${result.unchangedCount} já estava(m) na etapa.` : ""}`
+          : "Os clientes selecionados já estão nessa etapa.");
         setSelectedLeadIds(new Set());
         setBulkMoveDialogOpen(false);
-        queryClient.invalidateQueries({ queryKey: ["crm-funnel"] });
+        try {
+          await reloadFunnels(crmSourceId);
+        } catch {
+          toast.info("Movimentação confirmada. Atualize o funil para ver os cartões.");
+        }
       } catch (error) {
         console.error("bulkMoveError", error);
-        toast.error("Erro ao mover leads");
+        toast.error(error instanceof Error ? error.message : "Não foi possível confirmar a movimentação.");
       } finally {
         setBulkMoving(false);
       }
@@ -1582,75 +1636,97 @@ onConfigureTrigger={(stageId, actionId) => setConfiguring({ stageId, actionId })
          open={!!quickEditingLead}
          onOpenChange={(o: boolean) => { 
            if (!o) {
+             if (quickEditingLead) quickEditCheckpoints.current.delete(quickEditingLead.id);
              setQuickEditingLead(null);
              // Garantimos um refresh visual ao fechar, caso algo tenha mudado sem disparar efeito
-             reloadFunnels(crmSourceId);
+             void reloadFunnels(crmSourceId).catch(() => toast.info("Atualize o funil para conferir os dados mais recentes."));
            }
          }}
         funnels={funnels}
         users={workspaceUsers}
-        onSave={async (data) => {
+        onSave={async (data, baseline) => {
           if (!quickEditingLead) return;
+          const leadId = quickEditingLead.id;
+          let checkpoint = quickEditCheckpoints.current.get(leadId);
+          if (!checkpoint) {
+            checkpoint = {
+              basic: quickEditBasicValues(baseline),
+              customFields: {...baseline.customFields},
+              pipelineId: baseline.pipelineId,
+              stageId: baseline.stageId,
+              hasConfirmedData: false,
+            };
+            quickEditCheckpoints.current.set(leadId, checkpoint);
+          }
+          let phase: "data" | "stage" = "data";
           try {
-            const currentPipelineId = (quickEditingLead as any).pipeline_id || (quickEditingLead as any).pipelineId;
-            const currentStageId = (quickEditingLead as any).stage_id || (quickEditingLead as any).stageId;
+            // Somente mudanças reais em relação aos valores carregados ou já confirmados.
+            const values = quickEditBasicValues(data);
+            const patch = Object.fromEntries(Object.entries(values).filter(([key,value]) =>
+              value !== checkpoint.basic[key as keyof QuickEditBasicValues],
+            )) as Partial<QuickEditBasicValues>;
+            if (Object.keys(patch).length > 0) {
+              const { updateLead } = await import("@/lib/leads.functions");
+              const result = await updateLead({data:{leadId,patch}});
+              if (result?.ok !== true) throw new Error("A gravação dos campos não foi confirmada.");
+              if (quickEditCheckpoints.current.get(leadId) !== checkpoint) return;
+              checkpoint.basic = {...checkpoint.basic,...patch};
+              checkpoint.hasConfirmedData = true;
+            }
 
-            // 1. Atualizar campos básicos
-            const { updateLead } = await import("@/lib/leads.functions");
-            const res = await updateLead({
-              data: {
-                leadId: quickEditingLead.id,
-                patch: {
-                  name: data.name,
-                  email: data.email || null,
-                  phone: data.phone || null,
-                  value: data.value,
-                  responsibleId: data.responsibleId || null,
-                }
-              }
-            });
-            
-            if (!res.ok) throw new Error("Erro ao atualizar campos do lead");
-
-            // 2. Atualizar campos personalizados se houver
-            if (data.customFields && Object.keys(data.customFields).length > 0) {
+            const customChanges = Object.entries(data.customFields ?? {}).filter(([fieldId,value]) =>
+              String(value ?? "") !== String(checkpoint.customFields[fieldId] ?? ""),
+            );
+            if (customChanges.length > 0) {
               const { setLeadCustomFieldValue } = await import("@/lib/leads.functions");
-              for (const [fieldId, value] of Object.entries(data.customFields)) {
-                await setLeadCustomFieldValue({
-                  data: {
-                    leadId: quickEditingLead.id,
-                    fieldId,
-                    value: String(value)
-                  }
-                });
+              for (const [fieldId,value] of customChanges) {
+                const text = String(value ?? "");
+                const result = await setLeadCustomFieldValue({data:{leadId,fieldId,value:text}});
+                if (result?.ok !== true || result.fieldId !== fieldId || result.value !== text)
+                  throw new Error("A gravação de um campo personalizado não foi confirmada.");
+                if (quickEditCheckpoints.current.get(leadId) !== checkpoint) return;
+                checkpoint.customFields[fieldId] = text;
+                checkpoint.hasConfirmedData = true;
               }
             }
 
             // 3. Mover de etapa se necessário
-            if (data.pipelineId && data.stageId && (data.pipelineId !== currentPipelineId || data.stageId !== currentStageId)) {
-              const { moveLead } = await import("@/lib/crm.functions");
-              await moveLead({
-                data: {
-                  leadId: quickEditingLead.id,
-                  toStageId: data.stageId,
-                }
-              });
+            phase = "stage";
+            if (data.pipelineId && data.stageId && (data.pipelineId !== checkpoint.pipelineId || data.stageId !== checkpoint.stageId)) {
+              const result = await moveSlimLead({data:{leadId,toStageId:data.stageId}});
+              if (result?.ok !== true) throw new Error("A mudança de etapa não foi confirmada.");
+              if (quickEditCheckpoints.current.get(leadId) !== checkpoint) return;
+              checkpoint.pipelineId = data.pipelineId;
+              checkpoint.stageId = data.stageId;
             }
-            
+          } catch (e) {
+            if (quickEditCheckpoints.current.get(leadId) !== checkpoint) return;
+            console.error("quickEdit error:", e);
+            if (phase === "stage") {
+              toast.error(checkpoint.hasConfirmedData
+                ? "Dados salvos. A mudança de etapa não foi confirmada. O rascunho foi mantido para você conferir e tentar a etapa novamente."
+                : "A mudança de etapa não foi confirmada. O rascunho foi mantido para você conferir antes de tentar novamente.");
+            } else {
+              toast.error(checkpoint.hasConfirmedData
+                ? "Há dados já salvos; os demais dados não foram confirmados. Confira antes de repetir. O rascunho foi mantido."
+                : "Os dados não foram confirmados. Confira antes de repetir. O rascunho foi mantido.");
+            }
+            return;
+          }
+
+          quickEditCheckpoints.current.delete(leadId);
+          setQuickEditingLead(null);
+          toast.success("Lead atualizado com sucesso");
+          try {
             await queryClient.invalidateQueries({ queryKey: ["crm-funnels"] });
             await queryClient.invalidateQueries({ queryKey: ["crm-leads"] });
             await reloadFunnels(crmSourceId);
-            
-            if (data.pipelineId && data.pipelineId !== currentPipelineId) {
+            if (data.pipelineId && data.pipelineId !== baseline.pipelineId) {
               setFunnelId(data.pipelineId);
               await navigate({ to: "/crm/funis-de-venda", search: { funnelId: data.pipelineId }, replace: true });
             }
-            
-            setQuickEditingLead(null);
-            toast.success("Lead atualizado com sucesso");
-          } catch (e) {
-            console.error("quickEdit error:", e);
-            toast.error("Erro ao atualizar lead: " + (e instanceof Error ? e.message : "tente novamente"));
+          } catch {
+            toast.info("Alterações confirmadas. Atualize o funil para ver os dados salvos.");
           }
         }}
         onDelete={async (leadId) => {
@@ -1658,6 +1734,7 @@ onConfigureTrigger={(stageId, actionId) => setConfiguring({ stageId, actionId })
             await deleteLead({ data: { leadId } });
             await queryClient.invalidateQueries({ queryKey: ["crm-funnels"] });
             await reloadFunnels(crmSourceId);
+            quickEditCheckpoints.current.delete(leadId);
             setQuickEditingLead(null);
             toast.success("Card excluído com sucesso");
           } catch (e) {
@@ -1669,6 +1746,7 @@ onConfigureTrigger={(stageId, actionId) => setConfiguring({ stageId, actionId })
             await duplicateLead({ data: { leadId } });
             await queryClient.invalidateQueries({ queryKey: ["crm-funnels"] });
             await reloadFunnels(crmSourceId);
+            quickEditCheckpoints.current.delete(leadId);
             setQuickEditingLead(null);
             toast.success("Card duplicado com sucesso");
           } catch (e) {
@@ -1695,29 +1773,11 @@ function QuickEditDialog({
   onOpenChange: (open: boolean) => void;
   funnels: Funnel[];
   users: Array<{ id: string; name: string }>;
-  onSave: (data: { 
-    name: string; 
-    email: string; 
-    phone: string; 
-    value: number; 
-    responsibleId: string;
-    pipelineId: string;
-    stageId: string;
-    customFields?: Record<string, string>;
-  }) => Promise<void>;
+  onSave: (data: QuickEditValues, baseline: QuickEditValues) => Promise<void>;
   onDelete: (leadId: string) => Promise<void>;
   onDuplicate: (leadId: string) => Promise<void>;
 }) {
-  const [form, setForm] = useState<{
-    name: string;
-    email: string;
-    phone: string;
-    value: number;
-    responsibleId: string;
-    pipelineId: string;
-    stageId: string;
-    customFields: Record<string, string>;
-  }>({
+  const [form, setForm] = useState<QuickEditValues>({
     name: "",
     email: "",
     phone: "",
@@ -1727,6 +1787,7 @@ function QuickEditDialog({
     stageId: "",
     customFields: {},
   });
+  const initialValues = useRef<{leadId:string;values:QuickEditValues}|null>(null);
   const [saving, setSaving] = useState(false);
   const [loadingCustomFields, setLoadingCustomFields] = useState(false);
   const [customFieldError, setCustomFieldError] = useState<string | null>(null);
@@ -1742,6 +1803,7 @@ function QuickEditDialog({
 
   useEffect(() => {
     if (!open || !lead) {
+      initialValues.current = null;
       setCustomFieldDefs([]);
       setCustomFieldError(null);
       return;
@@ -1749,7 +1811,7 @@ function QuickEditDialog({
 
     const initialPipelineId = (lead as any).pipeline_id ?? (lead as any).pipelineId ?? "";
     const initialStageId = (lead as any).stage_id ?? (lead as any).stageId ?? "";
-    setForm({
+    const initialForm: QuickEditValues = {
       name: lead.name,
       email: (lead as any).email ?? "",
       phone: (lead as any).phone ?? "",
@@ -1758,7 +1820,9 @@ function QuickEditDialog({
       pipelineId: initialPipelineId,
       stageId: initialStageId,
       customFields: {},
-    });
+    };
+    initialValues.current = {leadId:lead.id,values:initialForm};
+    setForm(initialForm);
 
     let cancelled = false;
     setLoadingCustomFields(true);
@@ -1781,16 +1845,27 @@ function QuickEditDialog({
           options: field.options ?? [],
         }));
 
-        setCustomFieldDefs(defs);
-        setForm((prev) => ({
-          ...prev,
+        const loadedValues: QuickEditValues = {
+          ...initialForm,
           name: detail.lead.name,
           email: detail.lead.email ?? "",
           phone: detail.lead.phone ?? "",
           value: Number(detail.lead.value ?? 0),
+          pipelineId: detail.lead.pipelineId ?? initialPipelineId,
+          stageId: detail.lead.stageId ?? initialStageId,
+          customFields: Object.fromEntries(defs.map((field) => [field.id, currentValues.get(field.id) ?? ""])),
+        };
+        initialValues.current = {leadId:lead.id,values:loadedValues};
+        setCustomFieldDefs(defs);
+        setForm((prev) => ({
+          ...prev,
+          name: loadedValues.name,
+          email: loadedValues.email,
+          phone: loadedValues.phone,
+          value: loadedValues.value,
           pipelineId: detail.lead.pipelineId ?? prev.pipelineId,
           stageId: detail.lead.stageId ?? prev.stageId,
-          customFields: Object.fromEntries(defs.map((field) => [field.id, currentValues.get(field.id) ?? ""])),
+          customFields: loadedValues.customFields,
         }));
       })
       .catch((error) => {
@@ -2007,10 +2082,11 @@ function QuickEditDialog({
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
             <Button 
-              disabled={saving || loadingCustomFields || !!customFieldError} 
+              disabled={saving || loadingCustomFields || !!customFieldError || initialValues.current?.leadId !== lead?.id}
               onClick={async () => {
+                if (!initialValues.current || initialValues.current.leadId !== lead?.id) return;
                 setSaving(true);
-                try { await onSave(form); } finally { setSaving(false); }
+                try { await onSave(form, initialValues.current.values); } finally { setSaving(false); }
               }}
             >
               {saving ? "Salvando..." : "Salvar"}

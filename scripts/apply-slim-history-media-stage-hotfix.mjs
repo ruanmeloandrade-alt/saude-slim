@@ -57,7 +57,7 @@ edit('src/lib/stage-automation-engine.server.ts',({once})=>{
  once('  const seen = new Set<string>();','  if(stageActionsError)throw new Error("Não foi possível consultar os gatilhos da etapa.");\n  const seen = new Set<string>();');
  once('    if (delay === 0) immediate.push({ id: jobId, action });','    if (delay === 0 && !input.deferExecution) immediate.push({ id: jobId, action });');
  once('    if (!passesExecutionRules(lead, action.execution)) {',`    if(String(job.context?.event_id??'').startsWith('slim-stage-move:') && (lead.stageId!==job.stage_id || lead.pipelineId!==job.pipeline_id)){
-      await finishJob(admin,job.id,'skipped','O cliente saiu da etapa antes da execução.');
+      await finishJob(admin,job.id,'skipped','O cliente saiu da etapa antes da execução.',job.attempts??0);
       return {actionId:action.id,title,ok:true,skipped:true};
     }
     if (!passesExecutionRules(lead, action.execution)) {`);

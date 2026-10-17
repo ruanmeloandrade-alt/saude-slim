@@ -15,11 +15,13 @@ edit('src/lib/saude-slim-orders-client.ts',({once,block})=>{
   if(!created.created)throw new Error('Este telefone já possui um contato. Use o cadastro existente; nenhuma duplicata foi criada.');
 `);
 });
-edit('src/lib/saude-slim-funnel-client.ts',({once,block})=>{
+edit('src/lib/saude-slim-funnel-client.ts',({once,block,get})=>{
  once('import { supabase } from "@/integrations/supabase/client";','import { supabase } from "@/integrations/supabase/client";\nimport {createSlimUiContact} from "./slim-contact-route.functions";\nimport {loadContactIdentityIndex,resolveSlimContactId} from "./slim-contact-identity.core";');
  once('.eq("workspace_id",ws).eq("crm_source_id",data.crmSourceId).eq("status","active").limit(5000)','.eq("workspace_id",ws).eq("crm_source_id",data.crmSourceId).eq("status","active").is("merged_into_id",null).limit(5000)');
  once('  const pipes=rows(p),stages=rows(st),leads=rows(lr);','  const identity=await loadContactIdentityIndex(sb,ws);\n  const pipes=rows(p),stages=rows(st),leads=rows(lr).filter(lead=>identity.resolve(lead.id)===lead.id);');
- block('  const {data:created,error}=await sb.from("leads").insert({','  return {id:created.id,leadId:created.id};',`  const created=await createSlimUiContact({data:{workspaceId:ws,payload:{
+ // The new authenticated funnel RPC preserves this contact guard inside its
+ // transaction. Keep the legacy adapter only for a source still using INSERT.
+ if(!get().includes('createSlimLeadWithAutomations'))block('  const {data:created,error}=await sb.from("leads").insert({','  return {id:created.id,leadId:created.id};',`  const created=await createSlimUiContact({data:{workspaceId:ws,payload:{
     crm_source_id:data.crmSourceId,pipeline_id:data.pipelineId,stage_id:data.stageId,
     name,email:data.email?.trim()||null,phone:data.phone?.trim()||null,
     value:Number.isFinite(Number(data.value))?Number(data.value):0,source:'cadastro_manual_saude_slim'

@@ -182,29 +182,44 @@ export async function createSlimFunnel({data}:{data:{crmSourceId:string;name:str
   return {pipelineId};
 }
 
-/** Cria lead diretamente no CRM Saúde Slim. Bots/eventos exigem runtime autorizado. */
+/** A mesma tentativa de cadastro conserva sua referência até a confirmação do servidor. */
 export async function createSlimLead({data}:{
   data:{crmSourceId:string;pipelineId:string;stageId:string;name:string;
-    email?:string;phone?:string;value?:number}
-}):Promise<{id:string;leadId:string}> {
-  const {ws,role}=await ctx();requiresEditor(role);
+    email?:string;phone?:string;value?:number;requestId:string}
+}):Promise<{id:string;leadId:string;eventId:string|null;automationQueued:boolean}> {
   const name=data.name?.trim();
   if(!name||name.length>200)throw new Error("Nome do cliente inválido.");
-  const [sourceResult,stageResult]=await Promise.all([
-    sb.from("crm_sources").select("id").eq("workspace_id",ws).eq("id",data.crmSourceId).maybeSingle(),
-    sb.from("pipeline_stages").select("id,pipeline_id")
-      .eq("workspace_id",ws).eq("id",data.stageId).eq("pipeline_id",data.pipelineId).maybeSingle(),
-  ]);
-  if(sourceResult.error||!sourceResult.data||stageResult.error||!stageResult.data)
-    throw new Error("Fonte ou etapa indisponível para sua empresa.");
-  const {data:created,error}=await sb.from("leads").insert({
-    workspace_id:ws,crm_source_id:data.crmSourceId,pipeline_id:data.pipelineId,
-    stage_id:data.stageId,name,email:data.email?.trim()||null,phone:data.phone?.trim()||null,
-    value:Number.isFinite(Number(data.value))?Number(data.value):0,
-    source:"cadastro_manual_saude_slim",status:"active",
-  }).select("id").single();
-  if(error)throw new Error(error.message);
-  return {id:created.id,leadId:created.id};
+  if(!data.requestId)throw new Error("A tentativa de cadastro não foi identificada. Abra novamente o formulário.");
+  const {createSlimLeadWithAutomations}=await import("./slim-funnel-mutations.functions");
+  const result=await createSlimLeadWithAutomations({data:{
+    ...data,name,email:data.email?.trim()||"",phone:data.phone?.trim()||"",
+    value:data.value??0,
+  }});
+  if(!result||typeof result.id!=="string"||!result.id||result.leadId!==result.id
+    ||typeof result.automationQueued!=="boolean")
+    throw new Error("O cadastro não foi confirmado. Confira o funil antes de repetir.");
+  return result;
+}
+
+/** Move somente a seleção explícita e registra seus eventos na mesma transação. */
+export async function bulkMoveSlimLeads({data}:{
+  data:{leadIds:string[];targetPipelineId:string;targetStageId:string;requestId:string}
+}):Promise<{ok:true;count:number;movedCount:number;unchangedCount:number;eventIds:string[]}> {
+  if(data.leadIds.length<1||data.leadIds.length>100)
+    throw new Error("Selecione de 1 a 100 clientes para mover de uma vez.");
+  if(new Set(data.leadIds).size!==data.leadIds.length)
+    throw new Error("A seleção contém clientes repetidos. Atualize o funil.");
+  if(!data.requestId)throw new Error("A tentativa de movimentação não foi identificada. Selecione novamente o destino.");
+  const {bulkMoveSlimLeadsWithAutomations}=await import("./slim-funnel-mutations.functions");
+  const result=await bulkMoveSlimLeadsWithAutomations({data:{
+    leadIds:[...data.leadIds].sort(),toStageId:data.targetStageId,requestId:data.requestId,
+  }});
+  if(!result||result.ok!==true||result.count!==data.leadIds.length
+    ||!Number.isInteger(result.movedCount)||!Number.isInteger(result.unchangedCount)
+    ||result.movedCount<0||result.unchangedCount<0
+    ||result.movedCount+result.unchangedCount!==result.count||!Array.isArray(result.eventIds))
+    throw new Error("A movimentação não foi confirmada. Confira o funil antes de repetir.");
+  return result;
 }
 
 export async function setDefaultSlimSource({data}:{data:{crmSourceId:string}}):Promise<{ok:true}>{

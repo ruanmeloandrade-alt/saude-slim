@@ -14,7 +14,19 @@ await test('previous history remains on demand without fifty-page auto loops',()
 await test('stage UI binds new RPC only when schema installation is verified',()=>{const move=client.split('export async function moveSlimLead(')[1].split('export async function updateSlimStage(')[0];if(stageReady){assert(move.includes('moveSlimLeadWithAutomations'));assert(!move.includes('.update('));assert(!move.includes('last_message_from'));assert(!move.includes('backendPending:true'));assert(move.includes('stageMoveRequests.delete(key)'));}else{assert(!client.includes('moveSlimLeadWithAutomations'));assert(move.includes('backendPending:true'));assert(client.includes('resolveSlimContactId'));}});
 await test('prepared server retains canonical identity and permission checks',()=>{const s=read('src/lib/slim-stage-move.functions.ts');for(const t of ['requireSupabaseAuth','assertSlimOperator','resolveSlimContactId','slim_move_lead_and_emit'])assert(s.includes(t));assert(!s.includes('startSalesbotRun'));});
 await test('new worker binding follows schema readiness without replacing old jobs',()=>{assert.equal(worker.includes('await tickSlimStageMoveEvents()'),stageReady);assert(worker.includes('void processStageJobs()'));if(stageReady){const guard=worker.indexOf('if(!await dbReadyForQueue(db))return;');const tick=worker.indexOf('await tickSlimStageMoveEvents()');assert(guard>=0&&tick>guard);assert(!worker.includes('void tickSlimStageMoveEvents()'));}assert(engine.includes('delay === 0 && !input.deferExecution'));assert(engine.includes('if(stageActionsError)throw'));});
-function fakeDb(){const state={lead:{id:'lead',stage_id:'stage',pipeline_id:'pipeline',status:'active',merged_into_id:null},fail:false,updates:[]};const db={from(){let patch;const q={select(){return q;},eq(){return q;},or(){return q;},lt(){return q;},order(){return q;},limit(){return q;},update(v){patch=v;return q;},async maybeSingle(){return {data:state.lead,error:state.fail?{}:null};},then(a,b){if(patch)state.updates.push(patch);return Promise.resolve({data:patch?[]:[{id:'event'}],error:null}).then(a,b);}};return q;},async rpc(){return {data:[{id:'event',workspace_id:'ws',lead_id:'lead',to_stage_id:'stage',pipeline_id:'pipeline',from_stage_id:'old',attempts:1}],error:null};}};return {db,state};}
+function fakeDb(){
+ const state={lead:{id:'lead',stage_id:'stage',pipeline_id:'pipeline',status:'active',merged_into_id:null},fail:false,updates:[]};
+ const db={from(){let patch,exhaustedSweep=false;const q={
+  select(){return q;},eq(){return q;},or(){return q;},lt(){return q;},gte(){exhaustedSweep=true;return q;},order(){return q;},limit(){return q;},
+  update(v){patch=v;return q;},
+  async maybeSingle(){
+   if(patch){state.updates.push(patch);return {data:{id:'event'},error:null};}
+   return {data:state.lead,error:state.fail?{}:null};
+  },
+  then(a,b){return Promise.resolve({data:exhaustedSweep?[]:[{id:'event'}],error:null}).then(a,b);},
+ };return q;},async rpc(){return {data:[{id:'event',workspace_id:'ws',lead_id:'lead',to_stage_id:'stage',pipeline_id:'pipeline',from_stage_id:'old',attempts:1}],error:null};}};
+ return {db,state};
+}
 const event={id:'event',workspace_id:'ws',lead_id:'lead',to_stage_id:'stage',pipeline_id:'pipeline',from_stage_id:'old'};
 await test('prepared event passes stable identity and defer flag to enqueue',async()=>{const f=fakeDb();let args;const outcome=await dispatchSlimStageMove(f.db,event,async(_,input)=>{args=input;return [{ok:true,queuedFor:'now'}];});assert.equal(outcome,'dispatched');assert.equal(args.eventId,'slim-stage-move:event');assert.equal(args.event,'moved');assert.equal(args.deferExecution,true);assert.equal(args.stageId,'stage');});
 await test('contact moved away cannot start an obsolete stage bot',async()=>{const f=fakeDb();f.state.lead.stage_id='another';let called=false;assert.equal(await dispatchSlimStageMove(f.db,event,async()=>{called=true;return [];}),'skipped');assert.equal(called,false);});

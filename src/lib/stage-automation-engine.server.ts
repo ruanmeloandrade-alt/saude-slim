@@ -13,6 +13,7 @@ import {
 } from "@/lib/crm-mock";
 import { buildFormShareUrl, renderFormMessage, DEFAULT_FORM_MESSAGE_TEMPLATE } from "@/lib/forms.functions";
 import { fromZonedTime } from "date-fns-tz";
+import { slimSafeOperationalError as stageResultError } from './slim-operation-errors.core';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export type AnySb = {
@@ -50,6 +51,7 @@ export interface JobResult {
   error?: string;
   skipped?: boolean;
   queuedFor?: string;
+  confirmationPending?: boolean;
 }
 
 type LeadCtx = {
@@ -253,6 +255,13 @@ type JobRow = {
   attempts: number | null;
 };
 
+class SlimStageJobConfirmationError extends Error {
+  constructor() {
+    super('O histórico da automação não foi confirmado. Confira a conversa antes de iniciar outra execução.');
+    this.name = 'SlimStageJobConfirmationError';
+  }
+}
+
 export async function runJobById(admin: AnySb, jobId: string): Promise<JobResult> {
   const { data } = await admin.from("crm_automation_jobs").select("*").eq("id", jobId).maybeSingle();
   const job = data as JobRow | null;
@@ -267,7 +276,8 @@ async function finishJob(
   error?: string,
   attempts?: number,
 ) {
-  await admin
+  try {
+  const saved = await admin
     .from("crm_automation_jobs")
     .update({
       status,
@@ -275,7 +285,16 @@ async function finishJob(
       executed_at: new Date().toISOString(),
       attempts: (attempts ?? 0) + 1,
     })
-    .eq("id", jobId);
+    .eq("id", jobId)
+    .eq("status", "running")
+    .eq("attempts", attempts ?? 0)
+    .select("id")
+    .maybeSingle();
+  if (saved.error || saved.data?.id !== jobId) throw new SlimStageJobConfirmationError();
+  } catch {
+    // Keep the claim when the receipt is uncertain. Never execute the action again.
+    throw new SlimStageJobConfirmationError();
+  }
 }
 
 export async function runJob(admin: AnySb, job: JobRow): Promise<JobResult> {
@@ -295,8 +314,17 @@ export async function runJob(admin: AnySb, job: JobRow): Promise<JobResult> {
     await finishJob(admin, job.id, "done", undefined, job.attempts ?? 0);
     return { actionId: action.id, title, ok: true };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    await finishJob(admin, job.id, "error", msg, job.attempts ?? 0);
+    if (e instanceof SlimStageJobConfirmationError) {
+      return { actionId: action?.id ?? job.id, title, ok: false, error: e.message, confirmationPending: true };
+    }
+    const msg = stageResultError(e);
+    try {
+      await finishJob(admin, job.id, "error", msg, job.attempts ?? 0);
+    } catch {
+      return { actionId: action?.id ?? job.id, title, ok: false,
+        error: 'A automação apresentou falha e o histórico não foi confirmado. Confira antes de iniciar outra execução.',
+        confirmationPending: true };
+    }
     return { actionId: action?.id ?? job.id, title, ok: false, error: msg };
   }
 }

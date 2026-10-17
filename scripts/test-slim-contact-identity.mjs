@@ -36,7 +36,23 @@ await test('reading identity does not edit money, stock or raw history',()=>{con
 const root=new URL('../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8');
 const paths=['src/lib/saude-slim-orders-client.ts','src/lib/saude-slim-funnel-client.ts','src/lib/saude-slim-leads-client.ts','src/routes/inbox.leads.$leadId.tsx','src/lib/leads.functions.legacy.ts','src/routes/api/public/evolution/webhook.$secret.ts'];
 const [clients,funnel,list,route,leadApi,webhook]=paths.map(read);
-await test('Clients and Funnel creation use authenticated server gateway',()=>{assert(clients.includes('createSlimUiContact({data:'));assert(funnel.includes('createSlimUiContact({data:'));assert(!clients.includes('sb.from("leads").insert'));assert(!funnel.includes('sb.from("leads").insert'));});
+await test('Clients and Funnel creation use authenticated server gateway',()=>{
+ assert(clients.includes('createSlimUiContact({data:'));
+ if(funnel.includes('createSlimLeadWithAutomations')){
+  const api=read('src/lib/slim-funnel-mutations.functions.ts');
+  const core=read('src/lib/slim-funnel-mutations.core.ts');
+  const migrations=fs.readdirSync(new URL('../supabase/migrations/',import.meta.url)).filter(p=>p.endsWith('_slim_funnel_create_bulk_outbox.sql'));
+  assert.equal(migrations.length,1);
+  const sql=read('supabase/migrations/'+migrations[0]);
+  assert(api.includes('.middleware([requireSupabaseAuth])'));
+  assert(api.includes('assertSlimOperator'));
+  assert(core.includes("db.rpc('slim_create_lead_and_emit'"));
+  assert(sql.includes('Este telefone já possui um contato. Use o cadastro existente; a etapa e os dados dele foram preservados.'));
+  assert(sql.includes('phone_normalized'));
+ }else assert(funnel.includes('createSlimUiContact({data:'));
+ assert(!clients.includes('sb.from("leads").insert'));
+ assert(!funnel.includes('sb.from("leads").insert'));
+});
 await test('three views use the same canonical ID map',()=>{assert(list.includes('identity.resolve(row.id)===row.id'));assert(funnel.includes('identity.resolve(lead.id)===lead.id'));assert(leadApi.includes('identity.resolve(row.lead_id)'));});
 await test('opening a chat is read-only and resolves before mounting thread',()=>{assert(route.includes('<SlimContactRouteGate'));const resolver=read('src/lib/slim-contact-route.functions.ts').split('export const resolveSlimInboxContact')[1].split('const Contact=')[0];assert(!resolver.includes('insert('));assert(resolver.includes('resolveSlimContactId'));});
 await test('webhook and backfill share identity instead of arbitrary first row',()=>{assert(webhook.includes('findSlimContact('));assert(webhook.includes('createSlimCanonicalContact('));assert(leadApi.includes('prepareSlimInboxContactMap('));assert(!leadApi.includes('const toInsert = missing.map'));});
