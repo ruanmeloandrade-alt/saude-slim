@@ -14,9 +14,9 @@ edit('src/lib/leads.functions.ts',({once,block})=>{
     }`);
 });
 edit('src/components/inbox/InboxPage.legacy.tsx',({once})=>{
- once('    onSuccess: () => {\n      // The next draft belongs to the operator, not to the finished upload.',`    onSuccess: (result:any) => {
+ once('    onSuccess: (result) => {\\n      if (result && typeof result === "object" && "historyPending" in result && result.historyPending === true) {',`    onSuccess: (result:any) => {
       if(result?.historyRecorded===false)toast.warning(result.warning,{duration:15000});
-      // The next draft belongs to the operator, not to the finished upload.`);
+      if (result && typeof result === "object" && "historyPending" in result && result.historyPending === true) {`);
 });
 edit('scripts/test-slim-inbox-resumption-source.mjs',({once})=>once("assert(media.includes('remote_jid: target.remoteJid'));","assert(media.includes('remoteJid:target.remoteJid'));assert(read('src/lib/slim-media-receipt.core.ts').includes('remote_jid:value.remoteJid'));"));
 for(const [path,code]of plans){const p=ts.createSourceFile(path,code,ts.ScriptTarget.Latest,true,path.endsWith('.tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS);assert.equal(p.parseDiagnostics.length,0,path);}
