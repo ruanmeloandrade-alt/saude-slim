@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 3 do Copiloto com aprovação real
 
-## Estado: 🟡 implementação e testes aprovados; publicação em preparação
+## Estado: 🟢 publicado; 🟡 pausa para conferência do usuário
 
 Data: 17/10/2026. Repositório exclusivo ruanmeloandrade-alt/saude-slim. Branch de trabalho fix/slim-copilot-approval-block3-20261017, base 792e2a9fc0491cbd1bc4df7ec2fccb7bff174573. Produção restauracao/sistema-completo-20261014. Supabase vyzvfcgpjjzvcjegzzza, workspace c49945db-1960-461a-9339-a43b8403bdd9.
 
@@ -94,8 +94,31 @@ Todos os cenários abaixo usam dados sintéticos, PostgreSQL em memória e prove
 
 ## Publicação e limites
 
-Ainda não publicado: aplicar somente a nova migração depois de código versionado e build aprovado; então avançar a branch de produção com comparação do SHA esperado e conferir Railway, healthcheck e banco. A aplicação publicada continua na versão aprovada pelo usuário até essa sequência terminar. A homologação visual autenticada do Copiloto e qualquer ação real pertencem à conferência do usuário após a pausa deste bloco.
+Código e SQL versionados em 20930d8736262127c163eccea46e8341f9e9a361 após build aprovado. A árvore do GitHub foi comparada exatamente ao conteúdo local testado. Migração aplicada às 23:26 UTC; branch de produção avançada com comparação do SHA esperado, sem force. Railway b3d7b984-6f3a-47f2-8837-327751865100 terminou SUCCESS às 23:31 UTC, com healthcheck 1/1 aprovado às 23:30:57 UTC. A homologação visual autenticada do Copiloto e qualquer ação real pertencem à conferência do usuário após a pausa deste bloco.
 
 ### Leitura anterior à migração
 
 Em 17/10 às 23:22:52 UTC: 25 leads, um pedido ERP e nenhum evento de etapa pendente. O ledger e as funções do Copiloto ainda não existiam. Hash do estado de leads 7282b4df6807dd873ae8710c89877b16; hash das funções existentes de movimentação e controle de bot 655e2bd6cbd760520cc70967d201c328. A aplicação e os outros três serviços estavam online, sem problemas ou operações pendentes. Estas leituras não executaram ações de negócio.
+
+### Migração instalada e permissões conferidas
+
+A migração slim_copilot_approval_ledger foi instalada pelo MCP com versão de banco 20261017232621; corresponde ao arquivo CLI 20261017225228_slim_copilot_approval_ledger.sql no commit funcional. A leitura posterior confirmou cinco funções públicas SECURITY INVOKER: create/decide/get/list para authenticated, finish_text somente para service_role e nenhuma execução anônima. As duas tabelas privadas possuem RLS e nenhum grant direto de leitura/escrita para anon, authenticated ou service_role. Foram encontradas zero propostas e zero entradas de auditoria; não houve preparação ou execução de QA em produção.
+
+Às 23:26:53 UTC, os 25 leads, um pedido e os hashes de estado e funções existentes eram idênticos à leitura anterior; nenhum evento de etapa pendente. Os avisos de segurança anteriores permaneceram iguais. O advisor acrescentou dois registros informativos de [RLS sem políticas](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy) para o ledger privado: acesso direto é intencionalmente negado e verificado, e a gravação ocorre apenas pelos helpers autenticados. Não foi criada política permissiva para silenciar o aviso. Os quatro avisos de [RPCs antigas com SECURITY DEFINER](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable) e a [proteção contra senhas vazadas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) já existiam e não integram este bloco.
+
+PGlite executa um único backend: os testes verificam transações, permissões, mudanças de estado e repetição, mas não constituem carga concorrente de múltiplas conexões. Em eventual rollback da aplicação, preservar o ledger e seus recibos; uma reserva incerta não deve voltar à fila de envio.
+
+## 🟢 Publicação concluída em 17/10/2026
+
+Versão funcional 20930d8736262127c163eccea46e8341f9e9a361, Railway b3d7b984-6f3a-47f2-8837-327751865100. Os quatro serviços ficaram online, cada um com uma réplica, zero réplicas travadas e nenhuma operação pendente. O servidor iniciou normalmente e escutou a porta esperada. O worker contínuo existente do Inbox é inicializado pelo entrypoint compilado e consulta a fila a cada cinco segundos; a ação do Copiloto confirma o enfileiramento e não antecipa uma confirmação de mensagem do bot.
+
+Leitura pós-publicação às 23:32:09 UTC: Supabase respondeu, 25 leads, um pedido, zero eventos pendentes, zero propostas e zero entradas de auditoria do Copiloto. Os hashes de estado dos leads e das funções existentes permaneceram iguais aos registrados antes da migração. Nenhum lead foi movido, bot iniciado ou texto enviado pela equipe para homologar este bloco.
+
+## 🟡 Conferência solicitada e pausa
+
+1. Atualizar a página e abrir o Copiloto na lateral direita. Consultar estoque ou relatório de vendas confirma a entrada do chat e suas consultas.
+2. Pedir uma proposta de mudança de etapa para o contato controlado, identificando claramente o cliente e a etapa. O cartão deve mostrar alvo, mudança e possíveis gatilhos antes de qualquer execução.
+3. Rejeitar uma proposta e verificar a confirmação visível. Para conferir a aprovação real, preparar outra proposta para o contato controlado e decidir pelo botão Aprovar e executar.
+4. Fechar e reabrir o Copiloto; conferir o resultado persistido da mesma proposta. Uma resposta incerta não autoriza reenvio automático.
+
+A publicação técnica está concluída. A homologação visual autenticada e ações reais ainda não foram declaradas concluídas. Pausar aqui conforme solicitado; a próxima frente é entrega/endereço/frete, somente após a revisão do usuário. Inbox/mídias e os bloqueios anteriores continuam com seus próprios estados no semáforo. IA autônoma para grupos permanece retirada.
