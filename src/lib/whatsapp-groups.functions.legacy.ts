@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { parseSlimInboxGroupConversationKey } from "./slim-inbox-group-key.core";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
@@ -258,6 +259,7 @@ export const listInboxGroupConversations = createServerFn({ method: "POST" })
       _limit: data.limit,
       _cursor_at: data.cursor?.lastMessageAt ?? null,
       _cursor_key: data.cursor?.key ?? null,
+      _search: data.search?.trim() || null,
     });
     if (error) throw new Error(error.message ?? "Falha ao listar grupos do Inbox.");
 
@@ -360,6 +362,11 @@ export const listInboxGroupMessages = createServerFn({ method: "POST" })
 
     let groupJid = data.groupJid;
     let sessionId: string | null = null;
+    const parsed = parseSlimInboxGroupConversationKey(data.groupId, data.groupJid);
+    if (parsed) {
+      groupJid = parsed.groupJid;
+      sessionId = parsed.sessionId;
+    }
     if (!groupJid && data.groupId.includes("@g.us")) groupJid = data.groupId;
     if (!groupJid) {
       const { data: group, error } = await sb
@@ -1272,6 +1279,18 @@ async function resolveGroupTarget(
   groupId: string,
   groupJidHint?: string,
 ): Promise<{ groupJid: string; sessionId: string }> {
+  const parsed = parseSlimInboxGroupConversationKey(groupId, groupJidHint);
+  if (parsed) {
+    const {data: session, error: sessionError} = await sb.from("whatsapp_web_sessions")
+      .select("id, status")
+      .eq("workspace_id", wsId)
+      .eq("id", parsed.sessionId)
+      .maybeSingle();
+    if (sessionError || !session || session.status !== "conectado") {
+      throw new Error("A sessão de origem do grupo não está conectada. Nenhuma mensagem foi enviada.");
+    }
+    return { groupJid: parsed.groupJid, sessionId: parsed.sessionId };
+  }
   let groupJid = groupJidHint ?? (groupId.includes("@g.us") ? groupId : undefined);
   let sessionId: string | null = null;
   const { data: group } = await sb
@@ -1374,18 +1393,19 @@ export const sendGroupMedia = createServerFn({ method: "POST" })
     const { groupJid, sessionId } = await resolveGroupTarget(sb, wsId, data.groupId, data.groupJid);
 
     // Upload no bucket inbox-outgoing
-    const bytes = Uint8Array.from(atob(data.base64), (c) => c.charCodeAt(0));
+    const { decodeSlimMedia, boundedMediaRequest, mediaPreparation, MediaSendUncertain } =
+      await import("./slim-media-transport.server");
+    const bytes = decodeSlimMedia(data.base64);
     const safeName = data.fileName.replace(/[^\w.\-]+/g, "_");
-    const storagePath = `${wsId}/groups/${data.groupId}/${Date.now()}-${safeName}`;
+    const safeGroupPathId = data.groupId.replace(/[^a-zA-Z0-9_.-]/g, "_").slice(0, 160);
+    const storagePath = wsId + "/groups/" + safeGroupPathId + "/" + Date.now() + "-" + safeName;
     const anySb = sb as unknown as { storage: { from: (b: string) => any } };
-    const up = await anySb.storage.from("inbox-outgoing").upload(storagePath, bytes, {
-      contentType: data.mimeType,
-      upsert: false,
-    });
+    const up = await mediaPreparation(anySb.storage.from("inbox-outgoing").upload(storagePath, bytes, {
+      contentType: data.mimeType, upsert: false,
+    }), "Upload do anexo");
     if (up.error) throw new Error(`upload_failed: ${up.error.message}`);
-    const signed = await anySb.storage
-      .from("inbox-outgoing")
-      .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+    const signed = await mediaPreparation(anySb.storage.from("inbox-outgoing")
+      .createSignedUrl(storagePath, 60 * 60 * 24 * 7), "Link do anexo");
     const mediaUrl: string = signed.data?.signedUrl;
     if (!mediaUrl) throw new Error("Falha ao gerar URL da mídia.");
 
@@ -1405,19 +1425,13 @@ export const sendGroupMedia = createServerFn({ method: "POST" })
           fileName: data.fileName,
           caption: data.caption ?? "",
         };
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", apikey: creds.api_key },
-      body: JSON.stringify(body),
-    });
-    if (!resp.ok) {
-      const t = await resp.text().catch(() => "");
-      throw new Error(`Evolution ${resp.status}: ${t.slice(0, 200)}`);
-    }
-    const j = await resp.json().catch(() => null);
-    const messageId = pickEvoMessageId(j);
+    // A single bounded provider attempt. Never restart/retry an uncertain send.
+    const sent = await boundedMediaRequest({url,apiKey:creds.api_key,payload:body});
+    if (!sent.response.ok) throw new MediaSendUncertain();
+    const messageId = pickEvoMessageId(sent.body);
+    if (!messageId) throw new MediaSendUncertain();
     if (messageId) {
-      await sb.from("whatsapp_web_messages").upsert(
+      const persisted = await sb.from("whatsapp_web_messages").upsert(
         {
           workspace_id: wsId,
           session_id: sessionId,
@@ -1434,6 +1448,7 @@ export const sendGroupMedia = createServerFn({ method: "POST" })
         },
         { onConflict: "workspace_id,message_id" },
       );
+      if (persisted.error) return { ok: true, messageId, mediaUrl, historyPending: true };
     }
-    return { ok: true, messageId, mediaUrl };
+    return { ok: true, messageId, mediaUrl, historyPending: false };
   });

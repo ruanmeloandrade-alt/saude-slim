@@ -2436,8 +2436,8 @@ function ChatThread({
     },
     enabled: isGroupThread && groupCacheReady && Boolean(cacheScope),
     staleTime: 10_000,
-    refetchInterval: 7_000,
-    refetchIntervalInBackground: true,
+    refetchInterval: 25_000,
+    refetchIntervalInBackground: false,
   });
 
   const effectiveActivityPage = activitiesQ.data ?? cachedActivityPage;
@@ -3078,7 +3078,10 @@ function ChatThread({
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result && typeof result === "object" && "historyPending" in result && result.historyPending === true) {
+        toast.warning("WhatsApp confirmou o envio, mas o histórico do grupo ainda não foi registrado. Não reenvie sem conferir.");
+      }
       setDraft("");
       if (isGroupThread) {
         queryClient.invalidateQueries({
