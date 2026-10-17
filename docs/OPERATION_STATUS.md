@@ -11,7 +11,7 @@ Escopo exclusivo: Saúde Slim, Supabase vyzvfcgpjjzvcjegzzza, GitHub ruanmeloand
 | Kanban | 🟢 Corrigido | Movimenta somente o lead escolhido; não altera leitura ou remetente da conversa; erro no movimento é mostrado ao operador. |
 | Histórico de Vendas | 🟢 Uma lista | Apenas ERP exibido, sem painel CRM duplicado. Dados antigos preservados. |
 | Prévia do Inbox | 🟢 Correção publicada | Versão 2ae0b9e, deploy Railway 48a46ba1 SUCCESS. Não busca mais conteúdo base64 na consulta agregada. Em 160 atividades: 11.226.455 bytes de payload integral contra cerca de 3.948 bytes de campos de prévia. Limite de 160 linhas/4s mantido. 10 testes focados aprovados. |
-| Inbox conversa aberta | 🟡 Mitigação parcial | Polling de 5s para 25s apenas com aba visível, Realtime preservado. Histórico ainda pode transferir mídia base64 grande ao abrir conversa: carregamento sob demanda pendente. |
+| Inbox conversa aberta | 🟢 Código sob demanda publicado, E2E pendente | Versão d30552f, deploy f6914a53 SUCCESS. Histórico busca apenas folhas JSONB sem media_url; clique em Abrir mídia consulta um único anexo autorizado pelo workspace/lead. Polling de 25s somente em aba visível, Realtime e cache antigo têm base64 removido do estado do chat. 20 verificações focadas, build e healthcheck aprovados. Não houve validação autenticada de clique ou download real. |
 | PDF e áudio no WhatsApp | 🟡 Código publicado anteriormente | Envio único, limite de tamanho e timeout, sem reinício da sessão. Envio real não homologado pelo agente. |
 | IA individual | 🟡 Prompt-only entregue | Guards e controle de duplicidade publicados; E2E real pendente. |
 | IA de grupos | 🟡 / 🔴 | Cadastro prompt-only publicado, atendimento autônomo e métricas pendentes. |
@@ -23,6 +23,6 @@ Escopo exclusivo: Saúde Slim, Supabase vyzvfcgpjjzvcjegzzza, GitHub ruanmeloand
 | Fiscal NF-e | 🔴 Pendente | PDF é comprovante comercial, não nota fiscal autorizada. |
 | Frontend/módulos restantes | 🟡 | Correções anteriores preservadas; homologação total de janelas autenticadas pendente. |
 
-Nenhum lead real foi movido, nenhum WhatsApp foi enviado e nenhuma venda ou documento foi alterado para testar. Testes de build e banco isolado não são homologação E2E. Alteração no banco nesta rodada limitada à migração transacional do Funil.
+Nenhum lead real foi movido, nenhum WhatsApp foi enviado e nenhuma venda ou documento foi alterado para testar. A ação nova de mídia é somente leitura, exige sessão autenticada, workspace ativo, ID do contato e ID do evento. Os 33 anexos inline existentes continuam armazenados. Eventos Realtime ainda podem transportar payload grande pelo provedor, apesar de não serem mais mantidos como data URL no estado do navegador. Testes de build e banco isolado não são homologação E2E. Alteração no banco nesta rodada limitada à migração transacional do Funil.
 
-Detalhes: docs/tasks/2026-10-16-slim-stage-trigger-release.md e docs/tasks/2026-10-16-slim-inbox-payload-relief.md. Histórico anterior preservado em docs/history/OPERATION_STATUS-before-stage-and-media-20261016.md.
+Detalhes: docs/tasks/2026-10-16-slim-stage-trigger-release.md, docs/tasks/2026-10-16-slim-inbox-payload-relief.md e docs/tasks/2026-10-16-slim-inbox-media-on-demand.md. Histórico anterior preservado em docs/history/OPERATION_STATUS-before-stage-and-media-20261016.md.
