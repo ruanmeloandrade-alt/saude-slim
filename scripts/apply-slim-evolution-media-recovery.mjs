@@ -13,15 +13,34 @@ function edit(path,run) {
   if(i<0||j<0)throw new Error('[Evolution media recovery] block absent '+path+': '+a);
   code=code.slice(0,i)+replacement+code.slice(j);
  };
- run({once,between});
+
+ const within=(a,b,fn)=>{
+  const i=code.indexOf(a),j=code.indexOf(b,i+a.length);
+  if(i<0||j<0||code.split(a).length!==2)throw new Error('[Evolution media recovery] scoped region missing '+path+': '+a);
+  let part=code.slice(i,j);
+  const one=(old,next)=>{
+   const n=part.split(old).length-1;
+   if(n!==1)throw new Error('[Evolution media recovery] scoped anchor '+n+' '+old.slice(0,95));
+   part=part.replace(old,()=>next);
+  };
+  const span=(old,end,replacement)=>{
+   const x=part.indexOf(old),y=part.indexOf(end,x+old.length);
+   if(x<0||y<0)throw new Error('[Evolution media recovery] scoped block absent '+old.slice(0,90));
+   part=part.slice(0,x)+replacement+part.slice(y);
+  };
+  fn({once:one,between:span});
+  code=code.slice(0,i)+part+code.slice(j);
+ };
+ run({once,between,within});
  const parsed=ts.createSourceFile(path,code,ts.ScriptTarget.Latest,true,path.endsWith('.tsx')?ts.ScriptKind.TSX:ts.ScriptKind.TS);
  if(parsed.parseDiagnostics.length)throw new Error('[Evolution media recovery] syntax '+path+': '+parsed.parseDiagnostics.map(d=>ts.flattenDiagnosticMessageText(d.messageText,' ')).join('; '));
  plans.push([url,code+'\n'+mark+'\n']);
 }
-edit('src/lib/leads.functions.legacy.ts',({once,between})=>{
+edit('src/lib/leads.functions.legacy.ts',({once,between,within})=>{
  once('import { SLIM_LEAD_ACTIVITY_META_SELECT, slimProjectedActivity, slimAllowStoredMediaUrl, type SlimProjectedActivityRow } from "./slim-inbox-lazy-media.core";',
       'import { SLIM_LEAD_ACTIVITY_META_SELECT, slimProjectedActivity, slimAllowStoredMediaUrl, slimInboxStoredMediaPath, type SlimProjectedActivityRow } from "./slim-inbox-lazy-media.core";');
  once('    const mediaUrl = slimAllowStoredMediaUrl(payload.media_url);\n    return { mediaUrl };',storedSigner);
+ within('export const resolveLeadMessageMedia =','/**\n * Envia mídia (imagem',({once,between})=>{
  once('.select("id, payload")\n      .eq("id", data.activityId)',
       '.select("id, type, payload")\n      .eq("id", data.activityId)');
  once('    if (!act) throw new Error("Mensagem não encontrada.");',
@@ -31,6 +50,7 @@ edit('src/lib/leads.functions.legacy.ts',({once,between})=>{
          '    return { ok: true, mediaUrl, mimeType };',recoveryBlock);
  once('    return { ok: true, mediaUrl, mimeType };',
       '    return { ok: true, mediaUrl: signed.data.signedUrl, mimeType: result.mimeType };');
+ });
 });
 edit('src/components/inbox/InboxPage.legacy.tsx',({once})=>{
  once('const resolveStickerFn = useServerFn(resolveLeadMessageMedia);',
