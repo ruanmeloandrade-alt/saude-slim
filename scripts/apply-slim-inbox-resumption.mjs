@@ -57,7 +57,7 @@ import {getSlimInboxIndicators} from '@/lib/slim-inbox-status.functions';`);
  once('    conversation.id,\n    markReadFn,','    conversation.id,\n    conversation.lastMessageAt,\n    markReadFn,');
  once('    mutationFn: async (file: File) => {','    mutationFn: async ({file,caption}:{file:File;caption?:string}) => {');
  all('caption: draft.trim() || undefined,','caption,',2);
- once('    onSuccess: () => {\n      setDraft("");\n      if (isGroupThread) {','    onSuccess: () => {\n      // The next draft belongs to the operator, not to the finished upload.\n      if (isGroupThread) {');
+ once('      setDraft("");\n      if (isGroupThread) {','      // The next draft belongs to the operator, not to the finished upload.\n      if (isGroupThread) {');
  block('  // Gravação de áudio (Mic)','  const [draft, setDraft]', '  // Voice recording and dictation live in SlimInboxVoiceControls.\n');
  block('  const [formMenuOpen, setFormMenuOpen]', '  const scrollRef', '');
  once('  const scrollRef = useRef<HTMLDivElement>(null);','  const scrollRef = useRef<HTMLDivElement>(null);\n  const composerInputRef=useRef<HTMLInputElement>(null);');
