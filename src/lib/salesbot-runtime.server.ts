@@ -639,6 +639,28 @@ async function resolveRuntimeWhatsappTarget(
       ? customData.whatsapp_session_id.trim()
       : null;
 
+  // A technical group context belongs to one WhatsApp session. Another
+  // session's newer message must never choose the sender for this Inbox run.
+  if (customData.technical_group_context === true) {
+    const group = whatsappIdentityFromJid(customData.whatsapp_group_jid);
+    const fallback = whatsappIdentityFromJid(fallbackPhone);
+    if (!group || group.kind !== "group" || !fallback || fallback.kind !== "group" ||
+        group.remoteJid !== fallback.remoteJid || !preferredSessionId) {
+      throw new Error("O contexto do grupo não corresponde à sessão e à conversa selecionadas.");
+    }
+    const sessionId = await resolveLeadEvolutionSession(supabaseAdmin, {
+      workspaceId,
+      preferredSessionId,
+    });
+    return {
+      phone: group.remoteJid,
+      remoteJid: group.remoteJid,
+      sessionId,
+      conversationKey: `${sessionId}:${group.remoteJid.toLowerCase()}`,
+      source: "group_jid",
+    };
+  }
+
   const conversation = await findLatestLeadWhatsappIdentity(supabaseAdmin, { workspaceId, leadId });
   if (conversation) {
     const sessionId = await resolveLeadEvolutionSession(supabaseAdmin, {

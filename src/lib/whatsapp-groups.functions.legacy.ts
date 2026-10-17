@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { parseSlimInboxGroupConversationKey } from "./slim-inbox-group-key.core";
+import { SLIM_GROUP_HISTORY_SELECT, slimProjectedGroupMessage, type SlimGroupHistoryRow } from "./slim-inbox-group-history.core";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
@@ -391,9 +392,7 @@ export const listInboxGroupMessages = createServerFn({ method: "POST" })
 
     let q = sb
       .from("whatsapp_web_messages")
-      .select(
-        "id, message_id, remote_jid, sender_name, body, from_me, received_at, message_type, media_url",
-      )
+      .select(SLIM_GROUP_HISTORY_SELECT)
       .eq("workspace_id", wsId)
       .eq("remote_jid", groupJid);
     if (sessionId) q = q.eq("session_id", sessionId);
@@ -415,34 +414,12 @@ export const listInboxGroupMessages = createServerFn({ method: "POST" })
       .limit(data.limit + 1);
     if (error) throw new Error(error.message);
 
-    const rawRows = (rows ?? []) as Array<{
-      id: string;
-      message_id: string;
-      sender_name: string | null;
-      body: string | null;
-      from_me: boolean;
-      received_at: string;
-      message_type: string | null;
-      media_url: string | null;
-    }>;
+    const rawRows = (rows ?? []) as SlimGroupHistoryRow[];
     const hasMore = rawRows.length > data.limit;
     const limitedRows = rawRows.slice(0, data.limit);
     const pageRows = isDelta ? limitedRows : limitedRows.slice().reverse();
 
-    const messages = pageRows.map((message) => ({
-      id: message.id,
-      from: message.from_me ? ("us" as const) : ("lead" as const),
-      author: message.sender_name ?? undefined,
-      text:
-        message.body ??
-        (message.media_url ? undefined : previewFromMessage(null, message.message_type)),
-      mediaUrl: message.media_url,
-      mediaType: message.message_type,
-      mimeType: null,
-      fileName: null,
-      whatsappMessageId: message.message_id,
-      occurredAt: message.received_at,
-    }));
+    const messages = pageRows.map(slimProjectedGroupMessage);
 
     const oldest = pageRows[0];
     return {

@@ -33,10 +33,34 @@ export function InboxLeadRouteEnhancements({ leadId }: { leadId: string }) {
     staleTime: 0, retry: 1, refetchInterval: 15_000,
   });
   const resolved = target.data as { kind: "lead" | "group"; workspaceId?: string; userId?: string } | undefined;
+  if (!resolved) return <AutomationTargetFeedback leadId={leadId} error={target.error}
+    reload={() => { void target.refetch(); }} />;
   if (resolved?.kind === "group") return <LegacyGroupControls key={`group:${leadId}`} leadId={leadId} />;
   return <ClientAutomationControls key={`${leadId}:${resolved?.workspaceId ?? "loading"}:${epoch}`}
     leadId={leadId} workspaceId={resolved?.workspaceId ?? null} targetError={target.error}
     reloadTarget={() => { void target.refetch(); }} />;
+}
+
+function AutomationTargetFeedback({ leadId, error, reload }: {
+  leadId: string; error: unknown; reload: () => void;
+}) {
+  const [composer, setComposer] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    const locate = () => {
+      const parent = document.querySelector('[data-chat-surface] input[type="file"][accept*="application/pdf"]')?.parentElement;
+      setComposer((old) => old === parent ? old : parent instanceof HTMLElement ? parent : null);
+    };
+    locate();
+    const observer = new MutationObserver(locate);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [leadId]);
+  if (!composer) return null;
+  return createPortal(<div data-inbox-lead-actions="composer" className="order-first flex items-center gap-2 text-[11px]">
+    {error ? <><span role="alert" className="text-destructive">{errorText(error)}</span>
+      <button type="button" className="shrink-0 underline" onClick={reload}>Tentar novamente</button></>
+      : <span role="status" className="text-muted-foreground">Carregando automações da conversa...</span>}
+  </div>, composer);
 }
 
 function ClientAutomationControls({ leadId, workspaceId, targetError, reloadTarget }: {

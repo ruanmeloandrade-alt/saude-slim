@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { renderSVG } from "uqr";
 import { normalizeEvolutionParticipantPhone } from "@/lib/salesbot-group-actions.server";
 import { shouldDispatchEvolutionInbound, withEvolutionDispatchStatus } from "@/lib/evolution-inbound-lifecycle";
+import { slimDeferredInboundMediaUrl, slimEvolutionMessageSnapshot } from "@/lib/slim-inbound-media.core";
 import {
   conversationKey,
   whatsappIdentityFromEvolutionJids,
@@ -156,7 +157,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
         function normalizeMediaKind(rawType: string): "image" | "video" | "audio" | "document" | "sticker" | null {
           const t = rawType.toLowerCase();
           if (t.includes("image")) return "image";
-          if (t.includes("video")) return "video";
+          if (t.includes("video") || t === "ptv" || t === "ptvmessage") return "video";
           if (t.includes("audio") || t.includes("ptt")) return "audio";
           if (t.includes("document")) return "document";
           if (t.includes("sticker")) return "sticker";
@@ -181,7 +182,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
 
         function extractMediaInfo(rawType: string, message: Record<string, unknown>, data: Record<string, unknown>) {
           const image = asRecord(message.imageMessage);
-          const video = asRecord(message.videoMessage);
+          const video = asRecord(message.videoMessage) ?? asRecord(message.ptvMessage);
           const audio = asRecord(message.audioMessage);
           const document = asRecord(message.documentMessage);
           const sticker = asRecord(message.stickerMessage);
@@ -199,11 +200,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
           const directUrl =
             pickString(data, ["mediaUrl", "media_url", "url", "imageUrl", "audioUrl", "videoUrl", "documentUrl"]) ??
             pickString(media, ["mediaUrl", "media_url", "url", "imageUrl", "audioUrl", "videoUrl", "documentUrl"]);
-          const base64 =
-            pickString(data, ["base64", "mediaBase64"]) ??
-            pickString(media, ["base64", "mediaBase64"]);
-          const cleanBase64 = base64?.replace(/^data:[^;]+;base64,/, "").replace(/\s/g, "");
-          const url = directUrl ?? (cleanBase64 ? `data:${mimeType};base64,${cleanBase64}` : null);
+          const url = slimDeferredInboundMediaUrl(directUrl);
           const secondsRaw = Number((media?.seconds as number | string | undefined) ?? (media?.duration as number | string | undefined));
           return {
             kind,
@@ -399,39 +396,8 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
 
             const mediaInfo = extractMediaInfo(rawMessageType, m, itemObj);
 
-            // Se a Evolution não mandou url/base64 no webhook (padrão para media),
-            // buscamos o base64 diretamente para poder exibir a imagem/áudio/vídeo no Inbox.
-            if (mediaInfo && msg.key?.id && (!mediaInfo.url || mediaInfo.kind === "sticker" || mediaInfo.url.includes("mmg.whatsapp.net"))) {
-              try {
-                const base = (process.env.EVOLUTION_BASE_URL ?? "").replace(/\/+$/, "");
-                if (base) {
-                  const resp = await fetch(
-                    `${base}/chat/getBase64FromMediaMessage/${encodeURIComponent(sess.instance_name)}`,
-                    {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", apikey: sess.api_key },
-                      body: JSON.stringify({
-                        message: { key: msg.key },
-                        convertToMp4: false,
-                      }),
-                    },
-                  );
-                  if (resp.ok) {
-                    const j = await resp.json().catch(() => null);
-                    const b64 = findDeepString(j, ["base64", "mediaBase64"])
-                      ?.replace(/^data:[^;]+;base64,/, "")
-                      .replace(/\s/g, "");
-                    if (b64) {
-                      const mt = findDeepString(j, ["mimetype", "mimeType"]) ?? mediaInfo.mimeType;
-                      mediaInfo.mimeType = mt;
-                      mediaInfo.url = `data:${mt};base64,${b64}`;
-                    }
-                  }
-                }
-              } catch {
-                // segue sem mídia; texto continuará como label
-              }
-            }
+            // Persist the message immediately. A clicked attachment is recovered
+            // through the authenticated, bounded Inbox media operation.
 
             const messageType = mediaInfo?.kind ?? rawMessageType.replace(/Message$/i, "") ?? "text";
             const body =
@@ -462,7 +428,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
                 body,
                 media_url: mediaInfo?.url ?? null,
                 delivery_status: msg.key?.fromMe ? "sent" : "received",
-                raw: JSON.parse(JSON.stringify({ ...payload, data: itemObj })),
+                raw: slimEvolutionMessageSnapshot(payload, itemObj, mediaInfo),
                 received_at: receivedAt,
               },
               { onConflict: "workspace_id,message_id" },
@@ -766,12 +732,14 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
                     .select("id")
                     .eq("workspace_id", sess.workspace_id)
                     .eq("phone", remoteJid)
+                    .eq("custom_data->>whatsapp_session_id", sess.session_id)
+                    .eq("custom_data->>technical_group_context", "true")
                     .limit(1)
                     .maybeSingle();
                   const groupLeadId = (groupLead as { id?: string } | null)?.id ?? null;
+                  const senderPhone = normalizeEvolutionParticipantPhone(msg.key?.participant);
+                  const senderName = msg.pushName ?? "";
                   if (groupLeadId) {
-                    const senderPhone = normalizeEvolutionParticipantPhone(msg.key?.participant);
-                    const senderName = msg.pushName ?? "";
                     const { resumeRunsOnInboundMessage } = await import("@/lib/salesbot-runtime.server");
                     await resumeRunsOnInboundMessage(supabaseAdmin as unknown as never, {
                       workspaceId: sess.workspace_id,
@@ -780,19 +748,19 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
                       senderPhone: senderPhone ?? undefined,
                       senderName,
                     });
-
-                    // Nova lógica de regras de grupo
-                    const { dispatchGroupEvent } = await import("@/lib/whatsapp-group-rules.server");
-                    await dispatchGroupEvent({
-                      workspaceId: sess.workspace_id,
-                      sessionId: sess.session_id,
-                      groupJid: remoteJid,
-                      type: "message",
-                      text: body ?? mediaInfo?.label ?? "",
-                      senderPhone: senderPhone ?? undefined,
-                      senderName,
-                    });
                   }
+
+                  // A configured trigger can create the group's first bot context.
+                  const { dispatchGroupEvent } = await import("@/lib/whatsapp-group-rules.server");
+                  await dispatchGroupEvent({
+                    workspaceId: sess.workspace_id,
+                    sessionId: sess.session_id,
+                    groupJid: remoteJid,
+                    type: "message",
+                    text: body ?? mediaInfo?.label ?? "",
+                    senderPhone: senderPhone ?? undefined,
+                    senderName,
+                  });
                 } catch (e) {
                   console.warn("[salesbot grupo] resume fail:", (e as Error).message);
                 }

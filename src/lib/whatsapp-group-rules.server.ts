@@ -36,6 +36,7 @@ export async function dispatchGroupEvent(data: GroupEventData) {
     .from("whatsapp_groups")
     .select("id, rules, is_admin")
     .eq("workspace_id", data.workspaceId)
+    .eq("session_id", data.sessionId)
     .eq("group_jid", data.groupJid)
     .maybeSingle();
 
@@ -98,7 +99,7 @@ async function executeGroupAction(
     case "send_message":
     case "send_dm":
       if (rule.config.message) {
-        await sendWhatsappText(admin, event.workspaceId, targetPhone, rule.config.message);
+        await sendWhatsappText(admin, event.workspaceId, targetPhone, rule.config.message, event.sessionId);
       }
       break;
 

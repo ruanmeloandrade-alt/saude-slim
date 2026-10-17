@@ -1,50 +1,29 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { resolveSlimInboxGroupTarget } from "./slim-inbox-group-target.core";
 
 type AnySb = { from: (table: string) => any };
 const ACTIVE_RUN_STATUSES = ["running", "waiting_message", "waiting_timer"] as const;
 
 async function loadActiveWorkspace(sb: AnySb, userId: string): Promise<string> {
-  const { data } = await sb
+  const { data, error } = await sb
     .from("profiles")
     .select("current_workspace_id")
     .eq("id", userId)
     .maybeSingle();
+  if (error) throw new Error("Não foi possível identificar a empresa ativa.");
   const workspaceId = (data as { current_workspace_id?: string } | null)?.current_workspace_id;
   if (!workspaceId) throw new Error("Workspace ativo não encontrado.");
   return workspaceId;
 }
 
-type GroupRow = {
-  id: string;
-  workspace_id: string;
-  session_id: string;
-  group_jid: string;
-  name: string | null;
-  subject: string | null;
-};
-
 async function findGroup(
   sb: AnySb,
   workspaceId: string,
   conversationId: string,
-): Promise<GroupRow | null> {
-  let query = sb
-    .from("whatsapp_groups")
-    .select("id, workspace_id, session_id, group_jid, name, subject")
-    .eq("workspace_id", workspaceId);
-
-  query = conversationId.includes("@g.us")
-    ? query.eq("group_jid", conversationId)
-    : query.eq("id", conversationId);
-
-  const { data, error } = await query
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw new Error(error.message ?? "Não foi possível identificar a conversa de grupo.");
-  return (data as GroupRow | null) ?? null;
+) {
+  return resolveSlimInboxGroupTarget(sb, workspaceId, conversationId);
 }
 
 export const resolveInboxSalesbotTarget = createServerFn({ method: "POST" })
@@ -55,20 +34,30 @@ export const resolveInboxSalesbotTarget = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
     const workspaceId = await loadActiveWorkspace(sb, context.userId);
+    // SLIM_INBOX_DIRECT_FIRST: a client conversation never depends on group tables.
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.conversationId)) {
+      const direct = await sb.from("leads").select("id")
+        .eq("workspace_id", workspaceId).eq("id", data.conversationId).maybeSingle();
+      if (direct.error) throw new Error(direct.error.message);
+      if (direct.data) return { kind: "lead" as const, activeRunId: null, workspaceId, userId: context.userId };
+    }
     const group = await findGroup(sb, workspaceId, data.conversationId);
-    if (!group) return { kind: "lead" as const, activeRunId: null };
+    if (!group) throw new Error("Conversa não encontrada nesta empresa.");
 
-    const { data: technicalLead } = await sb
+    const { data: technicalLead, error: technicalLeadError } = await sb
       .from("leads")
       .select("id")
       .eq("workspace_id", workspaceId)
       .eq("phone", group.group_jid)
+      .eq("custom_data->>whatsapp_session_id", group.session_id)
+      .eq("custom_data->>technical_group_context", "true")
       .limit(1)
       .maybeSingle();
+    if (technicalLeadError) throw new Error("Não foi possível consultar o SalesBot deste grupo.");
 
     let activeRunId: string | null = null;
     if (technicalLead?.id) {
-      const { data: activeRun } = await sb
+      const { data: activeRun, error: activeRunError } = await sb
         .from("salesbot_runs")
         .select("id")
         .eq("workspace_id", workspaceId)
@@ -77,6 +66,7 @@ export const resolveInboxSalesbotTarget = createServerFn({ method: "POST" })
         .order("started_at", { ascending: false })
         .limit(1)
         .maybeSingle();
+      if (activeRunError) throw new Error("Não foi possível consultar as execuções deste grupo.");
       activeRunId = (activeRun as { id?: string } | null)?.id ?? null;
     }
 
@@ -84,6 +74,10 @@ export const resolveInboxSalesbotTarget = createServerFn({ method: "POST" })
       kind: "group" as const,
       groupId: group.id,
       groupJid: group.group_jid,
+      sessionId: group.session_id,
+      conversationKey: group.conversation_key,
+      workspaceId,
+      userId: context.userId,
       groupName: group.name ?? group.subject ?? group.group_jid,
       activeRunId,
     };
@@ -97,8 +91,13 @@ export const startGroupSalesbotFromInbox = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const userSb = context.supabase as unknown as AnySb;
     const workspaceId = await loadActiveWorkspace(userSb, context.userId);
+    const { assertSlimOperator } = await import("./slim-workspace-operator.server");
+    await assertSlimOperator(userSb, workspaceId, context.userId);
     const group = await findGroup(userSb, workspaceId, data.conversationId);
     if (!group) throw new Error("Grupo não encontrado neste workspace.");
+    if (group.sessionStatus !== "conectado") {
+      throw new Error("Conecte a sessão de origem do grupo antes de iniciar o SalesBot.");
+    }
 
     const { data: bot, error: botError } = await userSb
       .from("salesbots")
@@ -146,6 +145,8 @@ export const startGroupSalesbotFromInbox = createServerFn({ method: "POST" })
         group_inbox_manual: true,
         group_id: group.id,
         group_jid: group.group_jid,
+        whatsapp_session_id: group.session_id,
+        group_inbox_conversation_key: group.conversation_key,
         participante_telefone: "",
         participante_nome: "",
       },

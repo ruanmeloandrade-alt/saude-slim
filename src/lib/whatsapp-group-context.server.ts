@@ -86,29 +86,35 @@ export async function resolveOrCreateGroupTechnicalLead(
   input: GroupContextInput,
 ): Promise<string> {
   const { workspaceId, groupJid } = input;
+  const originSessionId = input.sessionId;
+  if (!originSessionId) throw new Error("A sessão de origem do grupo não foi identificada.");
   const exact = await admin
     .from("leads")
     .select("id")
     .eq("workspace_id", workspaceId)
     .eq("phone", groupJid)
+    .eq("custom_data->>whatsapp_session_id", originSessionId)
+    .eq("custom_data->>technical_group_context", "true")
     .limit(1)
     .maybeSingle();
+  if (exact.error) throw new Error("Não foi possível conferir o contexto do grupo nesta sessão.");
   if (exact.data?.id) return String(exact.data.id);
 
   let groupId = input.groupId ?? null;
   let groupName = input.groupName ?? null;
-  let sessionId = input.sessionId ?? null;
-  if (!groupId || !sessionId || !groupName) {
-    const { data: group } = await admin
+  const sessionId = originSessionId;
+  if (!groupId || !groupName) {
+    const { data: group, error: groupError } = await admin
       .from("whatsapp_groups")
       .select("id, name, subject, session_id")
       .eq("workspace_id", workspaceId)
       .eq("group_jid", groupJid)
+      .eq("session_id", sessionId)
       .limit(1)
       .maybeSingle();
+    if (groupError) throw new Error("Não foi possível conferir os dados do grupo nesta sessão.");
     groupId = groupId ?? group?.id ?? null;
     groupName = groupName ?? group?.name ?? group?.subject ?? null;
-    sessionId = sessionId ?? group?.session_id ?? null;
   }
 
   const crmSourceId = await resolveWhatsappCrmSourceId(admin, workspaceId, sessionId);
@@ -129,6 +135,7 @@ export async function resolveOrCreateGroupTechnicalLead(
         technical_group_context: true,
         whatsapp_group_id: groupId,
         whatsapp_group_jid: groupJid,
+        whatsapp_remote_jid: groupJid,
         whatsapp_session_id: sessionId,
       },
       tags: [],
@@ -147,6 +154,8 @@ export async function resolveOrCreateGroupTechnicalLead(
     .select("id")
     .eq("workspace_id", workspaceId)
     .eq("phone", groupJid)
+    .eq("custom_data->>whatsapp_session_id", originSessionId)
+    .eq("custom_data->>technical_group_context", "true")
     .limit(1)
     .maybeSingle();
   if (retry.data?.id) return String(retry.data.id);
