@@ -29,6 +29,9 @@ import {
 } from "@/lib/ai-agent.functions";
 import { Bot, RotateCcw, Settings2, Sparkles, Wrench, Paperclip, Mic, Square, X, Image as ImageIcon, FileText } from "lucide-react";
 import { toast } from "sonner";
+import { SlimCopilotProposals } from "./SlimCopilotProposals";
+import { useSlimCopilotUser } from "./useSlimCopilotUser";
+import { slimCopilotConversationKey } from "@/lib/slim-copilot-ui.core";
 
 type Module = "gestor_trafego" | "kommo_manager" | "salesbot" | "inbox" | "dashboard" | "social_media" | "strategist" | "support_robot";
 type Mode = "consultor" | "gestor";
@@ -40,10 +43,10 @@ const MODE_LABEL: Record<Mode, { label: string; icon: React.ReactNode; hint: str
 
 const SUGGESTIONS: Record<Module, string[]> = {
   support_robot: [
-    "Como conecto meu WhatsApp?",
-    "Minhas campanhas estão com erro, pode verificar?",
-    "Como crio um funil de vendas?",
-    "O que tem de novo na plataforma?"
+    "Consulte o estoque atual dos produtos",
+    "Mostre o relatório de vendas dos últimos 30 dias",
+    "Quero preparar uma mudança de etapa para um lead",
+    "Liste os SalesBots disponíveis"
   ],
   gestor_trafego: [
     "Analise minhas campanhas dos últimos 7 dias e execute os ajustes necessários",
@@ -76,7 +79,7 @@ const SUGGESTIONS: Record<Module, string[]> = {
 };
 
 const TITLE: Record<Module, string> = {
-  support_robot: "Suporte Saúde Slim",
+  support_robot: "Copiloto Saúde Slim",
   gestor_trafego: "Chat Marketing",
   kommo_manager: "Chat CRM",
   salesbot: "Assistente Salesbot",
@@ -86,21 +89,38 @@ const TITLE: Record<Module, string> = {
   strategist: "Estrategista de Mídia IA",
 };
 
-export function AiAgentChat({
-  workspaceId,
-  module: agentModule,
-  fullscreen = false,
-  onStrategyPatch,
-  hideActions = false,
-  contextPayload,
-}: {
+type AiAgentChatProps = {
   workspaceId: string;
+  actorId?: string;
   module: Module;
   fullscreen?: boolean;
   onStrategyPatch?: (patch: Record<string, unknown>) => void;
   hideActions?: boolean;
   contextPayload?: Record<string, unknown>;
-}) {
+};
+
+export function AiAgentChat(props: AiAgentChatProps) {
+  return props.module === "support_robot"
+    ? <ScopedSlimCopilotChat {...props} />
+    : <AiAgentChatSession {...props} />;
+}
+
+function ScopedSlimCopilotChat(props: AiAgentChatProps) {
+  const authenticatedActorId = useSlimCopilotUser();
+  if (!authenticatedActorId || (props.actorId && props.actorId !== authenticatedActorId)) return null;
+  return <AiAgentChatSession key={props.workspaceId + ":" + authenticatedActorId}
+    {...props} actorId={authenticatedActorId} />;
+}
+
+function AiAgentChatSession({
+  workspaceId,
+  actorId,
+  module: agentModule,
+  fullscreen = false,
+  onStrategyPatch,
+  hideActions = false,
+  contextPayload,
+}: AiAgentChatProps) {
   const qc = useQueryClient();
   const loadFn = useServerFn(loadAgentConversation);
   const resetFn = useServerFn(resetAgentConversation);
@@ -110,14 +130,24 @@ export function AiAgentChat({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [initialMessages, setInitialMessages] = useState<UIMessage[] | null>(null);
   const [initError, setInitError] = useState<string | null>(null);
+  const conversationKey = agentModule === "support_robot" && actorId
+    ? slimCopilotConversationKey(workspaceId, actorId)
+    : ["ai-agent-conv", workspaceId, agentModule];
+  const conversationIdentity = {
+    workspaceId, module: agentModule,
+    ...(agentModule === "support_robot" ? { actorId } : {}),
+  };
 
   // Carrega histórico + settings
   const historyQ = useQuery({
-    queryKey: ["ai-agent-conv", workspaceId, agentModule],
-    queryFn: () => loadFn({ data: { workspaceId, module: agentModule } }),
+    queryKey: conversationKey,
+    queryFn: () => loadFn({ data: conversationIdentity }),
+    enabled: agentModule !== "support_robot" || Boolean(actorId),
   });
   const settingsQ = useQuery({
-    queryKey: ["ai-agent-settings", workspaceId, agentModule],
+    queryKey: agentModule === "support_robot"
+      ? ["ai-agent-settings", workspaceId, agentModule, actorId]
+      : ["ai-agent-settings", workspaceId, agentModule],
     queryFn: () => settingsFn({ data: { workspaceId, module: agentModule } }),
   });
 
@@ -132,7 +162,9 @@ export function AiAgentChat({
     }
   }, [historyQ.data, initialMessages]);
 
-  const chatId = `${agentModule}-${workspaceId}`;
+  const chatId = agentModule === "support_robot"
+    ? agentModule + ":" + workspaceId + ":" + actorId
+    : `${agentModule}-${workspaceId}`;
 
   const transport = useMemo(
     () =>
@@ -141,15 +173,19 @@ export function AiAgentChat({
         prepareSendMessagesRequest: async ({ messages }) => {
           const { data: sess } = await supabase.auth.getSession();
           const token = sess.session?.access_token;
+          if (agentModule === "support_robot" && (!actorId || sess.session?.user?.id !== actorId)) {
+            throw new Error("A sessão do operador mudou. Reabra o Copiloto na empresa atual.");
+          }
           const headers: Record<string, string> = {};
           if (token) headers.Authorization = `Bearer ${token}`;
           return {
-            body: { workspaceId, module: agentModule, messages, contextPayload },
+            body: { workspaceId, module: agentModule, messages, contextPayload,
+              ...(agentModule === "support_robot" ? { actorId } : {}) },
             headers,
           };
         },
       }),
-    [workspaceId, agentModule, contextPayload],
+    [workspaceId, actorId, agentModule, contextPayload],
   );
 
   const chat = useChat({
@@ -161,6 +197,10 @@ export function AiAgentChat({
       toast.error(err.message);
     },
   });
+
+  useEffect(() => () => {
+    if (agentModule === "support_robot") void chat.stop();
+  }, [agentModule, chat.stop]);
 
   // Se as messages iniciais chegarem depois, sincroniza
   useEffect(() => {
@@ -334,11 +374,11 @@ export function AiAgentChat({
   }, [agentModule, workspaceId]);
 
   const resetM = useMutation({
-    mutationFn: () => resetFn({ data: { workspaceId, module: agentModule } }),
+    mutationFn: () => resetFn({ data: conversationIdentity }),
     onSuccess: () => {
       chat.setMessages([]);
       setInitialMessages([]);
-      qc.invalidateQueries({ queryKey: ["ai-agent-conv", workspaceId, agentModule] });
+      qc.invalidateQueries({ queryKey: conversationKey });
       toast.success("Conversa zerada.");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -422,7 +462,9 @@ export function AiAgentChat({
           <div className="min-w-0">
             <div className="text-sm font-semibold truncate">{TITLE[agentModule]}</div>
             <div className="text-[11px] text-muted-foreground truncate">
-              Conversa contínua · lê seus dados, imagens e executa ações no modo {isSocialMedia ? "Social Media" : "Gestor"}
+              {agentModule === "support_robot"
+                ? "Conversa contínua · ações executadas após sua aprovação"
+                : <>Conversa contínua · lê seus dados, imagens e executa ações no modo {isSocialMedia ? "Social Media" : "Gestor"}</>}
             </div>
 
           </div>
@@ -545,6 +587,10 @@ export function AiAgentChat({
             )}
             {initError && (
               <div className="text-xs text-destructive px-2">{initError}</div>
+            )}
+            {agentModule === "support_robot" && actorId && (
+              <SlimCopilotProposals key={workspaceId + ":" + actorId}
+                workspaceId={workspaceId} actorId={actorId} chatStatus={chat.status} />
             )}
           </ConversationContent>
           <ConversationScrollButton />

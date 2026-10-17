@@ -11,34 +11,13 @@ export const loadAgentConversation = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({
     workspaceId: z.string().uuid(),
     module: z.enum(MODULES),
+    actorId: z.string().uuid().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     // Se for support_robot, usamos a tabela específica
     if (data.module === "support_robot") {
-      const { data: rows, error } = await context.supabase
-        .from("support_robot_messages")
-        .select("role,content,created_at")
-        .eq("workspace_id", data.workspaceId)
-        .eq("user_id", context.userId)
-        .order("created_at", { ascending: true })
-        .limit(100);
-      
-      if (error) throw new Error(error.message);
-      
-      // Converte para o formato UIMessage que o AiAgentChat espera
-      const messages = (rows ?? []).map((r, i) => ({
-        id: `support-${i}`,
-        role: r.role,
-        content: r.content,
-        createdAt: new Date(r.created_at || ""),
-        parts: [{ type: "text", text: r.content }]
-      }));
-
-      return {
-        id: "support-robot",
-        messages: JSON.stringify(messages),
-        lastMessageAt: rows?.[rows.length - 1]?.created_at ?? null,
-      };
+      const {loadSlimCopilotHistory} = await import('./slim-copilot-history.server');
+      return loadSlimCopilotHistory(context as any, {workspaceId: data.workspaceId, actorId: data.actorId ?? ''});
     }
 
     const { data: row, error } = await context.supabase
@@ -62,9 +41,12 @@ export const resetAgentConversation = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({
     workspaceId: z.string().uuid(),
     module: z.enum(MODULES),
+    actorId: z.string().uuid().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     if (data.module === "support_robot") {
+      const {authorizeSlimCopilot} = await import('./slim-copilot-approval.core');
+      await authorizeSlimCopilot(context.supabase as any, context.userId, {workspaceId: data.workspaceId, actorId: data.actorId ?? ''});
       const { error } = await context.supabase
         .from("support_robot_messages")
         .delete()

@@ -6,7 +6,7 @@ edit('src/routes/__root.tsx',once=>{
  once('        {!migratedRoute && <ConditionalSupportRobot />}\n','');
  once('<CheckoutCompatibilityGuard><AuthGate><Outlet />','<CheckoutCompatibilityGuard><AuthGate><ConditionalSupportRobot /><Outlet />');
 });
-edit('src/components/SupportRobot.tsx',once=>{
+if (!fs.readFileSync(new URL('src/components/SupportRobot.tsx',root),'utf8').includes('// SLIM_COPILOT_APPROVAL_UI_V1')) edit('src/components/SupportRobot.tsx',once=>{
  once('import { AiAgentChat } from "./ai-agent/AiAgentChat";','import { AiAgentChat } from "./ai-agent/AiAgentChat";\nimport {getSlimErpIdentity} from "@/lib/slim-erp-release.functions";');
  once('export function SupportRobot() {',`export function SupportRobot() {
   const identify=useServerFn(getSlimErpIdentity);

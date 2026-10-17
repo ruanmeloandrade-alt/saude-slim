@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 3 do Copiloto com aprovação real
 
-## Estado: 🟡 escopo registrado antes da implementação
+## Estado: 🟡 implementação e testes aprovados; publicação em preparação
 
 Data: 17/10/2026. Repositório exclusivo ruanmeloandrade-alt/saude-slim. Branch de trabalho fix/slim-copilot-approval-block3-20261017, base 792e2a9fc0491cbd1bc4df7ec2fccb7bff174573. Produção restauracao/sistema-completo-20261014. Supabase vyzvfcgpjjzvcjegzzza, workspace c49945db-1960-461a-9339-a43b8403bdd9.
 
@@ -16,6 +16,7 @@ O usuário moveu seu contato controlado e confirmou que o bot iniciou. Consulta 
 
 - Evento moved 8832d2ea-0f2b-486a-8254-22de95099a63, criado às 22:33:11 UTC, status dispatched, uma tentativa, destino Em atendimento no funil Vendas.
 - Job 77bf038c-7a37-4f19-bedb-1bc26f5135ef, vinculado ao mesmo evento e ao SalesBot Emprestimos ativa IA (7208c558-d4df-4591-b758-3864137d995a), status done, uma tentativa, concluído às 22:33:29 UTC.
+- Execução 1df3a006-62a5-4871-bf08-c65efa83f21e, do mesmo contato e SalesBot, iniciada às 22:33:21 UTC e finalizada às 22:33:28 UTC, status finished, sem erro. Este run do worker não possui actor_user_id/request_id; a correlação usa evento, contexto do job, contato, bot e intervalo, sem atribuir campos de auditoria ausentes.
 - Nenhum evento ou job pendente na consulta. A movimentação anterior, sem gatilho aplicável, foi finalizada como skipped.
 - Esta evidência confirma o cenário movimento → gatilho → início do bot. Não equivale a teste real de criação/lote ou mídia.
 - SalesBot → IA individual permanece comprovado pelo teste real de 16/10 já documentado no bloco 1.
@@ -62,3 +63,39 @@ Nenhuma modificação do runtime foi feita antes deste escopo.
 🟢 Build/regressões e banco isolado aprovados; publicação com deployment SUCCESS, healthcheck e leitura pós-publicação. Manter limites explícitos do teste autenticado e das integrações externas.
 
 🟡 Ao concluir, atualizar o semáforo completo com emojis e pausar para o usuário conferir o Copiloto antes de iniciar o bloco seguinte.
+
+## Implementação e decisões verificadas
+
+O escopo foi registrado em c383d75f74d39369e7223676ea4fa43ed6c5dfcd antes do código. O catálogo efetivo de support_robot contém 11 consultas e quatro ferramentas propose_*; nenhuma ferramenta de aprovação ou execução é entregue ao modelo. Os endpoints de decisão recebem somente empresa, operador, ID, versão e approve/reject. Autenticação e empresa ativa são lidas sem reparo automático de perfil ou membership.
+
+As propostas duram 15 minutos e preservam conteúdo, destinatário, canal, versão e estado relevante. O ID de preparação é estável para a mesma mensagem humana e argumentos. Repetir uma aprovação consulta o recibo já existente. Mudar contato, etapa, vínculo do funil, configuração de gatilhos, bot ou run invalida a proposta correspondente. Uma nova proposta é necessária quando os dados relevantes mudam.
+
+A migração aditiva 20261017225228_slim_copilot_approval_ledger.sql foi gerada pela CLI. Acrescenta somente o ledger privado de propostas e auditoria e seus RPCs. As funções públicas são SECURITY INVOKER; helpers privados limitam-se a autenticação, locks, leitura e gravação do ledger. Mover etapa e controlar SalesBot reutilizam as funções de negócio existentes sob a identidade autenticada. A movimentação e seu recibo são transacionais: falha ao guardar o recibo desfaz também lead e outbox. Não há backfill, seed, job novo nem ampliação de permissões das tabelas comerciais.
+
+O texto usa uma reserva persistida obtida após aprovação, uma única requisição Evolution com prazo de 25 segundos, corpo limitado a 64 KB e redirecionamento desativado. Antes do POST, reconfirma destinatário completo, sessão original, empresa, operador e bloqueio de contato. Não busca mídia. Exige ID do WhatsApp para confirmar envio e registra os dois históricos. Se o histórico local falha após o provedor confirmar, conserva o ID e informa a pendência sem reenviar. Resposta perdida ou reserva sem recibo final fica incerta; nenhuma repetição automática é permitida. O service role apenas finaliza o recibo dessa reserva, sem aprovar proposta ou escrever dados comerciais por esse RPC.
+
+Movimentar e iniciar bot declaram a possibilidade de mensagens e IA individual conforme os gatilhos e blocos salvos. Depois da aprovação, o processamento segue a configuração vigente do runtime existente. Parar afeta somente o run exibido. O envio de texto não altera a sessão de IA. Grupos não são alvos dessas novas propostas.
+
+O histórico do Copiloto usa IDs estáveis, grava usuário antes da resposta e carrega as últimas 100 mensagens em ordem cronológica. As propostas são recuperadas do ledger e independem do texto ou dos tool parts. Consultas de estoque usam o catálogo existente; relatório usa pedidos de slim_orders e separa cancelados/pagos/pendentes, em centavos, com período UTC e origem declarados.
+
+## Verificações técnicas deste bloco
+
+Todos os cenários abaixo usam dados sintéticos, PostgreSQL em memória e provedor simulado. Nenhum teste acessa credenciais reais ou envia WhatsApp.
+
+| Gate | Resultado atual | Cobertura relevante |
+|---|---|---|
+| test-slim-copilot-text.mjs | 🟢 23/23 | Identidade, alvo, sessão, bloqueio de contato, único POST, prazo, recibo, duplicata de webhook e histórico parcial. |
+| test-slim-copilot-backend.mjs | 🟢 33/33 | Catálogo, autorização, preparação estável, claims, mensagens não confiáveis, isolamento e persistência de histórico. |
+| test-slim-copilot-postgres.mjs | 🟢 70/70 | Grants reais, RLS, rejeição, vencimento, mudança de estado, efeitos atômicos, rollback, reserva única e finalização exclusiva do servidor. |
+| test-slim-copilot-integration.mjs | 🟢 9/9 | Ferramenta → RPC real → aprovação → ação/adapter → históricos → recibo; resposta perdida sem repetição. |
+| test-slim-copilot-ui.mjs | 🟢 34/34 | Cartões renderizados, decisão duplicada, perda de resposta, troca de identidade e recibos preservados. |
+| test-slim-global-history.mjs | 🟢 17/17 | Integração global, contexto autenticado e transform idempotente; gate anterior preservado. |
+| Build completo e regressões | 🟢 Aprovado em cópia isolada | 169 verificações novas e regressões anteriores passaram. Compilação final concluída às 23:24 UTC; bundles cliente, servidor e Nitro gerados. Encerramento de stream ao desmontar limitado ao Copiloto. |
+
+## Publicação e limites
+
+Ainda não publicado: aplicar somente a nova migração depois de código versionado e build aprovado; então avançar a branch de produção com comparação do SHA esperado e conferir Railway, healthcheck e banco. A aplicação publicada continua na versão aprovada pelo usuário até essa sequência terminar. A homologação visual autenticada do Copiloto e qualquer ação real pertencem à conferência do usuário após a pausa deste bloco.
+
+### Leitura anterior à migração
+
+Em 17/10 às 23:22:52 UTC: 25 leads, um pedido ERP e nenhum evento de etapa pendente. O ledger e as funções do Copiloto ainda não existiam. Hash do estado de leads 7282b4df6807dd873ae8710c89877b16; hash das funções existentes de movimentação e controle de bot 655e2bd6cbd760520cc70967d201c328. A aplicação e os outros três serviços estavam online, sem problemas ou operações pendentes. Estas leituras não executaram ações de negócio.

@@ -5,6 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Bot, MessageSquare, Plug, X } from "lucide-react";
 import { getSupportRobotContext } from "@/lib/support-robot.functions";
 import { AiAgentChat } from "./ai-agent/AiAgentChat";
+import { useSlimCopilotUser } from "./ai-agent/useSlimCopilotUser";
+import { getSlimErpIdentity } from "@/lib/slim-erp-release.functions";
+
+// SLIM_COPILOT_APPROVAL_UI_V1: canonical widget; the history transform preserves it.
 
 function greetingKey(workspaceId: string) {
   return `Saúde Slim:support-greeting:${workspaceId}`;
@@ -27,25 +31,52 @@ function markGreetingShown(workspaceId: string) {
 }
 
 export function SupportRobot() {
+  const authenticatedActorId = useSlimCopilotUser();
+  const identify = useServerFn(getSlimErpIdentity);
+  const location = useLocation();
+  const identity = useQuery({
+    queryKey: ["slim-copilot-identity", authenticatedActorId],
+    enabled: Boolean(authenticatedActorId),
+    queryFn: async () => {
+      const current = await identify();
+      if (!authenticatedActorId || current.actorId !== authenticatedActorId) {
+        throw new Error("A sessão do operador mudou.");
+      }
+      return current;
+    },
+    staleTime: 0,
+    retry: false,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: false,
+  });
+  useEffect(() => {
+    if (authenticatedActorId) void identity.refetch();
+  }, [location.pathname, authenticatedActorId]);
+  if (!authenticatedActorId || identity.error || !identity.isFetchedAfterMount
+    || !identity.data || identity.data.actorId !== authenticatedActorId) return null;
+  return <ScopedSupportRobot key={identity.data.workspaceId+':'+identity.data.actorId}
+    workspaceId={identity.data.workspaceId} actorId={identity.data.actorId} />;
+}
+
+function ScopedSupportRobot({ workspaceId, actorId }: { workspaceId: string; actorId: string }) {
   const getContext = useServerFn(getSupportRobotContext);
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [showGreeting, setShowGreeting] = useState(false);
   const [chatWorkspaceId, setChatWorkspaceId] = useState<string | null>(null);
   const contextQuery = useQuery({
-    queryKey: ["support-robot-context", location.href],
+    queryKey: ["support-robot-context", workspaceId, actorId],
     queryFn: () => getContext(),
     refetchInterval: isOpen ? 5_000 : 60_000,
     refetchIntervalInBackground: false,
     retry: false,
   });
-  const ctx = contextQuery.data;
-
-  useEffect(() => {
-    setIsOpen(false);
-    setChatWorkspaceId(null);
-    setShowGreeting(false);
-  }, [location.href]);
+  const ctx = !contextQuery.error && contextQuery.data?.active
+    && contextQuery.data.workspaceId===workspaceId && contextQuery.data.actorId===actorId
+    ? contextQuery.data : null;
+  // Internal navigation preserves the chat; identity changes remount the scoped instance.
 
   useEffect(() => {
     if (!isOpen || !chatWorkspaceId || !ctx?.active) return;
@@ -79,7 +110,8 @@ export function SupportRobot() {
     }
 
     const fresh = await contextQuery.refetch();
-    if (!fresh.data?.active || !fresh.data.workspaceId) return;
+    if (fresh.error || !fresh.data?.active || fresh.data.workspaceId !== workspaceId
+      || fresh.data.actorId !== actorId) return;
     markGreetingShown(fresh.data.workspaceId);
     setChatWorkspaceId(fresh.data.workspaceId);
     setIsOpen(true);
@@ -94,7 +126,7 @@ export function SupportRobot() {
             <div>
               <p className="text-xs font-semibold text-foreground">Olá, {ctx.userName}.</p>
               <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
-                {ctx.hasOpenAI ? `Ainda ${pendingCount === 1 ? "há 1 configuração" : `há ${pendingCount} configurações`} do seu plano para concluir. Posso te ajudar a finalizar a implementação.` : "Primeiro passo: conecte sua própria chave de IA em Integrações. O Copiloto não usa uma chave compartilhada da Saúde Slim."}
+                {ctx.hasOpenAI ? `Ainda ${pendingCount === 1 ? "há 1 configuração" : `há ${pendingCount} configurações`} para concluir. Posso te ajudar a finalizar a implementação.` : "Primeiro passo: conecte sua própria chave de IA em Integrações. O Copiloto não usa uma chave compartilhada da Saúde Slim."}
               </p>
             </div>
             <button type="button" onClick={() => setShowGreeting(false)} className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Fechar mensagem do Copiloto"><X className="h-3.5 w-3.5" /></button>
@@ -112,9 +144,9 @@ export function SupportRobot() {
               </div>
               <button type="button" onClick={() => { setIsOpen(false); setChatWorkspaceId(null); }} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Fechar Copiloto"><X className="h-4 w-4" /></button>
             </div>
-            {implementationMode && ctx.hasOpenAI && <div className="border-b border-border bg-primary/5 px-4 py-2 text-[10px] leading-4 text-muted-foreground">O Copiloto permanece em modo implementação até todas as configurações obrigatórias do seu plano estarem concluídas.</div>}
+            {implementationMode && ctx.hasOpenAI && <div className="border-b border-border bg-primary/5 px-4 py-2 text-[10px] leading-4 text-muted-foreground">O Copiloto ajuda a concluir as configurações necessárias para usar a IA nesta empresa.</div>}
             <div className="flex-1 overflow-hidden [&_header]:hidden">
-              {ctx.hasOpenAI ? <AiAgentChat workspaceId={chatWorkspaceId} module="support_robot" fullscreen hideActions /> : (
+              {ctx.hasOpenAI ? <AiAgentChat workspaceId={chatWorkspaceId} actorId={actorId} module="support_robot" fullscreen hideActions contextPayload={{page:location.pathname,approvalRequired:true}} /> : (
                 <div className="flex h-full items-center justify-center p-6"><div className="max-w-[300px] text-center"><div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary/10 text-primary"><Plug className="h-5 w-5" /></div><h4 className="mt-4 text-sm font-semibold text-foreground">Conecte uma IA para ativar o Copiloto</h4><p className="mt-2 text-xs leading-5 text-muted-foreground">O Copiloto usa exclusivamente uma chave deste workspace, como OpenAI ou Gemini. Sem uma chave própria conectada, o chat de IA permanece bloqueado.</p><Link to="/integracoes" onClick={() => { setIsOpen(false); setChatWorkspaceId(null); }} className="mt-5 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"><Plug className="h-3.5 w-3.5" /> Abrir Integrações</Link></div></div>
               )}
             </div>
