@@ -21,7 +21,7 @@ patch('src/lib/salesbot-runtime.server.ts',({once,all,prepend})=>{
  prepend('import { slimSafeOperationalError } from "./slim-operation-errors.core";');
  all('last_error: (e as Error).message','last_error: slimSafeOperationalError(e)',2);
  once('last_error: e instanceof Error ? e.message : String(e)','last_error: slimSafeOperationalError(e)');
- once('log(supabaseAdmin, run, b, "error", (e as Error).message)','log(supabaseAdmin, run, b, "error", slimSafeOperationalError(e))');
+ all('log(supabaseAdmin, run, b, "error", (e as Error).message)','log(supabaseAdmin, run, b, "error", slimSafeOperationalError(e))',4);
 });
 patch('src/lib/inbox-automation-worker.server.ts',({once,prepend})=>{
  prepend('import { slimSafeOperationalError } from "./slim-operation-errors.core";');
