@@ -14,7 +14,7 @@ edit('src/lib/leads.functions.ts',({once,block})=>{
     }`);
 });
 edit('src/components/inbox/InboxPage.legacy.tsx',({once})=>{
- once('    onSuccess: (result) => {\\n      if (result && typeof result === "object" && "historyPending" in result && result.historyPending === true) {',`    onSuccess: (result:any) => {
+ once('    onSuccess: (result) => {\n      if (result && typeof result === "object" && "historyPending" in result && result.historyPending === true) {',`    onSuccess: (result:any) => {
       if(result?.historyRecorded===false)toast.warning(result.warning,{duration:15000});
       if (result && typeof result === "object" && "historyPending" in result && result.historyPending === true) {`);
 });
