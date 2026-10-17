@@ -6,7 +6,7 @@ import {fileURLToPath} from 'node:url';
 import {slimSafeOperationalError,SLIM_ERROR_MAX_LENGTH} from '../src/lib/slim-operation-errors.core.ts';
 const root=new URL('../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8');
 let passed=0;function test(name,fn){fn();passed++;console.log('PASS slim error safety: '+name);}
-test('error text never exceeds 512 characters',()=>{const v=slimSafeOperationalError('x'.repeat(1_050_000));assert(v.length<=512);assert.equal(v.length,SLIM_ERROR_MAX_LENGTH);});
+test('error text never exceeds 512 characters',()=>{const v=slimSafeOperationalError('x'.repeat(1_050_000));assert(v.length<=SLIM_ERROR_MAX_LENGTH);assert(!v.includes('x'.repeat(200)));});
 test('inline audio base64 omitted from error storage',()=>{const payload='data:audio/ogg; codecs=opus;base64,'+'QUJD'.repeat(25000);const s=slimSafeOperationalError(new Error('Evolution send failed: '+payload));assert(!s.includes('QUJDQUJD'));assert(s.includes('mídia base64 omitida'));assert(s.length<512);});
 test('PDF base64 omitted from persisted error',()=>{const s=slimSafeOperationalError('Sending data:application/pdf;base64,'+'JVBERi0x'.repeat(10000));assert(!s.includes('JVBERi0xJVBERi0x'));assert(s.includes('mídia base64 omitida'));});
 test('Bearer token is not stored in error',()=>{const s=slimSafeOperationalError('Access denied Bearer abcdefghijklmnopqrstuvwxyz0123456789');assert(!s.includes('abcdefghijklmnopqrstuvwxyz'));assert(s.includes('Bearer [omitido]'));});
