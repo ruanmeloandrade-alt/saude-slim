@@ -72,3 +72,25 @@ export function slimAllowStoredMediaUrl(value: unknown): string | null {
   if (/^data:(?:image|audio|video|application)\/[a-z0-9.+-]+(?:;[^,\r\n]{0,120})?;base64,[a-z0-9+/=\r\n]+$/i.test(value)) return value;
   return null;
 }
+
+/**
+ * Re-sign a private workspace-scoped Storage object, including old outgoing
+ * signed links that expire. The caller must already have checked Auth/RLS.
+ */
+export function slimInboxStoredMediaPath(payload:Record<string,unknown>,wsId:string,leadId:string):string|null {
+ const prefix=wsId+'/'+leadId+'/';
+ const stored=typeof payload.media_storage_path==='string'?payload.media_storage_path:null;
+ let path=stored;
+ if(!path&&typeof payload.media_url==='string'){
+   try {
+     const url=new URL(payload.media_url);
+     const route='/storage/v1/object/sign/inbox-outgoing/';
+     if(url.protocol==='https:'&&url.hostname.endsWith('.supabase.co')&&url.pathname.startsWith(route)) {
+       path=decodeURIComponent(url.pathname.slice(route.length));
+     }
+   } catch {return null;}
+ }
+ if(!path||path.length>550||!path.startsWith(prefix)||path.includes('..')||path.includes('\\')||
+    /[\r\n?#]/.test(path))return null;
+ return path;
+}
