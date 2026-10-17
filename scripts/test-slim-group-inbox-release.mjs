@@ -77,6 +77,28 @@ await check('changed code parses TypeScript',()=>{
  }
 });
 
+
+await check('text group send is bounded with one acknowledged provider response',()=>{
+ const code=read('src/lib/whatsapp-groups.functions.legacy.ts')
+   .split('export const sendGroupMessage =')[1].split('export const sendGroupMedia =')[0];
+ assert(code.includes('boundedMediaRequest({'));
+ assert(code.includes('timeoutMs: 25_000'));
+ assert(code.includes('maxBodyBytes: 64 * 1024'));
+ assert(code.includes('if (!messageId) throw new MediaSendUncertain()'));
+ assert(!code.includes('await fetch('));
+ assert(!code.includes('/instance/restart'));
+});
+await check('acknowledged text with unrecorded history is not silently reported complete',()=>{
+ const code=read('src/lib/whatsapp-groups.functions.legacy.ts')
+  .split('export const sendGroupMessage =')[1].split('export const sendGroupMedia =')[0];
+ assert(code.includes('if (persisted.error) return { ok: true, messageId, historyPending: true }'));
+ assert(code.includes('return { ok: true, messageId, historyPending: false }'));
+ const ui=read('src/components/inbox/InboxPage.legacy.tsx');
+ const textSend=ui.split('const sendMut = useMutation({')[1].split('const sendMediaFn =')[0];
+ assert(textSend.includes('result.historyPending === true'));
+ assert(textSend.includes('Confira antes de reenviar'));
+});
+
 const pg=new PGlite();
 try{
  await pg.exec("CREATE SCHEMA IF NOT EXISTS private; CREATE ROLE authenticated; CREATE ROLE anon;");

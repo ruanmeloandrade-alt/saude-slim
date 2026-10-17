@@ -3017,7 +3017,10 @@ function ChatThread({
         data: { leadId: conversation.id, text, clientRequestId: crypto.randomUUID() },
       });
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result && typeof result === "object" && "historyPending" in result && result.historyPending === true) {
+        toast.warning("WhatsApp confirmou o envio, mas o histórico do grupo não foi registrado. Confira antes de reenviar.");
+      }
       // Após o servidor salvar, exibir a resposta sem depender de eventos externos.
       if (isGroupThread) {
         void queryClient.invalidateQueries({

@@ -1337,39 +1337,36 @@ export const sendGroupMessage = createServerFn({ method: "POST" })
     const { groupJid, sessionId } = await resolveGroupTarget(sb, wsId, data.groupId, data.groupJid);
     const creds = await loadCreds(sb as unknown as SbRpc, sessionId);
     const base = baseUrl();
-    const resp = await fetch(
-      `${base}/message/sendText/${encodeURIComponent(creds.instance_name)}`,
+    // One bounded provider request, even when Evolution never answers.
+    // Do not resend an uncertain operation or claim success without its ID.
+    const { boundedMediaRequest, MediaSendUncertain } = await import("./slim-media-transport.server");
+    const url = `${base}/message/sendText/${encodeURIComponent(creds.instance_name)}`;
+    const sent = await boundedMediaRequest({
+      url,
+      apiKey: creds.api_key,
+      payload: { number: groupJid, text: data.text },
+    }, { timeoutMs: 25_000, maxBodyBytes: 64 * 1024 });
+    if (!sent.response.ok) throw new MediaSendUncertain();
+    const messageId = pickEvoMessageId(sent.body);
+    if (!messageId) throw new MediaSendUncertain();
+    const persisted = await sb.from("whatsapp_web_messages").upsert(
       {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: creds.api_key },
-        body: JSON.stringify({ number: groupJid, text: data.text }),
+        workspace_id: wsId,
+        session_id: sessionId,
+        remote_jid: groupJid,
+        to_jid: groupJid,
+        message_id: messageId,
+        from_me: true,
+        message_type: "text",
+        body: data.text,
+        delivery_status: "sent",
+        raw: {},
+        received_at: new Date().toISOString(),
       },
+      { onConflict: "workspace_id,message_id" },
     );
-    if (!resp.ok) {
-      const t = await resp.text().catch(() => "");
-      throw new Error(`Evolution ${resp.status}: ${t.slice(0, 200)}`);
-    }
-    const j = await resp.json().catch(() => null);
-    const messageId = pickEvoMessageId(j);
-    if (messageId) {
-      await sb.from("whatsapp_web_messages").upsert(
-        {
-          workspace_id: wsId,
-          session_id: sessionId,
-          remote_jid: groupJid,
-          to_jid: groupJid,
-          message_id: messageId,
-          from_me: true,
-          message_type: "text",
-          body: data.text,
-          delivery_status: "sent",
-          raw: {},
-          received_at: new Date().toISOString(),
-        },
-        { onConflict: "workspace_id,message_id" },
-      );
-    }
-    return { ok: true, messageId };
+    if (persisted.error) return { ok: true, messageId, historyPending: true };
+    return { ok: true, messageId, historyPending: false };
   });
 
 export const sendGroupMedia = createServerFn({ method: "POST" })
