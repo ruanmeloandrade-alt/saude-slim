@@ -28,7 +28,7 @@ Não mover lead real, criar cliente de teste em produção, iniciar bot ou dispa
 
 ## Validação e resultado
 
-Implementação e validação local concluídas. O gate completo npm run build passou em uma cópia isolada do checkout, com os transforms reais, regressões, testes PostgreSQL, preflight e paridade de rotas. A instalação da migração e a implantação em produção são acompanhadas em seguida.
+Implementação e validação local concluídas. O gate completo npm run build passou em uma cópia isolada do checkout, com os transforms reais, regressões, testes PostgreSQL, preflight e paridade de rotas. A migração foi aplicada no Supabase exclusivo e conferida. A implantação da aplicação em produção é acompanhada em seguida.
 
 ### Decisões de implementação
 
@@ -55,7 +55,11 @@ O build completo preserva os testes anteriores, inclusive identidade de contatos
 
 Revisão independente final não encontrou bloqueio de autorização ou isolamento. A guarda por telefone é específica da entrada do Funil; não equivale a unicidade global. Recibos de operações sem mudança passam a existir após esta instalação: não é possível reconstruir retroativamente um no-op anterior sem registro. Contatos históricos fora do vínculo fonte/funil são preservados e não são movidos por esse caminho.
 
-SHA256 final da migração: d70799930cd42b47ec1d58841d21b8b605ab2d958d8b9a8366dca40939a63ce5. Ela ainda não foi aplicada em produção neste ponto do registro.
+SHA256 final da migração: d70799930cd42b47ec1d58841d21b8b605ab2d958d8b9a8366dca40939a63ce5. O arquivo gerado pela CLI usa 20261017213710; a instalação via Supabase MCP foi registrada no banco como versão 20261017220458, nome slim_funnel_create_bulk_outbox, às 22:04:58 UTC de 17/10. O conteúdo foi versionado no commit ecd3e455 antes da aplicação.
+
+Às 22:05 UTC foram conferidas as sete funções/helper, assinaturas, search_path vazio, wrappers públicos invoker e execuções autorizadas. Anon e service_role não receberam acesso às RPCs; authenticated só tem execução das funções autorizadas, sem leitura ou escrita direta do recibo privado. A tabela tem RLS e a coluna event_kind tem default moved e não aceita NULL. Antes e depois da instalação havia 25 leads, zero eventos e zero jobs; depois, zero recibos. O hash dos IDs, funis, etapas, updated_at e remetente dos leads permaneceu idêntico, 136dbe59ed2ac557a769359e11614d7b.
+
+O advisor não acrescentou WARN/ERROR. O aviso de funções públicas definer caiu de cinco para quatro; o aviso anterior de proteção de senha permanece. Há um INFO esperado para o recibo privado com RLS sem policy, que aplica negação por padrão além da revogação dos grants diretos; o acesso ocorre pela implementação autorizada. Referências: https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy e https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable. Nenhuma configuração Auth foi alterada neste bloco.
 
 ### Conferência do usuário e rollback
 
