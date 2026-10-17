@@ -28,7 +28,7 @@ Não mover lead real, criar cliente de teste em produção, iniciar bot ou dispa
 
 ## Validação e resultado
 
-Implementação e validação local concluídas. O gate completo npm run build passou em uma cópia isolada do checkout, com os transforms reais, regressões, testes PostgreSQL, preflight e paridade de rotas. A migração foi aplicada no Supabase exclusivo e conferida. A implantação da aplicação em produção é acompanhada em seguida.
+Implementação, validação e publicação concluídas. O gate completo npm run build passou em uma cópia isolada do checkout e no Railway, com os transforms reais, regressões, testes PostgreSQL, preflight e paridade de rotas. A migração foi aplicada no Supabase exclusivo e conferida. Healthcheck da versão funcional aprovado. Pausar agora para a conferência do usuário antes do bloco 3.
 
 ### Decisões de implementação
 
@@ -60,6 +60,12 @@ SHA256 final da migração: d70799930cd42b47ec1d58841d21b8b605ab2d958d8b9a8366dc
 Às 22:05 UTC foram conferidas as sete funções/helper, assinaturas, search_path vazio, wrappers públicos invoker e execuções autorizadas. Anon e service_role não receberam acesso às RPCs; authenticated só tem execução das funções autorizadas, sem leitura ou escrita direta do recibo privado. A tabela tem RLS e a coluna event_kind tem default moved e não aceita NULL. Antes e depois da instalação havia 25 leads, zero eventos e zero jobs; depois, zero recibos. O hash dos IDs, funis, etapas, updated_at e remetente dos leads permaneceu idêntico, 136dbe59ed2ac557a769359e11614d7b.
 
 O advisor não acrescentou WARN/ERROR. O aviso de funções públicas definer caiu de cinco para quatro; o aviso anterior de proteção de senha permanece. Há um INFO esperado para o recibo privado com RLS sem policy, que aplica negação por padrão além da revogação dos grants diretos; o acesso ocorre pela implementação autorizada. Referências: https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy e https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable. Nenhuma configuração Auth foi alterada neste bloco.
+
+### Publicação e conferência de produção
+
+Código validado no commit ecd3e45563bcf6f2f3a2767fb225dbbf8d74b21b. A branch de produção avançou sem force para d50e7ab419b100c0ed4a47498ab87d2d3b0bae77, incluindo o registro da instalação do banco. O Railway 780a4d55-557f-41d2-8d4b-345b9861971b terminou SUCCESS; o healthcheck 1/1 passou às 22:11:04 UTC de 17/10.
+
+Às 22:12 UTC, web, Evolution, Redis e PostgreSQL estavam online, uma réplica de cada, nenhuma travada e nenhuma operação pendente. O Supabase respondeu com 25 leads, zero eventos, zero jobs e zero recibos; o hash dos campos de estado dos leads permaneceu igual ao anterior à instalação. A configuração created-or-moved do SalesBot Emprestimos ativa IA continuava habilitada com o mesmo botId. Nenhum contato de teste, movimento, bot ou WhatsApp foi executado em produção pela equipe.
 
 ### Conferência do usuário e rollback
 
