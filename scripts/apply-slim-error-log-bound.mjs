@@ -12,7 +12,7 @@ function patch(file,fn){
   const n=text.split(from).length-1;if(n!==expected)throw new Error('[Slim error bound] '+file+' count '+n+' expected '+expected);
   text=text.split(from).join(to);
  };
- fn({once,all,prepend:s=>{text=s+'\n'+text;}});
+ fn({once,all,prepend:added=>{if(text.startsWith('// SLIM_')){const pos=text.indexOf('\n')+1;text=text.slice(0,pos)+added+'\n'+text.slice(pos);}else{text=added+'\n'+text;}}});
  const ast=ts.createSourceFile(file,text,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
  if(ast.parseDiagnostics.length)throw new Error('[Slim error bound] syntax '+file);
  plans.push([path,text+'\n'+mark+'\n']);
