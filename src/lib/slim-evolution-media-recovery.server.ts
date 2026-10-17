@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { decodeSlimMedia, SLIM_MEDIA_BYTES } from './slim-media-transport.server';
+import { decodeSlimMedia, SLIM_MEDIA_BYTES } from './slim-media-transport.server.ts';
 
 export const SLIM_EVOLUTION_READ_DEADLINE_MS = 30_000;
 export const SLIM_EVOLUTION_RESPONSE_MAX_BYTES = 4 * Math.ceil(SLIM_MEDIA_BYTES / 3) + 128 * 1024;
