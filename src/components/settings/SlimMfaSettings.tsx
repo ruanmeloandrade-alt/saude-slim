@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import { createClientOnlyFn } from '@tanstack/react-start';
 import { createBrowserSlimMfaController } from '@/lib/slim-mfa.client';
 import type { SlimMfaController, SlimMfaState } from '@/lib/slim-mfa.core';
 
+const makeBrowserController = createClientOnlyFn(() => createBrowserSlimMfaController());
 const initial: SlimMfaState = { actorId: null, phase: 'loading', snapshot: null, enrollment: null, pending: null, message: '' };
 const button = 'rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed';
 const primary = button + ' bg-primary text-primary-foreground hover:bg-primary/90';
 
-export function SlimMfaSettings({ makeController = createBrowserSlimMfaController }: { makeController?: () => SlimMfaController }) {
+export function SlimMfaSettings({ makeController = makeBrowserController }: { makeController?: () => SlimMfaController }) {
   const controller = useRef<SlimMfaController | null>(null);
   const [state, setState] = useState<SlimMfaState>(initial);
   const [addReview, setAddReview] = useState(false);

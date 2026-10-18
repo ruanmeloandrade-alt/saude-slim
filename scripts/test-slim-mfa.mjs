@@ -7,6 +7,7 @@ import ts from 'typescript';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 import {createClient} from '@supabase/supabase-js';
+import {createClientOnlyFn} from '@tanstack/start-fn-stubs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)),require=createRequire(import.meta.url);
 const bundled=buildSync({stdin:{contents:'export * from "./src/lib/slim-mfa.core.ts"; export * from "./src/lib/slim-mfa-transport.core.ts";',resolveDir:root,loader:'ts'},bundle:true,platform:'node',format:'cjs',write:false,logLevel:'silent'}).outputFiles[0].text;
@@ -85,7 +86,7 @@ function harness(f){
  const hooks={...React,useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return[slots[i],v=>{const next=typeof v==='function'?v(slots[i]):v;if(!Object.is(next,slots[i]))changed=true;slots[i]=next}]},useRef(value){const i=cursor++;if(!(i in slots))slots[i]={current:value};return slots[i]},useEffect(fn,deps){const i=cursor++;if(!(i in slots)||!equal(slots[i].deps,deps)){const old=slots[i];slots[i]={deps,cleanup:old?.cleanup};effects.push(()=>{old?.cleanup?.();slots[i].cleanup=fn()})}}};
  const src=fs.readFileSync(root+'src/components/settings/SlimMfaSettings.tsx','utf8');
  const compiled=ts.transpileModule(src,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
- const mod={exports:{}};Function('require','module','exports',compiled)(name=>name==='react'?hooks:name==='@/lib/slim-mfa.client'?{createBrowserSlimMfaController:()=>f.controller}:require(name),mod,mod.exports);
+ const mod={exports:{}};Function('require','module','exports',compiled)(name=>name==='react'?hooks:name==='@tanstack/react-start'?{createClientOnlyFn}:name==='@/lib/slim-mfa.client'?{createBrowserSlimMfaController:()=>f.controller}:require(name),mod,mod.exports);
  const component=mod.exports.SlimMfaSettings;const props={makeController:()=>f.controller};
  const render=()=>{cursor=0;changed=false;tree=component(props);while(effects.length)effects.shift()()};
  const all=(node,out=[])=>{if(Array.isArray(node))node.forEach(n=>all(n,out));else if(React.isValidElement(node)){out.push(node);all(node.props.children,out)}return out};

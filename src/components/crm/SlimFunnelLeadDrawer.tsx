@@ -179,7 +179,12 @@ export const SlimFunnelLeadDrawer = forwardRef<SlimFunnelLeadDrawerHandle, { onE
   }
   const failed = isGroup || !!contactQ.error || !!detailQ.error || (!!contactQ.data && !contextKey);
   return <Sheet open={!!selected} onOpenChange={open => { if (!open) close(); }}>
-    <SheetContent className="slim-funnel-drawer" aria-describedby="slim-funnel-drawer-description" onCloseAutoFocus={event => {
+    <SheetContent className="slim-funnel-drawer" aria-describedby="slim-funnel-drawer-description" onEscapeKeyDown={event => {
+      // Radix handles Escape in native capture, before the selector's React key handler.
+      const dismiss = (event.target as Element | null)?.closest?.('.slim-funnel-drawer')
+        ?.querySelector<HTMLButtonElement>('[data-inbox-lead-actions="inline"] [role="dialog"] button[aria-label="Fechar"]');
+      if (dismiss) { event.preventDefault(); dismiss.click(); }
+    }} onCloseAutoFocus={event => {
       event.preventDefault();
       if (opener.current?.isConnected) opener.current.focus();
     }}>
