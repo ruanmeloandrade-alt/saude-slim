@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 7 de edição e exclusão revisadas de pedidos
 
-## Estado: 🟢 implementação, 110 testes novos e compilação aprovados; 🟡 instalação e publicação
+## Estado: 🟢 implementação, 110 testes novos, compilação e banco aprovados; 🟡 implantação Railway
 
 Base 5abfbda7022842061481686ab0d431b3c6f9d1a4. Branch fix/slim-order-changes-block7-20261017. Produção restauracao/sistema-completo-20261014, repositório ruanmeloandrade-alt/saude-slim. Supabase vyzvfcgpjjzvcjegzzza, empresa c49945db-1960-461a-9339-a43b8403bdd9. Somente Saúde Slim.
 
@@ -77,3 +77,9 @@ Naquele checkpoint, os testes de interface, a compilação completa, a instalaç
 Interface concluída: scripts/test-slim-order-changes-ui.mjs passou 25/25, com componentes reais e dependências sintéticas, além de 11/11 da regressão de entrega. Total de 110 verificações novas (48 SQL, 37 runtime, 25 UI), sem somar repetições nem regressões anteriores. Checkout é reutilizado em revisão; motivo e cliente cadastrado são obrigatórios. Modalidade antiga ausente exige escolha. Botões do histórico estão conectados, a aba Alterações preserva origens/PDFs e o cancelamento existente permanece. Nenhuma alteração na sessão comum do checkout ou no transporte de documentos. O gate antigo de histórico foi ajustado somente para reconhecer o filtro adicional de visão. Todos os arquivos de runtime foram congelados para uma compilação completa final em cópia isolada.
 
 A compilação completa final terminou com exit 0 em /tmp/slim-order-changes-build-oy50byo8, incluindo os gates anteriores, bundle cliente/servidor e saída Nitro. Log local /tmp/slim-order-changes-build-final.log. Houve duas interrupções anteriores de integração nos testes: o loader de UI precisava simular explicitamente os transportes de recuperação/envio documental acrescentados pelos transforms; depois, uma âncora textual do teste antigo de preparação precisava reconhecer o transporte opcional da revisão. Corrigidos somente os testes correspondentes, com 25/25 da UI transformada e 53/53 da preparação aprovados. Os arquivos de runtime permaneceram congelados durante esses ajustes. A compilação não foi descrita como aprovação na primeira tentativa. Instalação, conferência de metadados/estado comercial e publicação ainda pendem neste checkpoint.
+
+## Instalação e publicação em execução
+
+Implementação versionada em 42b11fc16158b7b40f45c56b85cebc12fa3acaaa antes da instalação. A chamada normal de apply_migration aprovou slim_order_changes_delivery_reviewed, versão aplicada 20261018021019. Nenhuma recusa de revisão ocorreu. Conferência posterior: ledger vazio, RLS ativa e somente SELECT autorizado por empresa, DML direto negado a authenticated e leitura negada a anon; três RPCs públicas INVOKER, autenticadas; os três hashes das funções anteriores permaneceram idênticos. Triggers novos e guards documentais existentes ativos. Advisors com os mesmos três registros INFO de tabelas privadas sem política, quatro avisos antigos de funções públicas SECURITY DEFINER e aviso antigo de proteção contra senha vazada; sem apontamento novo desta migration.
+
+Agregados e hashes completos antes/depois da instalação permaneceram iguais: 2 pedidos, 1 produto, 4 movimentos de estoque, 0 documentos e 0 entregas documentais. Nenhuma operação comercial de QA foi executada. A produção foi avançada por compare-and-swap de 5abfbda para 42b11fc; Railway iniciou b6567ceb-a933-4c0f-8848-087f0445765e às 02:11:39 UTC de 18/10. SUCCESS e healthcheck ainda aguardados neste checkpoint.
