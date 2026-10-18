@@ -1,5 +1,8 @@
 # Saúde Slim | Bloco 13: sincronização da Central de Grupos e aceite final
 
+## Estado atual: 🟢 publicado, sincronizado e conferido em produção
+Versão final 5e24b2da48a21a1011c6a3894c1454c5ffa0a141; Railway 85d5c964-6b15-408b-831d-0302bfb03b7b SUCCESS, healthcheck 1/1 e quatro serviços online. A sessão autenticada sincronizou 40 grupos reais e confirmou catálogo, regras, contexto de SalesBots e seletor da conta conectada. Funcionário na empresa operacional correta; checkout e comprovante aceitos. O encerramento ao final deste arquivo prevalece sobre os checkpoints históricos abaixo.
+
 ## Status inicial: 🟡 em execução, antes da implementação
 Registro de 18/10/2026. Fonte de verdade exclusiva: GitHub ruanmeloandrade-alt/saude-slim, produção restauracao/sistema-completo-20261014, Supabase vyzvfcgpjjzvcjegzzza, empresa c49945db-1960-461a-9339-a43b8403bdd9. Base funcional eb9ca08e8edc7e16158fbc8c51a34d3d48100d94; documentação consolidada em 396af5b514504dbd5e74e4335c6ab2ab7e489c60. Railway 2c72ee70-bd81-486f-94f9-74d0389f7a95 continua SUCCESS na consulta inicial.
 
@@ -73,3 +76,40 @@ A sessão autenticada do dono foi acessada pelo Browser conectado somente em lei
 A conferência autenticada durante a primeira implantação mostrou os quatro grupos após a recuperação, mas a consulta legada de canais retornou lista de sessões vazia. A inspeção do handler encontrou projeção de push_name em whatsapp_web_sessions, coluna ausente no schema versionado, e descarte de wa.error. A Central nova já mantém uma opção recuperada dos session_id do histórico, permitindo continuidade, mas o seletor deve também carregar normalmente a conta WhatsApp conectada.
 
 Dentro do mesmo bloco, corrigir somente a projeção/mapeamento WhatsApp de src/lib/channels.functions.ts para colunas reais e expor falha de consulta em vez de sucesso vazio. Preservar middleware, workspace ativo, RLS, filtragem/deduplicação, Meta e a ausência de envios. Validar o handler real com transporte sintético e a compilação integrada em cópia isolada. Não criar colunas artificiais nem alterar dados ou credenciais da sessão. Confirmar a sessão conectada e sincronização real de metadados pelo navegador após publicar a correção.
+
+## 🟢 Encerramento do bloco 13 e evidência de produção
+
+### Publicação e causa corrigida
+Código principal dca4c0eddbaa6fa02c07d441c5d80584f87eb057, tree 7ab88381391839e112abc035a196c9b34d5908cc, publicado no deployment fe102bac-8a7d-4c13-ae94-e696472f1173, SUCCESS em 18/10 às 19:30:05 UTC. A Central passou a recuperar identidades persistidas do histórico e ofereceu a sessão derivada dos grupos para continuar a operação.
+
+A conferência autenticada encontrou o defeito adicional do seletor: channels.functions.ts selecionava push_name, coluna ausente, e ignorava wa.error. Adendo registrado antes da correção em bca522cb590bbc673f4a216f75a0e0b7c0b8ad83. A projeção passou a usar somente id, phone_number, status, updated_at e metadata, com rótulo pelo telefone disponível e erro explícito sanitizado. Leitura real de information_schema e privilégios confirmou as cinco colunas disponíveis para authenticated e ausência de push_name. Middleware, empresa ativa, RLS, filtragem, deduplicação e comportamento Meta foram preservados.
+
+Versão final 5e24b2da48a21a1011c6a3894c1454c5ffa0a141, tree 200291a992a28c22367a8271cbbe7254b20f708a. Deployment 85d5c964-6b15-408b-831d-0302bfb03b7b SUCCESS às 19:43:20.917 UTC e healthcheck 1/1 às 19:43:17.328 UTC. Conferência final: quatro serviços online, uma réplica por serviço, nenhuma falha, nenhuma operação pendente. Às 19:45:37 UTC, https://slimesaude.com retornou HTTP 200, quatro CSS byte a byte iguais aos validados e GETs anônimos de /api/partners/payment-profile e /api/partners/admin/payment-profiles retornaram 401 com JSON.
+
+### Migração, recuperação e segurança
+A RPC invoker foi instalada como migration 20261018191837, nome slim_group_catalog_recovery; fonte versionada supabase/migrations/20261018185403_slim_group_catalog_recovery.sql. Prosrc hash 4d558a350af1388cdbe58b748bc2dac7; SECURITY INVOKER, search_path vazio e lock_timeout 5s confirmados. EXECUTE permitido somente a authenticated entre os papéis públicos conferidos, recusado a anon e service_role.
+
+Executadas as duas operações parametrizadas previamente versionadas: quatro INSERTs de metadados derivados do histórico e um UPDATE de profiles.current_workspace_id para o funcionário identificado. A conferência às 19:23:32 UTC encontrou quatro grupos na Slim e zero na empresa inicial do funcionário; conta e sessão Auth mantiveram os registros, vínculo member/funcionario e validade. Nenhuma empresa, membership, permissão, senha, fator ou sessão foi alterada.
+
+As 192 políticas conservaram o hash 3c1767d874321020684cfbafc8ec5460, e o corpo do guard slim_assert_session_security permaneceu cea919fe8a00fd3be21482665196f997. Advisor sem novos avisos: os quatro INFO de ledgers privados fechados, quatro WARN de RPCs DEFINER existentes e o WARN de proteção contra senha vazada do bloco 12 continuam os mesmos, com seus limites já documentados. Referências: https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy ; https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable ; https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection .
+
+### Conferência autenticada de grupos
+Pelo navegador conectado, em uma aba de QA separada da aba do usuário, foi selecionada a sessão original dos grupos e acionado Sincronizar uma vez. A Evolution respondeu e a UI confirmou 40 grupos atualizados, zero recuperados nessa chamada e 40 disponíveis. last_synced_at 2026-10-18T19:32:27.313Z. A atualização trouxe nomes e quantidades de participantes; não criou grupos no WhatsApp nem enviou mensagens.
+
+A consulta das 19:39:18 UTC confirmou 40 pares sessão/JID únicos, todos sincronizados, e os quatro IDs originais preservados. As 95 mensagens, dez delas enviadas, conservaram o hash projetado 108fd3b0f4d299ef9eec89470ad8b198. O catálogo da empresa inicial do funcionário continuou vazio, e o perfil do funcionário apontava para a Slim operacional.
+
+Na interface, Configurar regras no grupo do teste abriu o editor; o mesmo grupo permaneceu selecionado na aba SalesBots. Foram observados os controles de moderação e gatilhos e os 40 grupos disponíveis no seletor. A aba informou corretamente que não existe SalesBot de grupo cadastrado; os três bots existentes são individuais. Após a versão final, o seletor passou a mostrar a conta conectada normalmente, sem depender da opção do histórico. Seleção habilitou Sincronizar e a busca local encontrou um grupo entre os 40, com atualização do WhatsApp identificada. Captura visual final conferida internamente; não incluída no repositório por conter identificadores de contato.
+
+Nenhuma regra, moderação, agendamento, bot ou mensagem foi criado, salvo ou executado para QA em produção. O teste de salvamento e seus recibos foi isolado. Não foram simulados cenários de entrega/leitura de mensagem, envio real de mídia, aceite de convite por link, ações administrativas no WhatsApp ou execução de bot de grupo.
+
+### Validação técnica final
+78 testes novos portáteis: catálogo SQL 12, catálogo/provedor 23, UI 8, agendamento 16, empresa inicial 12 e seletor de canais 7. Além deles, oito casos interativos Chromium dos componentes reais com dados sintéticos passaram novamente com o CSS final, sem erros JavaScript ou transbordamento em computador e celular. A recaptura não foi contada como novos testes.
+
+O build completo inicial passou em /tmp/slim-block13-build-io0qgev9, com todos os gates anteriores. Para o ajuste focal, foi criada /tmp/slim-block13-channels-build-b35jp8yo a partir da árvore já transformada e aprovada. Comparação confirmou uma única diferença de runtime, channels.functions.ts, além do novo teste e da integração do gate. O handler real passou 7/7; ./node_modules/.bin/vite build gerou cliente, SSR e Nitro com exit 0. As 1.591 entradas permaneceram intactas durante a compilação, e as fontes ainda coincidiam com o checkout. Nenhum transform/build foi executado no repositório compartilhado. O Railway executou novamente a bateria completa e publicou somente após aprovação.
+
+Hash SHA-256 de channels.functions.ts: 25087be24bd378687086a7240ac9040ce95c7d36308a6b349cabcccf5910a720. CSS final styles-NNUnQaCy.css: 097adcf892fed44acf55c7e03d67810de776d4a9df8e24e1df3d49f4fb6164a7, acompanhado dos mesmos três CSS auxiliares aprovados. Evidência temporária em /tmp/slim-block13-channels-build-meta.json e /tmp/slim-block13-live-smoke.json; resultados essenciais registrados neste arquivo para continuidade.
+
+### Aceite e limites da entrega
+🟢 Grupos sincronizados, regras e seleção de gatilhos disponíveis, teste anterior de texto localizado, funcionário com login confirmado e empresa inicial corrigida. 🟢 Checkout e comprovante comercial aceitos pelo usuário. 🟢 Segurança do bloco 12 preservada. ⚪ IA autônoma de grupos e NF-e real continuam fora do escopo.
+
+Não há bloqueio técnico identificado nas correções deste pedido. O sistema está publicado e liberado para conferência final. O login do funcionário foi feito pelo usuário e confirmado pelos registros; não foi realizado novo login de QA em seu nome. O checkpoint de encerramento é somente documental na branch de trabalho, sem gerar outra implantação.
