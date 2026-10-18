@@ -2,8 +2,11 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
-import { resolvePublicAppUrl } from "@/integrations/supabase/saude-slim-env";
 import { requireActiveWorkspace } from "@/lib/workspace-resolver.server";
+import { SLIM_INVITATION_WORKSPACE_ID } from "@/lib/slim-invitations.core";
+import { readSlimInvitations, withSlimInvitationRequest } from "@/lib/slim-invitations.server";
+import { changeSlimInvitation, previewSlimInvitation, acceptSlimInvitation } from "@/lib/slim-invitations.functions";
+// SLIM_INVITATIONS_EXPLICIT_ACCESS_V1: legacy names share the reviewed server contract.
 
 type AnySb = { from: (t: string) => any; rpc: (fn: string, args?: any) => any };
 
@@ -57,18 +60,6 @@ async function requireMember(sb: AnySb, wsId: string, userId: string) {
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Usuário não pertence ao workspace ativo.");
   return data as { user_id: string; role?: string | null; role_type?: string | null };
-}
-
-async function requireInvitation(sb: AnySb, wsId: string, invitationId: string) {
-  const { data, error } = await sb
-    .from("workspace_invitations")
-    .select("id, token")
-    .eq("workspace_id", wsId)
-    .eq("id", invitationId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Convite não pertence ao workspace ativo.");
-  return data as { id: string; token?: string | null };
 }
 
 async function requireSector(sb: AnySb, wsId: string, sectorId: string) {
@@ -130,22 +121,24 @@ export const getSettingsBundle = createServerFn({ method: "GET" })
       memberProfiles = (profs ?? []) as any[];
     }
 
-    const { data: invitations } = await sb
-      .from("workspace_invitations")
-      .select("id, email, role_type, is_partner, access_days, status, token, expires_at, created_at")
-      .eq("workspace_id", wsId)
-      .order("created_at", { ascending: false });
+    const canManageInvitations = wsId === SLIM_INVITATION_WORKSPACE_ID && (ws as any)?.owner_id === userId;
+    const invitations = canManageInvitations
+      ? await withSlimInvitationRequest(signal => readSlimInvitations(sb, wsId, signal))
+      : [];
 
     return {
+      actorId: userId,
+      workspaceId: wsId,
       profile,
       workspace: wsWithLogo,
       isOwner: ownerFlag,
       canManageRegionalSettings: regionalSettingsFlag,
+      canManageInvitations,
       members: ((members ?? []) as any[]).map((m) => ({
         ...m,
         profile: memberProfiles.find((p) => p.id === m.user_id) || null,
       })),
-      invitations: invitations ?? [],
+      invitations,
     };
   });
 
@@ -306,49 +299,7 @@ export const updateBusinessHours = createServerFn({ method: "POST" })
 
 /* ---------- Equipe / Convites ---------- */
 
-const InviteSchema = z.object({
-  email: z.string().email().max(200),
-  role_type: z.enum(["admin", "gestor", "funcionario", "vendedor", "visualizador", "parceiro"]),
-  is_partner: z.boolean().default(false),
-  modules: z.array(z.string()).default([]),
-  access_days: z.number().int().min(1).max(3650).nullable().optional(),
-});
-
-export const inviteMember = createServerFn({ method: "POST" })
-  .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .inputValidator((d: unknown) => InviteSchema.parse(d))
-  .handler(async ({ data, context }) => {
-    const sb = context.supabase as unknown as AnySb;
-    const wsId = await activeWorkspace(sb, context.userId);
-    if (!(await isOwner(sb, context.userId, wsId))) throw new Error("Apenas o dono pode convidar.");
-
-    // upsert manual: revoga convite pendente anterior para o mesmo email
-    await sb
-      .from("workspace_invitations")
-      .update({ status: "revoked" })
-      .eq("workspace_id", wsId)
-      .eq("status", "pending")
-      .ilike("email", data.email);
-
-    const { data: created, error } = await sb
-      .from("workspace_invitations")
-      .insert({
-        workspace_id: wsId,
-        email: data.email.toLowerCase(),
-        role_type: data.is_partner ? "parceiro" : data.role_type,
-        is_partner: data.is_partner,
-        modules: data.modules,
-        access_days: data.is_partner ? (data.access_days ?? null) : null,
-        invited_by: context.userId,
-      })
-      .select("id, token")
-      .single();
-    if (error) throw new Error(error.message);
-
-    const base = resolvePublicAppUrl();
-    const inviteUrl = `${base}/convite/${(created as any).token}`;
-    return { ok: true, invitationId: (created as any).id, inviteUrl };
-  });
+export const inviteMember = changeSlimInvitation;
 
 /* ---------- Criar funcionário direto (sem confirmação por e-mail) ---------- */
 
@@ -485,42 +436,9 @@ export const createEmployee = createServerFn({ method: "POST" })
 
 const InvIdSchema = z.object({ id: z.string().uuid() });
 
-export const revokeInvitation = createServerFn({ method: "POST" })
-  .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .inputValidator((d: unknown) => InvIdSchema.parse(d))
-  .handler(async ({ data, context }) => {
-    const sb = context.supabase as unknown as AnySb;
-    const wsId = await activeWorkspace(sb, context.userId);
-    if (!(await isOwner(sb, context.userId, wsId))) throw new Error("Apenas o dono pode revogar convites.");
-    await requireInvitation(sb, wsId, data.id);
-    const { error } = await sb
-      .from("workspace_invitations")
-      .update({ status: "revoked" })
-      .eq("workspace_id", wsId)
-      .eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
+export const revokeInvitation = changeSlimInvitation;
 
-export const resendInvitation = createServerFn({ method: "POST" })
-  .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .inputValidator((d: unknown) => InvIdSchema.parse(d))
-  .handler(async ({ data, context }) => {
-    const sb = context.supabase as unknown as AnySb;
-    const wsId = await activeWorkspace(sb, context.userId);
-    if (!(await isOwner(sb, context.userId, wsId))) throw new Error("Apenas o dono pode reenviar convites.");
-    await requireInvitation(sb, wsId, data.id);
-    const { data: inv, error } = await sb
-      .from("workspace_invitations")
-      .update({ status: "pending", expires_at: new Date(Date.now() + 7 * 86400_000).toISOString() })
-      .eq("workspace_id", wsId)
-      .eq("id", data.id)
-      .select("token")
-      .single();
-    if (error) throw new Error(error.message);
-    const base = resolvePublicAppUrl();
-    return { ok: true, inviteUrl: `${base}/convite/${(inv as any).token}` };
-  });
+export const resendInvitation = changeSlimInvitation;
 
 const RemoveSchema = z.object({ userId: z.string().uuid() });
 
@@ -571,51 +489,6 @@ export const updateMemberRole = createServerFn({ method: "POST" })
 
 /* ---------- Aceitar convite ---------- */
 
-const TokenSchema = z.object({ token: z.string().uuid() });
+export const previewInvitation = previewSlimInvitation;
 
-export const previewInvitation = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => TokenSchema.parse(d))
-  .handler(async ({ data }) => {
-    // Executado apenas no servidor com credencial privilegiada: a função
-    // preview_invitation não fica mais exposta a chamadas anônimas na API.
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const sb = supabaseAdmin as unknown as AnySb;
-    const { data: result } = await sb.rpc("preview_invitation", { p_token: data.token });
-    return result ?? null;
-  });
-
-export const acceptInvitation = createServerFn({ method: "POST" })
-  .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .inputValidator((d: unknown) => TokenSchema.parse(d))
-  .handler(async ({ data, context }) => {
-    const sb = context.supabase as unknown as AnySb;
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const admin = supabaseAdmin as unknown as AnySb;
-
-    // Lê o prazo antes do RPC consumir/alterar o convite. A validação de token/e-mail
-    // continua centralizada no accept_invitation existente.
-    const { data: invitation, error: invitationError } = await admin
-      .from("workspace_invitations")
-      .select("workspace_id, is_partner, access_days")
-      .eq("token", data.token)
-      .maybeSingle();
-    if (invitationError) throw new Error(invitationError.message);
-
-    const { data: result, error } = await sb.rpc("accept_invitation", { p_token: data.token });
-    if (error) throw new Error(error.message);
-
-    if (invitation?.is_partner && invitation.workspace_id) {
-      const accessDays = Number(invitation.access_days);
-      const accessExpiresAt = Number.isFinite(accessDays) && accessDays > 0
-        ? new Date(Date.now() + accessDays * 86400_000).toISOString()
-        : null;
-      const { error: accessError } = await admin
-        .from("workspace_members")
-        .update({ access_expires_at: accessExpiresAt })
-        .eq("workspace_id", invitation.workspace_id)
-        .eq("user_id", context.userId);
-      if (accessError) throw new Error(accessError.message);
-    }
-
-    return result;
-  });
+export const acceptInvitation = acceptSlimInvitation;

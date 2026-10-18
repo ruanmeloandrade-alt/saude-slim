@@ -53,6 +53,9 @@ for (const file of ['test-slim-funnel-detail.mjs', 'test-slim-embedded-inbox.mjs
 for (const file of ['test-slim-contact-guard-runtime.mjs', 'test-slim-contact-guard-postgres.mjs']) {
   execFileSync(process.execPath, ['--experimental-strip-types', fileURLToPath(new URL('./' + file, import.meta.url))], { stdio: 'inherit' });
 }
+for (const file of ['test-slim-invitations-runtime.mjs', 'test-slim-invitations-ui.mjs', 'test-slim-invitations-postgres.mjs']) {
+  execFileSync(process.execPath, ['--experimental-strip-types', fileURLToPath(new URL('./' + file, import.meta.url))], { stdio: 'inherit' });
+}
 for (const file of ['test-slim-order-changes-runtime.mjs', 'test-slim-order-changes-ui.mjs', 'test-slim-order-changes-current-postgres.mjs']) {
  execFileSync(process.execPath, ['--experimental-strip-types', fileURLToPath(new URL('./' + file, import.meta.url))], {stdio: 'inherit'});
 }

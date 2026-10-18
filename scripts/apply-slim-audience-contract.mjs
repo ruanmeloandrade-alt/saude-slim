@@ -95,7 +95,13 @@ edit('src/lib/security-settings.functions.ts',({once})=>{
  once('    const { data: row } = await sb\n      .from("workspace_security_settings")','    const { data: row, error: saveError } = await sb\n      .from("workspace_security_settings")');
  once('    await logEvent(sb, wsId, context.userId, {\n      type: "settings",','    if(saveError||!row)throw new Error("Não foi possível salvar as configurações de segurança.");\n    await logEvent(sb, wsId, context.userId, {\n      type: "settings",');
 });
-edit('src/lib/settings.functions.ts',({once})=>{
+edit('src/lib/settings.functions.ts',({once,get})=>{
+ const code=get();
+ if(code.includes('// SLIM_INVITATIONS_EXPLICIT_ACCESS_V1:')){
+  const modernImport='import { changeSlimInvitation, previewSlimInvitation, acceptSlimInvitation } from "@/lib/slim-invitations.functions";';
+  if(!code.includes(modernImport)||!code.includes('export const previewInvitation = previewSlimInvitation;')||!code.includes('export const acceptInvitation = acceptSlimInvitation;')||/\.rpc\(["'](?:preview_invitation|accept_invitation)["']/.test(code))throw new Error('settings.functions.ts: modern invitation contract changed; review compatibility before building.');
+  return; // Error handling and strict receipts now belong to the dedicated invitation server functions.
+ }
  once('    const { data: result } = await sb.rpc("preview_invitation", { p_token: data.token });','    const { data: result, error } = await sb.rpc("preview_invitation", { p_token: data.token });\n    if(error)throw new Error("Serviço de convites indisponível. Não foi possível verificar o convite.");');
 });
 for(const [p,s] of plans)fs.writeFileSync(new URL(p,root),s);

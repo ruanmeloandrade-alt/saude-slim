@@ -27,11 +27,12 @@ import { syncWorkspaceCurrencyCache } from "@/lib/workspace-currency-cache";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getSettingsBundle, updateProfile, updateWorkspace, updateNotificationPrefs, uploadWorkspaceLogo,
-  inviteMember, revokeInvitation, resendInvitation, removeMember, updateMemberRole, createEmployee,
+  removeMember, updateMemberRole, createEmployee,
   updateBusinessHours,
 } from "@/lib/settings.functions";
 import { useIsSuperAdmin } from "@/hooks/use-roles";
 import { UserPermissionsDialog } from "@/components/settings/UserPermissionsDialog";
+import { SlimInvitationsPanel } from "@/components/settings/SlimInvitationsPanel";
 import { AccountEmailChangeControl } from "@/components/settings/AccountEmailChangeControl";
 import { listWorkSectors } from "@/lib/permissions.functions";
 import { getNotificationSettings, saveNotificationSettings } from "@/lib/notification-settings.functions";
@@ -497,35 +498,16 @@ function EmpresaTab({ workspace, isOwner, onToast }: { workspace: any; isOwner: 
 function EquipeTab({ bundle, isOwner, onToast }: { bundle: any; isOwner: boolean; onToast: (m: string, t?: "ok" | "err") => void }) {
   const qc = useQueryClient();
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [lastLink, setLastLink] = useState<string | null>(null);
-  const fnInvite = useServerFn(inviteMember);
-  const fnRevoke = useServerFn(revokeInvitation);
-  const fnResend = useServerFn(resendInvitation);
   const fnRemove = useServerFn(removeMember);
   const fnRole = useServerFn(updateMemberRole);
   const fnCreate = useServerFn(createEmployee);
 
   const reload = () => qc.invalidateQueries({ queryKey: ["settings-bundle"] });
 
-  const mInvite = useMutation({
-    mutationFn: (input: any) => fnInvite({ data: input }),
-    onSuccess: (r: any) => {
-      onToast("Convite criado. Compartilhe o link abaixo.");
-      setLastLink(r.inviteUrl);
-      setInviteOpen(false);
-      reload();
-    },
-    onError: (e: any) => onToast(e.message ?? "Falha ao convidar", "err"),
-  });
   const mCreate = useMutation({
     mutationFn: (input: any) => fnCreate({ data: input }),
     onSuccess: (r: any) => { onToast(r?.reusedExistingUser ? "Usuário existente vinculado a esta conta. Ele verá os dois workspaces no mesmo login." : "Usuário criado. Ele já pode fazer login."); setInviteOpen(false); reload(); },
     onError: (e: any) => onToast(e.message ?? "Falha ao criar usuário", "err"),
-  });
-  const mRevoke = useMutation({ mutationFn: (id: string) => fnRevoke({ data: { id } }), onSuccess: () => { onToast("Convite revogado."); reload(); } });
-  const mResend = useMutation({
-    mutationFn: (id: string) => fnResend({ data: { id } }),
-    onSuccess: (r: any) => { onToast("Link renovado por 7 dias."); setLastLink(r.inviteUrl); reload(); },
   });
   const mRemove = useMutation({ mutationFn: (userId: string) => fnRemove({ data: { userId } }), onSuccess: () => { onToast("Membro removido."); reload(); }, onError: (e: any) => onToast(e.message, "err") });
   const mRole = useMutation({ mutationFn: (v: { userId: string; role_type: any }) => fnRole({ data: v }), onSuccess: () => { onToast("Papel atualizado."); reload(); } });
@@ -543,7 +525,7 @@ function EquipeTab({ bundle, isOwner, onToast }: { bundle: any; isOwner: boolean
 
   const membrosFiltrados = members.filter((m: any) => {
     if (filtro === "parceiros" && !m.is_partner) return false;
-    if (filtro === "admins" && !["owner", "admin"].includes(m.role_type)) return false;
+    if (filtro === "admins" && !["owner", "admin"].includes(m.role) && !["owner", "admin"].includes(m.role_type)) return false;
     const alvo = `${nomeDe(m)} ${m.profile?.email ?? ""}`.toLowerCase();
     return alvo.includes(busca.trim().toLowerCase());
   });
@@ -572,17 +554,6 @@ function EquipeTab({ bundle, isOwner, onToast }: { bundle: any; isOwner: boolean
         ))}
       </div>
 
-      {lastLink && (
-        <div className="rounded-xl border border-primary/40 bg-primary/5 px-4 py-3 flex items-center gap-3 mb-5">
-          <Sparkles className="w-4 h-4 text-primary shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-semibold text-primary">Link do convite gerado</div>
-            <div className="text-[11px] font-mono truncate text-muted-foreground">{lastLink}</div>
-          </div>
-          <GhostBtn onClick={() => { navigator.clipboard.writeText(lastLink); onToast("Link copiado."); }}><Copy className="w-3.5 h-3.5" />Copiar</GhostBtn>
-        </div>
-      )}
-
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 mb-4 sm:flex sm:flex-wrap sm:justify-between">
         <div className="flex min-w-0 items-center gap-2 flex-1">
           <div className="relative flex-1 min-w-0 max-w-sm">
@@ -603,7 +574,7 @@ function EquipeTab({ bundle, isOwner, onToast }: { bundle: any; isOwner: boolean
             ))}
           </div>
         </div>
-        <Btn onClick={() => setInviteOpen(true)} disabled={!isOwner}><UserPlus className="w-3.5 h-3.5" />Adicionar pessoa</Btn>
+        <Btn onClick={() => setInviteOpen(true)} disabled={!isOwner}><UserPlus className="w-3.5 h-3.5" />Adicionar usuário</Btn>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 mb-8">
@@ -626,7 +597,7 @@ function EquipeTab({ bundle, isOwner, onToast }: { bundle: any; isOwner: boolean
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full border ${m.is_partner ? "border-amber-500/30 bg-amber-500/10 text-amber-600" : "border-border bg-muted/50 text-muted-foreground"}`}>
-                      {m.is_partner ? `Parceiro técnico · ${m.access_expires_at ? `até ${new Date(m.access_expires_at).toLocaleDateString("pt-BR")}` : "tempo indeterminado"}` : PAPEIS.find((p) => p.id === m.role_type)?.label ?? "Membro"}
+                      {m.is_partner ? `Parceiro técnico${m.role === "admin" ? " · Administrador" : ""} · ${m.access_expires_at ? `até ${new Date(m.access_expires_at).toLocaleDateString("pt-BR")}` : "sem prazo"}` : PAPEIS.find((p) => p.id === m.role_type)?.label ?? "Membro"}
                     </span>
                     <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
                       <Clock className="w-3 h-3" />desde {new Date(m.created_at).toLocaleDateString("pt-BR")}
@@ -671,51 +642,19 @@ function EquipeTab({ bundle, isOwner, onToast }: { bundle: any; isOwner: boolean
         )}
       </div>
 
-      <div className="flex items-center gap-2 mb-3">
-        <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Convites pendentes</div>
-        {invitations.length > 0 && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{invitations.length}</span>
-        )}
-      </div>
-      {invitations.length === 0 ? (
-        <div className="text-sm text-muted-foreground py-8 text-center border border-dashed border-border rounded-xl">
-          Nenhum convite pendente. Use “Adicionar pessoa” para convidar alguém.
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-          {invitations.map((i: any) => (
-            <div key={i.id} className="rounded-xl border border-dashed border-border bg-muted/20 p-4">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full grid place-items-center shrink-0 bg-sky-500/10 text-sky-600">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium truncate">{i.email}</div>
-                  <div className="text-[11px] text-muted-foreground">
-                    {i.is_partner ? `Parceiro técnico · acesso ${i.access_days ? `${i.access_days} dia(s)` : "por tempo indeterminado"}` : PAPEIS.find((p) => p.id === i.role_type)?.label ?? i.role_type} · link expira em {new Date(i.expires_at).toLocaleDateString("pt-BR")}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 pt-3 border-t border-border/70 flex flex-wrap items-center gap-2">
-                <GhostBtn onClick={() => {
-                  const url = `${window.location.origin}/convite/${i.token}`;
-                  navigator.clipboard.writeText(url); onToast("Link copiado.");
-                }}><Copy className="w-3.5 h-3.5" />Copiar link</GhostBtn>
-                <GhostBtn onClick={() => mResend.mutate(i.id)}><RefreshCw className="w-3.5 h-3.5" />Renovar</GhostBtn>
-                <GhostBtn onClick={() => mRevoke.mutate(i.id)} className="ml-auto text-destructive border-destructive/40"><Trash2 className="w-3.5 h-3.5" />Revogar</GhostBtn>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <SlimInvitationsPanel
+        key={`${bundle.workspaceId ?? bundle.workspace?.id ?? ''}:${bundle.actorId ?? bundle.profile?.id ?? ''}`}
+        workspaceId={bundle.workspaceId ?? bundle.workspace?.id ?? ''}
+        actorId={bundle.actorId ?? bundle.profile?.id ?? ''}
+        isOwner={bundle.canManageInvitations === true}
+        onChanged={reload}
+      />
 
       {inviteOpen && (
         <InviteDialog
           onClose={() => setInviteOpen(false)}
-          onInvite={(payload) => mInvite.mutate(payload)}
           onCreate={(payload) => mCreate.mutate(payload)}
-          loading={mInvite.isPending || mCreate.isPending}
+          loading={mCreate.isPending}
         />
       )}
 
@@ -732,26 +671,18 @@ function EquipeTab({ bundle, isOwner, onToast }: { bundle: any; isOwner: boolean
 }
 
 function InviteDialog({
-  onClose, onInvite, onCreate, loading,
+  onClose, onCreate, loading,
 }: {
   onClose: () => void;
-  onInvite: (p: any) => void;
   onCreate: (p: any) => void;
   loading?: boolean;
 }) {
-  const [tab, setTab] = useState<"funcionario" | "parceiro">("funcionario");
-  // Funcionário: cria conta direto
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<typeof PAPEIS[number]["id"]>("funcionario");
   const [sectorId, setSectorId] = useState("");
   const [sectorName, setSectorName] = useState("");
-  // Parceiro: mantém convite por link e permite prazo de acesso.
-  const [partnerEmail, setPartnerEmail] = useState("");
-  const [partnerAccessMode, setPartnerAccessMode] = useState<"indefinido" | "dias">("indefinido");
-  const [partnerAccessDays, setPartnerAccessDays] = useState("7");
-
   const fnSectors = useServerFn(listWorkSectors);
   const sectorsQ = useQuery({ queryKey: ["work-sectors"], queryFn: () => fnSectors({ data: {} } as any) });
   const sectors: any[] = (sectorsQ.data as any)?.sectors ?? [];
@@ -762,48 +693,19 @@ function InviteDialog({
       <form onClick={(e) => e.stopPropagation()}
         onSubmit={(e) => {
           e.preventDefault();
-          if (tab === "funcionario") {
-            if (!fullName.trim() || !email.trim() || password.length < 8) return;
-            if (needsNewSector ? sectorName.trim().length < 2 : !sectorId) return;
-            onCreate({
-              email: email.trim(), password, full_name: fullName.trim(), role_type: role, modules: [],
-              sector_id: needsNewSector ? null : sectorId,
-              sector_name: needsNewSector ? sectorName.trim() : null,
-            });
-          } else {
-            if (!partnerEmail.trim()) return;
-            const accessDays = partnerAccessMode === "dias" ? Number.parseInt(partnerAccessDays, 10) : null;
-            if (partnerAccessMode === "dias" && (!Number.isFinite(accessDays) || Number(accessDays) < 1 || Number(accessDays) > 3650)) return;
-            onInvite({ email: partnerEmail.trim(), role_type: "parceiro", is_partner: true, access_days: accessDays });
-          }
+          if (!fullName.trim() || !email.trim() || password.length < 8) return;
+          if (needsNewSector ? sectorName.trim().length < 2 : !sectorId) return;
+          onCreate({
+            email: email.trim(), password, full_name: fullName.trim(), role_type: role, modules: [],
+            sector_id: needsNewSector ? null : sectorId,
+            sector_name: needsNewSector ? sectorName.trim() : null,
+          });
         }}
-
         className="w-full max-w-lg max-h-[88vh] overflow-y-auto rounded-2xl bg-card border border-border shadow-2xl p-6 space-y-5">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary grid place-items-center shrink-0">
-            <UserPlus className="w-5 h-5" />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-base font-semibold leading-tight">Adicionar pessoa</h2>
-            <p className="text-xs text-muted-foreground">Escolha o tipo de acesso e preencha os dados.</p>
-          </div>
+          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary grid place-items-center shrink-0"><UserPlus className="w-5 h-5" /></div>
+          <div className="min-w-0"><h2 className="text-base font-semibold leading-tight">Adicionar usuário</h2><p className="text-xs text-muted-foreground">Preencha os dados da conta.</p></div>
         </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          {([
-            { id: "funcionario", icon: Users, title: "Usuário", desc: "Conta criada na hora" },
-            { id: "parceiro", icon: Wrench, title: "Parceiro técnico", desc: "Acesso temporário por link" },
-          ] as const).map((o) => (
-            <button key={o.id} type="button" onClick={() => setTab(o.id)}
-              className={`text-left rounded-xl border p-3 transition-colors ${tab === o.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"}`}>
-              <o.icon className={`w-4 h-4 mb-1.5 ${tab === o.id ? "text-primary" : "text-muted-foreground"}`} />
-              <div className="text-xs font-semibold">{o.title}</div>
-              <div className="text-[10px] text-muted-foreground leading-snug">{o.desc}</div>
-            </button>
-          ))}
-        </div>
-
-        {tab === "funcionario" ? (
           <>
             <p className="text-[11px] text-muted-foreground flex items-start gap-1.5 rounded-lg bg-muted/40 p-3">
               <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
@@ -855,41 +757,9 @@ function InviteDialog({
             </div>
 
           </>
-        ) : (
-          <>
-            <p className="text-[11px] text-muted-foreground flex items-start gap-1.5 rounded-lg bg-muted/40 p-3">
-              <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
-              Parceiros técnicos são ilimitados. Você pode deixar o acesso por tempo indeterminado ou definir quantos dias ele ficará ativo nesta conta.
-            </p>
-            <Field label="E-mail do parceiro"><Inp type="email" value={partnerEmail} onChange={(e) => setPartnerEmail(e.target.value)} required placeholder="parceiro@empresa.com" /></Field>
-            <div className="space-y-2">
-              <div className="text-xs font-medium">Tempo de acesso</div>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setPartnerAccessMode("indefinido")}
-                  className={`rounded-lg border px-3 py-2 text-left text-xs transition-colors ${partnerAccessMode === "indefinido" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"}`}>
-                  <div className="font-semibold">Tempo indeterminado</div>
-                  <div className="mt-0.5 text-[10px] text-muted-foreground">Fica ativo até você remover</div>
-                </button>
-                <button type="button" onClick={() => setPartnerAccessMode("dias")}
-                  className={`rounded-lg border px-3 py-2 text-left text-xs transition-colors ${partnerAccessMode === "dias" ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"}`}>
-                  <div className="font-semibold">Definir dias</div>
-                  <div className="mt-0.5 text-[10px] text-muted-foreground">Expira automaticamente</div>
-                </button>
-              </div>
-              {partnerAccessMode === "dias" && (
-                <Field label="Quantidade de dias" hint="O prazo começa quando o parceiro aceitar o convite.">
-                  <Inp type="number" min={1} max={3650} value={partnerAccessDays} onChange={(e) => setPartnerAccessDays(e.target.value)} required />
-                </Field>
-              )}
-            </div>
-          </>
-        )}
-
         <div className="flex justify-end gap-2 pt-2">
           <GhostBtn type="button" onClick={onClose}>Cancelar</GhostBtn>
-          <Btn type="submit" loading={loading}>
-            <Send className="w-3.5 h-3.5" />{tab === "funcionario" ? "Criar conta" : "Gerar link"}
-          </Btn>
+          <Btn type="submit" loading={loading}><Send className="w-3.5 h-3.5" />Criar conta</Btn>
         </div>
       </form>
     </div>
