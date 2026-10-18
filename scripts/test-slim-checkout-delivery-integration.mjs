@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {z} from 'zod';
 import {calculateCheckout,verifyCheckoutReceipt} from '../src/lib/slim-checkout.core.ts';
 import {normalizeCheckoutDelivery} from '../src/lib/slim-checkout-delivery.core.ts';
-import {persistedOrder,quoteFromOrder,lookupErpAttempt,loadErpOrders,ORDER_COLUMNS} from '../src/lib/slim-erp-data.server.ts';
+import {persistedOrder,quoteFromOrder,lookupErpAttempt,loadErpOrders,ORDER_COLUMNS,ORDER_CHANGE_COLUMNS} from '../src/lib/slim-erp-data.server.ts';
 import {buildOrderReadModel} from '../src/lib/slim-order-read.core.ts';
 import {createCheckoutSession} from '../src/lib/slim-checkout-session.core.ts';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
@@ -16,7 +16,7 @@ const catalog=[{id:id(4),workspaceId:ws,name:'Produto teste',description:'Teste 
 const draft={customer:{kind:'existing',id:id(3)},items:[{productId:id(4),quantity:3}],discount:{kind:'percent',basisPoints:1000},payment:{method:'pix',status:'paid',installments:1},notes:'',fulfillment,shippingCents:1251};
 const quote=calculateCheckout(ws,draft,catalog);
 function row(){const snapshot={version:1,...structuredClone(quote),orderId:id(10),requestId:id(11),number:'SL-TESTE',status:'confirmed',confirmedAt:'2026-10-18T00:00:00Z',cancelledAt:null,cancellationReason:null,customer:{id:id(3),name:'Cliente teste',phone:'5511988888888',email:''},issuer:{name:'Saúde Slim',legalName:'',document:''}};return {id:snapshot.orderId,workspace_id:ws,request_id:snapshot.requestId,created_by:actor,customer_id:id(3),status:'confirmed',subtotal_cents:5997,discount_cents:600,shipping_cents:1251,total_cents:6648,snapshot,confirmed_at:snapshot.confirmedAt,cancelled_at:null,cancellation_reason:null};}
-function db(rows){const calls=[];return {calls,from(table){const filters=[];calls.push({table,filters});return {select(columns){assert.equal(columns,ORDER_COLUMNS);return this;},eq(k,v){filters.push([k,v]);return this;},order(){return this;},async maybeSingle(){return {data:rows.find(r=>filters.every(([k,v])=>r[k]===v))??null,error:null};},async range(from,to){return {data:rows.filter(r=>filters.every(([k,v])=>r[k]===v)).slice(from,to+1),error:null};}};}};}
+function db(rows){const calls=[];return {calls,from(table){const filters=[],data=table==='slim_order_changes'?[]:rows;calls.push({table,filters});return {select(columns){assert.equal(columns,table==='slim_order_changes'?ORDER_CHANGE_COLUMNS:ORDER_COLUMNS);return this;},eq(k,v){filters.push([k,v]);return this;},order(){return this;},async maybeSingle(){return {data:data.find(r=>filters.every(([k,v])=>r[k]===v))??null,error:null};},async range(from,to){if(table==='slim_order_changes'){assert(filters.some(([k,v])=>k==='workspace_id'&&v===ws));assert(filters.some(([k,v])=>k==='state'&&v==='completed'));}return {data:data.filter(r=>filters.every(([k,v])=>r[k]===v)).slice(from,to+1),error:null};}};}};}
 let n=0;async function test(name,fn){await fn();n++;console.log('PASS delivery integration: '+name);}
 await test('real strict server schema accepts delivery quote',()=>assert.equal(schema.parse(quote).totalCents,6648));
 await test('legacy quote keeps both new fields absent',()=>{const q=structuredClone(quote);delete q.fulfillment;delete q.shippingCents;q.totalCents=5397;const parsed=schema.parse(q);assert(!('fulfillment' in parsed));assert(!('shippingCents' in parsed));});

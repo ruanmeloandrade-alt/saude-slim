@@ -6,6 +6,7 @@ export type OrderItemSnapshot = {
   quantity: number; unitPriceCents: number; subtotalCents: number;
   discountCents: number; totalCents: number;
 };
+export type OrderChangeSummary = {requestId:string;operation:'edit'|'delete';reason:string;createdAt:string;replacementOrderId:string|null;actorId:string};
 export type OrderSnapshot = {
   version: 1; workspaceId: string; orderId: string; requestId: string; number: string;
   status: 'confirmed' | 'cancelled'; confirmedAt: string;
@@ -16,6 +17,7 @@ export type OrderSnapshot = {
   payment: { method: string; status: 'pending' | 'paid'; installments: number };
   notes: string;
   fulfillment?: CheckoutFulfillment; shippingCents?: number;
+  change?: OrderChangeSummary;
 };
 export type OrderReadBatch = { workspaceId: string; complete: true; orders: OrderSnapshot[] };
 const methods = new Set(['pix', 'cash', 'debit_card', 'credit_card', 'bank_transfer', 'boleto', 'other']);
@@ -106,6 +108,14 @@ export function validateOrderSnapshot(value: unknown, expectedWorkspace: string)
     cancellationReason = str(r.cancellationReason, 'Motivo de cancelamento', 2000, true);
     if (Date.parse(cancelledAt) < Date.parse(confirmedAt)) throw new Error('Cancelamento anterior ao pedido.');
   } else if (r.cancelledAt != null || r.cancellationReason != null) throw new Error('Estado de cancelamento inconsistente.');
+  let change:OrderChangeSummary|undefined;
+  if(r.change!==undefined){
+    const c=record(r.change,'Alteração');
+    if(r.status!=='cancelled'||!['edit','delete'].includes(String(c.operation)))throw new Error('Situação da alteração incompatível com o pedido.');
+    const replacementOrderId=c.operation==='edit'?orderUuid(c.replacementOrderId,'Pedido substituto'):null;
+    if((c.operation==='delete'&&c.replacementOrderId!==null)||replacementOrderId===r.orderId)throw new Error('Referência do pedido substituto inválida.');
+    change={requestId:orderUuid(c.requestId,'Tentativa de alteração'),operation:c.operation as 'edit'|'delete',reason:str(c.reason,'Motivo da alteração',500,true),createdAt:orderInstant(c.createdAt,'Data da alteração'),replacementOrderId,actorId:orderUuid(c.actorId,'Autor da alteração')};
+  }
   return {
     version: 1, workspaceId, orderId: orderUuid(r.orderId, 'Pedido'), requestId: orderUuid(r.requestId, 'Tentativa'),
     number: str(r.number, 'Número do pedido', 80, true), status: r.status as OrderSnapshot['status'], confirmedAt, cancelledAt, cancellationReason,
@@ -114,6 +124,7 @@ export function validateOrderSnapshot(value: unknown, expectedWorkspace: string)
     items, subtotalCents, discountCents, totalCents, ...delivery,
     payment: { method: payment.method as string, status: payment.status as 'pending' | 'paid', installments },
     notes: str(r.notes, 'Observações', 2000),
+    ...(change?{change}:{}),
   };
 }
 export function validateOrderBatch(value: unknown, expectedWorkspace: string): OrderReadBatch {
@@ -129,10 +140,18 @@ export function validateOrderBatch(value: unknown, expectedWorkspace: string): O
     seen.add(order.orderId); requests.add(order.requestId); numbers.add(order.number);
     return order;
   });
+  const byId=new Map(orders.map(order=>[order.orderId,order]));
+  for(const order of orders){
+    if(order.change?.operation==='edit'){
+      const replacement=byId.get(order.change.replacementOrderId!);
+      if(!replacement||replacement.requestId!==order.change.requestId)throw new Error('Histórico da substituição incompleto. Nenhum total parcial foi calculado.');
+    }
+  }
   orders.sort((a, b) => b.confirmedAt.localeCompare(a.confirmedAt) || a.orderId.localeCompare(b.orderId));
   return { workspaceId: ws, complete: true, orders };
 }
-export type OrderFilters = { status?: 'all' | 'confirmed' | 'cancelled'; query?: string; from?: string; to?: string; timeZone?: string };
+export type OrderFilters = { status?: 'all' | 'confirmed' | 'cancelled'; view?:'all'|'operational'|'changes'; query?: string; from?: string; to?: string; timeZone?: string };
+export function orderLifecycle(order:OrderSnapshot):'confirmed'|'cancelled'|'replaced'|'deleted'{return order.change?(order.change.operation==='edit'?'replaced':'deleted'):order.status;}
 function dateOnly(value: string | undefined): string | null {
   if (!value) return null;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error('Data do filtro inválida.');
@@ -146,15 +165,18 @@ function dayInZone(value: string, formatter: Intl.DateTimeFormat): string {
 export function buildOrderReadModel(value: unknown, workspaceId: string, filters: OrderFilters = {}) {
   const batch = validateOrderBatch(value, workspaceId);
   if (filters.status && !['all','confirmed','cancelled'].includes(filters.status)) throw new Error('Filtro de situação inválido.');
+  if(filters.view&&!['all','operational','changes'].includes(filters.view))throw new Error('Visão do histórico inválida.');
   const from = dateOnly(filters.from), to = dateOnly(filters.to);
   if (from && to && from > to) throw new Error('A data inicial precisa ser anterior à final.');
   const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: filters.timeZone ?? 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' });
   const needle = (filters.query ?? '').trim().toLocaleLowerCase('pt-BR');
   const rows = batch.orders.filter(order => {
+    if(filters.view==='operational'&&order.change)return false;
+    if(filters.view==='changes'&&!order.change)return false;
     if (filters.status && filters.status !== 'all' && filters.status !== order.status) return false;
     const day = dayInZone(order.confirmedAt, dateFormatter);
     if ((from && day < from) || (to && day > to)) return false;
-    const searchable = [order.number, order.customer.name, order.customer.email, order.customer.phone, ...order.items.flatMap(i => [i.name, i.sku, i.description])].join(' ').toLocaleLowerCase('pt-BR');
+    const searchable = [order.number, order.customer.name, order.customer.email, order.customer.phone, order.change?.reason??'',order.change?.replacementOrderId??'', ...order.items.flatMap(i => [i.name, i.sku, i.description])].join(' ').toLocaleLowerCase('pt-BR');
     return !needle || searchable.includes(needle);
   });
   const active = rows.filter(order => order.status === 'confirmed');
@@ -162,13 +184,14 @@ export function buildOrderReadModel(value: unknown, workspaceId: string, filters
   return {
     workspaceId: batch.workspaceId, rows, totalRecords: batch.orders.length, filteredRecords: rows.length,
     totals: {
-      confirmedCount: active.length, cancelledCount: rows.length - active.length,
+      confirmedCount: active.length, cancelledCount: rows.filter(o=>o.status==='cancelled'&&!o.change).length,
+      replacedCount:rows.filter(o=>o.change?.operation==='edit').length,deletedCount:rows.filter(o=>o.change?.operation==='delete').length,
       distinctCustomers: new Set(active.map(o => o.customer.id)).size,
       subtotalCents: sum(active, 'subtotalCents'), discountCents: sum(active, 'discountCents'), totalCents: sum(active, 'totalCents'),
       shippingCents: exact(active.reduce((n, order) => n + BigInt(order.shippingCents ?? 0), 0n)),
       receivedDeclaredCents: sum(active.filter(o => o.payment.status === 'paid'), 'totalCents'),
       pendingPaymentCents: sum(active.filter(o => o.payment.status === 'pending'), 'totalCents'),
-      cancelledTotalCents: sum(rows.filter(o => o.status === 'cancelled'), 'totalCents'),
+      cancelledTotalCents: sum(rows.filter(o => o.status === 'cancelled'&&!o.change), 'totalCents'),
       units: exact(active.reduce((n, o) => n + o.items.reduce((sum, i) => sum + BigInt(i.quantity), 0n), 0n)),
     },
   };

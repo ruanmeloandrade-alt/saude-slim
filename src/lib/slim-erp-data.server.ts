@@ -2,11 +2,14 @@ import { orderUuid, validateOrderSnapshot, validateOrderBatch, type OrderSnapsho
 import type { CheckoutQuote, ConfirmedCheckout } from './slim-checkout.core';
 export type ErpDb = { from: (table: string) => any; rpc: (name: string, args: Record<string, unknown>) => PromiseLike<any> };
 export const ORDER_COLUMNS = 'id,workspace_id,request_id,created_by,customer_id,status,subtotal_cents,discount_cents,shipping_cents,total_cents,snapshot,confirmed_at,cancelled_at,cancellation_reason';
+export const ORDER_CHANGE_COLUMNS = 'id,workspace_id,actor_id,order_id,operation,state,reason,replacement_order_id,created_at';
 export function checked<T = any>(result: {data: T; error?: unknown}, message: string): T { if (result.error) throw new Error(message); return result.data; }
-export async function erpRows(db: ErpDb, ws: string, table: string, columns: string) {
+export async function erpRows(db: ErpDb, ws: string, table: string, columns: string,filters:Record<string,string>={}) {
   orderUuid(ws, 'Empresa'); const out: any[] = [];
   for (;;) {
-    const result = await db.from(table).select(columns).eq('workspace_id', ws).order('id').range(out.length, out.length + 499);
+    let query=db.from(table).select(columns).eq('workspace_id', ws);
+    for(const [field,value] of Object.entries(filters))query=query.eq(field,value);
+    const result = await query.order('id').range(out.length, out.length + 499);
     const rows = checked(result, `Não foi possível consultar ${table}. Nenhum total parcial foi apresentado.`);
     if (!Array.isArray(rows)) throw new Error('Resposta de leitura inválida.');
     if (!rows.length) return out;
@@ -25,8 +28,23 @@ export async function loadErpOrder(db: ErpDb, ws: string, id: string) {
   return {row, order: persistedOrder(row, ws)};
 }
 export async function loadErpOrders(db: ErpDb, ws: string) {
-  const rows = await erpRows(db, ws, 'slim_orders', ORDER_COLUMNS);
-  return validateOrderBatch({workspaceId: ws, complete: true, orders: rows.map(r => persistedOrder(r, ws))}, ws);
+  const [rows,changes]=await Promise.all([
+    erpRows(db,ws,'slim_orders',ORDER_COLUMNS),
+    erpRows(db,ws,'slim_order_changes',ORDER_CHANGE_COLUMNS,{state:'completed'}),
+  ]);
+  const orders=rows.map(row=>persistedOrder(row,ws)),byId=new Map(orders.map(order=>[order.orderId,order]));
+  const rowsById=new Map(rows.map(row=>[row.id,row]));
+  for(const change of changes){
+    if(change.workspace_id!==ws||change.state!=='completed')throw new Error('Alteração de outra empresa ou sem conclusão persistida.');
+    const order=byId.get(orderUuid(change.order_id,'Pedido alterado'));
+    if(!order||order.change)throw new Error('Histórico de alterações incompleto ou duplicado. Nenhum total parcial foi apresentado.');
+    if(change.operation==='edit'){
+      const replacement=rowsById.get(change.replacement_order_id);
+      if(!replacement||replacement.request_id!==change.id||replacement.created_by!==change.actor_id)throw new Error('Referência da substituição não corresponde ao pedido gravado.');
+    }
+    order.change={requestId:change.id,operation:change.operation,reason:change.reason,createdAt:change.created_at,replacementOrderId:change.replacement_order_id,actorId:change.actor_id};
+  }
+  return validateOrderBatch({workspaceId: ws, complete: true, orders}, ws);
 }
 export function receiptFromOrder(order: OrderSnapshot): ConfirmedCheckout {
   if (order.status !== 'confirmed') throw new Error('Este pedido foi cancelado.');

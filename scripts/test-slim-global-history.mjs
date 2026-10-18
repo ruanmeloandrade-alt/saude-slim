@@ -10,7 +10,7 @@ test('invalid calendar date rejected',()=>assert.throws(()=>applyHistorySearch({
 test('valid leap day allowed',()=>assert.equal(applyHistorySearch({...emptyHistorySearch(),from:'2024-02-29'}).from,'2024-02-29'));
 test('unknown status rejected',()=>assert.throws(()=>applyHistorySearch({...emptyHistorySearch(),status:'error'})));
 const ui=read('src/components/erp/SlimOrderHistory.tsx'),layout=read('src/routes/__root.tsx'),robot=read('src/components/SupportRobot.tsx'),server=read('src/lib/support-robot.functions.ts'),erp=read('src/components/erp/SlimErpWorkspace.tsx');
-test('search and Enter share commit handler',()=>{assert(ui.includes('<form onSubmit={e=>{e.preventDefault();search();}}'));assert(ui.includes('type="submit"'));assert(ui.includes('>Pesquisar</button>'));assert(ui.includes('buildOrderReadModel(response,workspaceId,applied)'));});
+test('search and Enter share commit handler',()=>{assert(ui.includes('<form onSubmit={e=>{e.preventDefault();search();}}'));assert(ui.includes('type="submit"'));assert(ui.includes('>Pesquisar</button>'));assert(ui.includes('buildOrderReadModel(response,workspaceId,{...applied,view})'));});
 test('list is a table with per-order details and documents',()=>{assert(ui.includes('<table'));assert(ui.includes('<thead'));assert(ui.includes('key={order.orderId}'));assert(ui.includes('openDocument(order)'));assert(!ui.includes('<article'));});
 test('clearing resets page and applied filters',()=>assert(ui.includes('setApplied(applyHistorySearch(empty));setPage(1)')));
 test('read failures do not turn into empty successful history',()=>assert(ui.includes('error||result.error?<p role="alert"')));
