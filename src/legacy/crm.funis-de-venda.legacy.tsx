@@ -113,6 +113,8 @@ import { listCrmSources, listFunnels, moveLead as moveLeadServerFn, createFunnel
 import { updateLead as updateLeadFn, listWorkspaceTags, setLeadCustomFieldValue, listLeadCustomFields, getLeadDetail } from "@/lib/leads.functions";
 
 import { StageTriggerConfigPopover } from "@/components/crm/StageTriggerConfigPopover";
+import { SlimFunnelLeadDrawer, type SlimFunnelLeadDrawerHandle } from "@/components/crm/SlimFunnelLeadDrawer";
+import { slimFunnelActivationKey, slimFunnelCardAction } from "@/lib/slim-funnel-drawer.core";
 
  import { listSalesbots } from "@/lib/salesbots.functions";
  import { listProductCatalogs } from "@/lib/products.functions";
@@ -198,6 +200,7 @@ function CrmFunisPage() {
  const [sources, setSources] = useState<CrmSource[]>([]);
  const [crmSourceId, setCrmSourceId] = useState<string>("");
   const [quickEditingLead, setQuickEditingLead] = useState<CrmLead | null>(null);
+  const funnelDrawerRef = useRef<SlimFunnelLeadDrawerHandle>(null);
   const quickEditCheckpoints = useRef(new Map<string, QuickEditCheckpoint>());
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const onBatchToggleLeads = useCallback((ids: string[], forceState?: boolean) => {
@@ -1029,8 +1032,8 @@ function CrmFunisPage() {
  }
 
  function handleLeadClick(lead: CrmLead) {
-  // Vai direto para o inbox/chat (CRM → chat do lead)
- navigate({ to: "/inbox/leads/$leadId", params: { leadId: lead.id } });
+  if (selectedLeadIds.size > 0) { onToggleLeadSelection(lead.id); return; }
+  funnelDrawerRef.current?.open(lead);
  }
 
  function moveLead(leadId: string, fromStageId: string, toStageId: string) {
@@ -1631,6 +1634,7 @@ onConfigureTrigger={(stageId, actionId) => setConfiguring({ stageId, actionId })
      </div>
    </DialogContent>
  </Dialog>
+       <SlimFunnelLeadDrawer ref={funnelDrawerRef} onEdit={setQuickEditingLead} />
        <QuickEditDialog
          lead={quickEditingLead}
          open={!!quickEditingLead}
@@ -3242,8 +3246,10 @@ function LeadCard({
  const waiting = lead.lastMessageFrom === "lead";
  const SourceIcon = sourceIcon(lead.source);
  const [dragging, setDragging] = useState(false);
+ const dragSuppressedUntil = useRef(0);
 
  function handleDragStart(e: React.DragEvent) {
+  dragSuppressedUntil.current = Number.POSITIVE_INFINITY;
   e.dataTransfer.effectAllowed = "move";
   e.dataTransfer.setData(
    "application/x-saude-slim-lead",
@@ -3256,7 +3262,7 @@ function LeadCard({
    <div
     draggable
     onDragStart={handleDragStart}
-    onDragEnd={() => setDragging(false)}
+    onDragEnd={() => { dragSuppressedUntil.current = Date.now() + 400; setDragging(false); }}
     className={cn(
      "relative w-full group rounded-md border transition-all hover:shadow-sm",
      isSelected
@@ -3284,15 +3290,21 @@ function LeadCard({
     <div
      role="button"
      tabIndex={0}
+     aria-label={`Abrir ficha de ${lead.name}`}
+     onKeyDown={(event) => {
+       if (event.target !== event.currentTarget || !slimFunnelActivationKey(event.key)) return;
+       event.preventDefault();
+       const action = slimFunnelCardAction(selectedLeadIds.size, Date.now() < dragSuppressedUntil.current);
+       if (action === 'select') onToggleSelection?.();
+       if (action === 'open') onClick();
+     }}
      onClick={(e) => {
-       if (selectedLeadIds.size > 0) {
-         onToggleSelection?.();
-       } else {
-         onClick();
-       }
+       const action = slimFunnelCardAction(selectedLeadIds.size, Date.now() < dragSuppressedUntil.current);
+       if (action === 'select') onToggleSelection?.();
+       if (action === 'open') onClick();
      }}
      className={cn(
-       "w-full text-left p-2.5 cursor-grab active:cursor-grabbing",
+       "w-full text-left p-2.5 cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
        (isSelected || !waiting || selectedLeadIds.size > 0) && "pl-8"
      )}
     >
@@ -3726,9 +3738,17 @@ function ListBoard({
  return (
  <tr
  key={lead.id}
+ role="button"
+ tabIndex={0}
+ aria-label={`Abrir ficha de ${lead.name}`}
+ onKeyDown={(event) => {
+   if (event.target !== event.currentTarget || !slimFunnelActivationKey(event.key)) return;
+   event.preventDefault();
+   onLeadClick(lead);
+ }}
  onClick={() => onLeadClick(lead)}
  className={cn(
- "border-t border-border cursor-pointer transition-colors",
+ "border-t border-border cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
  waiting? "bg-success/5 hover:bg-success/10": "hover:bg-accent/40"
  )}
  >

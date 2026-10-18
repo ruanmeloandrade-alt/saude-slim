@@ -2,10 +2,11 @@ import {useEffect,useRef,useState} from 'react';
 import {Mic,FileText,Square,X,Send,Loader2} from 'lucide-react';
 import {supabase} from '@/integrations/supabase/client';
 import {assertInboxAudio,chooseRecordingMime,recordingExtension} from '@/lib/slim-inbox-ui.core';
-type Props={workspaceId:string;actorId:string;disabled?:boolean;onAudio:(file:File)=>Promise<unknown>;onText:(text:string)=>void};
-export function SlimInboxVoiceControls({workspaceId,actorId,disabled=false,onAudio,onText}:Props){
+type Props={workspaceId:string;actorId:string;disabled?:boolean;onAudio:(file:File)=>Promise<unknown>;onText:(text:string)=>void;onInteractionStateChange?:(state:{dirty:boolean;pending:boolean})=>void};
+export function SlimInboxVoiceControls({workspaceId,actorId,disabled=false,onAudio,onText,onInteractionStateChange}:Props){
  const [mode,setMode]=useState<'audio'|'text'|null>(null),[starting,setStarting]=useState(false),[seconds,setSeconds]=useState(0),[busy,setBusy]=useState(false),[error,setError]=useState(''),[preview,setPreview]=useState<File|null>(null),[previewUrl,setPreviewUrl]=useState('');
  const recorder=useRef<MediaRecorder|null>(null),alive=useRef(true),cancelled=useRef(false),startLock=useRef(false),timer=useRef<ReturnType<typeof setInterval>|null>(null),abort=useRef<AbortController|null>(null),sendLock=useRef(false);
+ useEffect(()=>{onInteractionStateChange?.({dirty:Boolean(starting||mode||preview),pending:busy});},[onInteractionStateChange,starting,mode,preview,busy]);
  function stopClock(){if(timer.current){clearInterval(timer.current);timer.current=null;}}
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;cancelled.current=true;stopClock();abort.current?.abort();const rec=recorder.current;if(rec){rec.onstop=null;if(rec.state!=='inactive')rec.stop();rec.stream.getTracks().forEach(t=>t.stop());}};},[]);
  useEffect(()=>{if(!preview){setPreviewUrl('');return;}const url=URL.createObjectURL(preview);setPreviewUrl(url);return()=>URL.revokeObjectURL(url);},[preview]);

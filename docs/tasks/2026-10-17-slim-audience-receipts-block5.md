@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 5 de Públicos e comprovantes de disparo
 
-## Estado: 🟢 implementação, testes e compilação completa; 🟡 publicação
+## Estado: 🟢 publicado e healthcheck aprovado; 🟡 teste real pelo usuário
 
 Base d2a41dc462c26a4b00da5484333e2d5665de82ec. Branch de trabalho fix/slim-audience-receipts-block5-20261017. Produção restauracao/sistema-completo-20261014, repositório ruanmeloandrade-alt/saude-slim. Supabase vyzvfcgpjjzvcjegzzza, empresa c49945db-1960-461a-9339-a43b8403bdd9. Somente Saúde Slim.
 
@@ -70,3 +70,11 @@ A rota atual e o código transformado do último build confirmado usam handleLea
 npm run build terminou com código zero na cópia isolada, preservando todos os gates anteriores. O ajuste final do orçamento de leitura passou novamente nos 41 testes focados e está presente no bundle servidor. Os seis arquivos de runtime/testes conferem byte a byte com os arquivos da cópia compilada. Nenhum transform foi executado no checkout compartilhado. Sem instalação de dependências ou GitHub Actions.
 
 Publicar este bloco em uma única atualização da branch de produção. Confirmar SUCCESS, healthcheck e os serviços antes de declarar publicação concluída. Nenhuma migration ou escrita de negócio é necessária. Resultado operacional será registrado no próximo checkpoint de trabalho e comunicado em chat, sem deploy documental separado. A implementação da ficha do Funil seguirá em escopo próprio, sem aguardar os testes do usuário.
+
+## 🟢 Publicação confirmada
+
+Commit 9cbfca6cd3671f8b32214e9b1cabff13fc38dbd5 publicado no deployment Railway 785ca72d-4080-4991-a86a-b6df2a6ca497, SUCCESS em 18/10 às 01:04:19 UTC (17/10 às 22:04 de Brasília), healthcheck 1/1 às 01:04:16 UTC. Quatro serviços online, uma réplica cada, nenhuma falha ou operação pendente.
+
+Supabase respondeu às 01:04:52 UTC, com zero campanhas e zero destinatários na fila de Públicos/Disparos. Metadados necessários existem; leitura autenticada das duas fontes de mensagens continua habilitada, sem mudança de grants. Não houve migration nem campanha/mensagem real pela equipe. A validação real do usuário permanece distinta dos testes técnicos.
+
+Continuidade já iniciada em docs/tasks/2026-10-17-slim-funnel-drawer-block6.md, conforme a ordem de não esperar os testes do usuário.

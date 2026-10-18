@@ -2205,6 +2205,9 @@ function mergeThreadCacheRows<T extends { id: string; occurredAt: string }>(
   );
 }
 
+export type SlimInboxInteractionState = { dirty: boolean; pending: boolean };
+export { ChatThread as SlimEmbeddedChatThread };
+
 function ChatThread({
   conversation,
   channel,
@@ -2214,6 +2217,8 @@ function ChatThread({
   listCollapsed,
   onToggleList,
   workspaceId,
+  embedded = false,
+  onInteractionStateChange,
 }: {
   conversation: ChatConversation;
   channel: ChatChannel;
@@ -2223,6 +2228,8 @@ function ChatThread({
   listCollapsed?: boolean;
   onToggleList?: () => void;
   workspaceId?: string | null;
+  embedded?: boolean;
+  onInteractionStateChange?: (state: SlimInboxInteractionState) => void;
 }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -3160,6 +3167,12 @@ function ChatThread({
   }
 
   const [draft, setDraft] = useState("");
+  const [voiceInteraction, setVoiceInteraction] = useState<SlimInboxInteractionState>({ dirty: false, pending: false });
+  const interactionDirty = draft.length > 0 || voiceInteraction.dirty || (sendMut.isError && Boolean(sendMut.variables)) || (mediaMut.isError && Boolean(mediaMut.variables));
+  const interactionPending = sendMut.isPending || mediaMut.isPending || reactionMut.isPending || deleteMut.isPending || transcribeMut.isPending || voiceInteraction.pending;
+  useEffect(() => {
+    onInteractionStateChange?.({ dirty: interactionDirty, pending: interactionPending });
+  }, [onInteractionStateChange, interactionDirty, interactionPending]);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [formMenuOpen, setFormMenuOpen] = useState(false);
   const [formFeedback, setFormFeedback] = useState<string | null>(null);
@@ -3316,7 +3329,7 @@ function ChatThread({
           borderBottom: "1px solid var(--chat-divider)",
         }}
       >
-        <button
+        {!embedded && <button
           type="button"
           className="md:hidden w-8 h-8 rounded-full flex items-center justify-center hover:bg-white/5"
           aria-label="Voltar"
@@ -3332,7 +3345,7 @@ function ChatThread({
           }
         >
           <ArrowLeft className="w-4 h-4" />
-        </button>
+        </button>}
         <Avatar name={leadName} isGroup={conversation.isGroup} />
         <div className="flex-1 min-w-0">
           <div className="text-sm font-semibold truncate flex items-center gap-2">
@@ -3357,7 +3370,7 @@ function ChatThread({
 
         {/* Ações */}
         <div className="flex items-center gap-1">
-          {isLead &&
+          {!embedded && isLead &&
             (whatsappUrl ? (
               <a
                 href={whatsappUrl}

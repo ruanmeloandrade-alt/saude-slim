@@ -155,6 +155,8 @@ function mediaTextLabel(mediaType: unknown, fileName?: unknown) {
 }
 
 export interface LeadDetailResponse {
+  workspaceId?: string;
+  actorId?: string;
   lead: {
     id: string;
     name: string;
@@ -181,6 +183,14 @@ export interface LeadDetailResponse {
     createdAt: string;
     updatedAt: string;
     keepFiles: boolean;
+    responsibleId?: string | null;
+    responsibleName?: string | null;
+    status?: string;
+    source?: string | null;
+    conversationStatus?: string | null;
+    lastMessageFrom?: string | null;
+    address?: string | null;
+    notes?: string | null;
   };
   activities: LeadActivityRow[];
 }
@@ -224,7 +234,7 @@ export const getLeadDetail = createServerFn({ method: "POST" })
     const { data: row, error } = await sb
       .from("leads")
       .select(
-        "id, name, email, phone, value, stage_id, pipeline_id, crm_source_id, external_id, tags, created_at, updated_at, keep_files, pipeline_stages(name), pipelines(name), crm_sources(provider, display_name)",
+        "id, name, email, phone, value, stage_id, pipeline_id, crm_source_id, external_id, tags, created_at, updated_at, keep_files, responsible_id, status, source, conversation_status, last_message_from, public_address:custom_data->endereco, public_address_fallback:custom_data->address, public_notes:custom_data->observacoes, public_notes_fallback:custom_data->notes, pipeline_stages(name), pipelines(name), crm_sources(provider, display_name)",
       )
       .eq("id", data.leadId)
       .eq("workspace_id", wsId)
@@ -245,12 +255,39 @@ export const getLeadDetail = createServerFn({ method: "POST" })
       created_at: string;
       updated_at: string;
       keep_files: boolean | null;
+      responsible_id: string | null;
+      status: string;
+      source: string | null;
+      conversation_status: string | null;
+      last_message_from: string | null;
+      public_address: unknown;
+      public_address_fallback: unknown;
+      public_notes: unknown;
+      public_notes_fallback: unknown;
       pipeline_stages: { name: string } | null;
       pipelines: { name: string } | null;
       crm_sources: { provider: string; display_name: string } | null;
     };
 
     const latestTags = Array.isArray(r.tags) ? (r.tags as string[]) : [];
+    const publicText = (value: unknown, max: number): string | null =>
+      typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null;
+    let responsibleName: string | null = null;
+    if (r.responsible_id) {
+      // Resolve only public profile labels after confirming their link to this workspace.
+      const [membership, workspace] = await Promise.all([
+        sb.from("workspace_members").select("user_id")
+          .eq("workspace_id", wsId).eq("user_id", r.responsible_id).maybeSingle(),
+        sb.from("workspaces").select("owner_id").eq("id", wsId).maybeSingle(),
+      ]);
+      if (membership.error || workspace.error) throw new Error("Não foi possível conferir o responsável do contato.");
+      if (membership.data?.user_id === r.responsible_id || workspace.data?.owner_id === r.responsible_id) {
+        const profile = await sb.from("profiles").select("display_name,full_name")
+          .eq("id", r.responsible_id).maybeSingle();
+        if (profile.error) throw new Error("Não foi possível carregar o nome do responsável.");
+        responsibleName = publicText(profile.data?.display_name, 200) ?? publicText(profile.data?.full_name, 200);
+      }
+    }
 
     const acts = data.includeActivities
       ? (
@@ -284,6 +321,8 @@ export const getLeadDetail = createServerFn({ method: "POST" })
     }
 
     const detail: LeadDetailResponse = {
+      workspaceId: wsId,
+      actorId: context.userId,
       lead: {
         id: r.id,
         name: r.name,
@@ -308,6 +347,14 @@ export const getLeadDetail = createServerFn({ method: "POST" })
         createdAt: r.created_at,
         updatedAt: r.updated_at,
         keepFiles: !!r.keep_files,
+        responsibleId: r.responsible_id ?? null,
+        responsibleName,
+        status: r.status,
+        source: r.source ?? null,
+        conversationStatus: r.conversation_status ?? null,
+        lastMessageFrom: r.last_message_from ?? null,
+        address: publicText(r.public_address, 1000) ?? publicText(r.public_address_fallback, 1000),
+        notes: publicText(r.public_notes, 4000) ?? publicText(r.public_notes_fallback, 4000),
       },
       activities: (
         (acts ?? []) as Array<{
