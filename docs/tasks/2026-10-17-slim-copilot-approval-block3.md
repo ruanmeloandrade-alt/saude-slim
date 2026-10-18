@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 3 do Copiloto com aprovação real
 
-## Estado: 🟢 publicado; 🟡 pausa para conferência do usuário
+## Estado: 🟢 publicado e aprovado no teste real do usuário
 
 Data: 17/10/2026. Repositório exclusivo ruanmeloandrade-alt/saude-slim. Branch de trabalho fix/slim-copilot-approval-block3-20261017, base 792e2a9fc0491cbd1bc4df7ec2fccb7bff174573. Produção restauracao/sistema-completo-20261014. Supabase vyzvfcgpjjzvcjegzzza, workspace c49945db-1960-461a-9339-a43b8403bdd9.
 
@@ -122,3 +122,7 @@ Leitura pós-publicação às 23:32:09 UTC: Supabase respondeu, 25 leads, um ped
 4. Fechar e reabrir o Copiloto; conferir o resultado persistido da mesma proposta. Uma resposta incerta não autoriza reenvio automático.
 
 A publicação técnica está concluída. A homologação visual autenticada e ações reais ainda não foram declaradas concluídas. Pausar aqui conforme solicitado; a próxima frente é entrega/endereço/frete, somente após a revisão do usuário. Inbox/mídias e os bloqueios anteriores continuam com seus próprios estados no semáforo. IA autônoma para grupos permanece retirada.
+
+## 🟢 Aceite posterior do usuário em 17/10/2026
+
+O usuário conferiu o agente/Copiloto e informou que passou no teste. Este relato encerra a conferência solicitada acima. O bloco fica verde; novas funcionalidades ficam para uma rodada futura. O usuário pediu execução mais rápida das pendências, mantendo um bloco por vez e semáforo com emojis. Segue o bloco 4 de entrega/endereço/frete, com pausa ao concluir. Não se atribuem ao relato cenários específicos que ele não detalhou.

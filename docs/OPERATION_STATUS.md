@@ -1,10 +1,10 @@
 # Saúde Slim | Semáforo operacional
 
-## Checkpoint de 17/10/2026: Copiloto publicado; pausa para conferência
+## Checkpoint de 17/10/2026: 🟢 Copiloto aprovado; 🟡 checkout em execução
 
 Escopo exclusivo: Saúde Slim, Supabase vyzvfcgpjjzvcjegzzza, GitHub ruanmeloandrade-alt/saude-slim, produção restauracao/sistema-completo-20261014.
 
-Orientação atual do usuário: concluir um bloco por vez, pausar para conferência e apresentar sempre semáforo com emojis. Em 17/10, o usuário confirmou “iniciou o bot! fiz o teste aqui” e autorizou seguir. A evidência no sistema confirmou a movimentação, o gatilho e a execução do SalesBot. O bloco 3 atual trata do Copiloto com aprovação real no servidor, conforme escopo previamente autorizado e registrado antes da implementação em docs/tasks/2026-10-17-slim-copilot-approval-block3.md. A continuidade não é registrada como homologação visual do Inbox. Atendimento autônomo de IA nos grupos foi retirado do escopo; permanecem SalesBots e gatilhos. O teste real de SalesBot passando para IA individual foi localizado no banco e não precisa ser repetido para provar essa passagem.
+Orientação atual do usuário: concluir um bloco por vez, pausar para conferência e apresentar sempre semáforo com emojis. Em 17/10, o usuário confirmou “iniciou o bot! fiz o teste aqui” e autorizou seguir. A evidência no sistema confirmou a movimentação, o gatilho e a execução do SalesBot. Em 17/10, o usuário confirmou que o agente/Copiloto passou no teste e pediu que fosse marcado verde. O bloco 3 está aceito; funcionalidades adicionais ficam para uma rodada futura. A execução segue para entrega/endereço/frete, em docs/tasks/2026-10-17-slim-checkout-delivery-block4.md. A continuidade não é registrada como homologação visual do Inbox. Atendimento autônomo de IA nos grupos foi retirado do escopo; permanecem SalesBots e gatilhos. O teste real de SalesBot passando para IA individual foi localizado no banco e não precisa ser repetido para provar essa passagem.
 
 | Área | Situação | Evidência e limite |
 |---|---|---|
@@ -23,7 +23,7 @@ Orientação atual do usuário: concluir um bloco por vez, pausar para conferên
 | SalesBot → IA individual | 🟢 Teste real confirmado em 16/10 | SalesBot “Emprestimos ativa IA”, execução f55e9849-f1e6-4c17-8a8e-7e0ce09177b2, terminou sem erro. Às 18:56:49 de Brasília, o log registra o agente “Consultor” assumindo a conversa. Três respostas posteriores com source=ai_agent possuem ID WhatsApp e correspondência individual em whatsapp_web_messages, status sent. O usuário confirmou funcionamento. Isso não substitui outros cenários do Funil, mídia ou falha. |
 | IA de grupos | ⚪ Retirada pelo usuário em 17/10 | Atendimento autônomo e respectivas métricas saíram da lista de trabalho. As entradas de IA da Central de Grupos foram retiradas; SalesBots, regras e gatilhos permanecem. Dados arquivados não foram excluídos. |
 | Mini-Inbox da ficha do Funil | 🔴 Bloqueio anterior | Integração recusada anteriormente, WIP não publicado e não contornado. |
-| Copiloto | 🟢 Publicado; 🟡 conferência do usuário | Commit 20930d87, Railway b3d7b984 SUCCESS, healthcheck 1/1 às 23:30:57 UTC e migração 20261017232621 instalada. 169 verificações específicas, regressões e build completo isolado aprovados. Quatro propostas com aprovação/rejeição no servidor, recibos e recuperação; 11 consultas. Interface e ações reais aguardam teste do usuário. |
+| Copiloto | 🟢 Publicado e teste real aprovado pelo usuário | Commit 20930d87, Railway b3d7b984 SUCCESS, healthcheck 1/1 às 23:30:57 UTC e migração 20261017232621 instalada. 169 verificações específicas, regressões e build completo isolado aprovados. Quatro propostas com aprovação/rejeição no servidor, recibos e recuperação; 11 consultas. O usuário confirmou em 17/10 que o Copiloto passou no teste. Aceite registrado conforme seu relato; novas funcionalidades ficam para depois. |
 | ERP/checkout/estoque | 🟡 / 🔴 | Correções anteriores preservadas; endereço/frete, E2E e Editar/Excluir pedidos pendentes, sem retentar migração bloqueada. |
 | Públicos/disparos/tracking | 🟡 | Proteções de fila publicadas; E2E de entrega pendente. |
 | Segurança/convites e unicidade global | 🔴 Bloqueios anteriores | Migrações não reaplicadas. |
@@ -36,7 +36,7 @@ Detalhes do bloco atual: docs/tasks/2026-10-17-slim-copilot-approval-block3.md. 
 
 ## Aceite do bloco 2 e próxima pausa
 
-Bloco 2 aprovado pelo usuário em 17/10, após seu teste real. A consulta somente leitura correlacionou evento 8832d2ea-0f2b-486a-8254-22de95099a63, job 77bf038c-7a37-4f19-bedb-1bc26f5135ef e execução 1df3a006-62a5-4871-bf08-c65efa83f21e; às 22:41 UTC não havia eventos/jobs pendentes. O usuário autorizou as próximas tarefas. O bloco 3 do Copiloto foi publicado e a execução está pausada para conferência antes de iniciar entrega/endereço/frete. A visualização dos grupos e a abertura de mídia do bloco 1 continuam com seus limites registrados. Mini-Inbox e demais áreas da tabela não foram incluídos nem declarados concluídos. IA autônoma em grupos não é mais uma demanda.
+Bloco 2 aprovado pelo usuário em 17/10, após seu teste real. A consulta somente leitura correlacionou evento 8832d2ea-0f2b-486a-8254-22de95099a63, job 77bf038c-7a37-4f19-bedb-1bc26f5135ef e execução 1df3a006-62a5-4871-bf08-c65efa83f21e; às 22:41 UTC não havia eventos/jobs pendentes. O usuário autorizou as próximas tarefas. O bloco 3 do Copiloto foi publicado e aprovado no teste do usuário em 17/10. A execução prossegue para entrega/endereço/frete, com pausa ao concluir esse bloco. A visualização dos grupos e a abertura de mídia do bloco 1 continuam com seus limites registrados. Mini-Inbox e demais áreas da tabela não foram incluídos nem declarados concluídos. IA autônoma em grupos não é mais uma demanda.
 
 ## Validação da versão funcional do bloco 2
 
@@ -54,4 +54,4 @@ O Copiloto agora separa proposta de decisão: mover etapa, enviar texto individu
 
 Os 169 testes novos incluem 23 de texto, 33 de backend, 70 de PostgreSQL isolado, nove de integração e 34 de interface. As regressões anteriores e a compilação completa passaram localmente e no Railway. A leitura do Supabase às 23:32 UTC confirmou 25 leads, um pedido, zero eventos pendentes e zero propostas/auditorias de QA; hashes de estado e funções existentes preservados.
 
-🟡 Pausa atual: conferir o cartão de uma proposta no contato controlado, rejeitar/aprovar pelo botão e reabrir para consultar o resultado. Testes técnicos não foram apresentados como homologação autenticada. Entrega/endereço/frete e demais pendências da tabela não começaram neste bloco.
+🟢 Aceite do usuário em 17/10: o agente/Copiloto passou no teste. Não há nova rodada de homologação pendente deste bloco. Funcionalidades futuras do Copiloto ficam adiadas. 🟡 Bloco seguinte em execução: entrega/endereço/frete; pausar para conferência quando publicado.
