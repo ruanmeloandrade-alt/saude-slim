@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 6 da ficha do lead com Mini-Inbox
 
-## Estado: 🟢 implementação, testes e compilação completa; 🟡 publicação
+## Estado: 🟢 publicado com healthcheck aprovado; 🟡 conferência visual do usuário
 
 Base 9cbfca6cd3671f8b32214e9b1cabff13fc38dbd5. Branch fix/slim-funnel-drawer-block6-20261017. Produção restauracao/sistema-completo-20261014, repositório ruanmeloandrade-alt/saude-slim. Supabase vyzvfcgpjjzvcjegzzza, empresa c49945db-1960-461a-9339-a43b8403bdd9. Somente Saúde Slim.
 
@@ -77,3 +77,7 @@ Total novo do bloco: 48 verificações (15 getter, 12 conversa/voz e 21 ficha). 
 ## Publicação e conferência
 
 Publicar uma única versão deste bloco e conferir Railway SUCCESS, healthcheck e serviços. A ficha fica disponível para o usuário conferir com sua sessão; não declarar aceite visual antecipado. A equipe não moveu leads, iniciou bots nem enviou texto/mídia real para validar. A implantação do bloco 5 e a nova integração da ficha são entregas distintas. Continuar as pendências autorizadas enquanto o usuário testa, sem nova pausa de aprovação.
+
+## Publicação confirmada
+
+Versão 5abfbda7022842061481686ab0d431b3c6f9d1a4, deployment 73598725-4dff-4e71-a9eb-50d40e890a21, SUCCESS em 18/10 às 01:24:14 UTC; healthcheck 1/1 às 01:24:11 UTC. Às 01:25:54 UTC, quatro serviços online, uma réplica por serviço, sem falhas ou operações pendentes. Não houve migration nem envio real de QA. Usuário pode atualizar o Funil e conferir a ficha e o Mini-Inbox; a execução continua no bloco 7 enquanto ele testa.
