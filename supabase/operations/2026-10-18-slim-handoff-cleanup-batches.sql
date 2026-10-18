@@ -2,6 +2,7 @@
 -- Run each block in order and reconcile its receipt before the next.
 -- The completed exact job deletion is recorded separately in the task scope.
 -- Each block is atomic and locks the workspace row; the four-block sequence is not one transaction.
+-- Reconciled 23:43 UTC: 3 message/activity pairs arrived before the test session removal.
 
 -- SLIM-HANDOFF-20261018 / explicit bounded block 1/4.
 -- Same authorized workspace and reviewed child-before-parent allowlist.
@@ -103,8 +104,8 @@ WITH authorized AS MATERIALIZED (
     AND (SELECT count(*) FROM public.inbox_label_assignments WHERE workspace_id=w.id) <= 0
     AND (SELECT count(*) FROM public.inbox_labels WHERE workspace_id=w.id) <= 0
     AND (SELECT count(*) FROM public.whatsapp_groups WHERE workspace_id=w.id) <= 40
-    AND (SELECT count(*) FROM public.whatsapp_web_messages WHERE workspace_id=w.id) <= 360
-    AND (SELECT count(*) FROM public.lead_activities WHERE workspace_id=w.id) <= 439
+    AND (SELECT count(*) FROM public.whatsapp_web_messages WHERE workspace_id=w.id) <= 363
+    AND (SELECT count(*) FROM public.lead_activities WHERE workspace_id=w.id) <= 442
   FOR UPDATE OF w
 ), removed_0 AS (
   DELETE FROM public.salesbot_runs WHERE workspace_id IN (SELECT id FROM authorized) RETURNING 1

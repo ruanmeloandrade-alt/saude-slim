@@ -38,3 +38,10 @@ Script externo: sintaxe e3mocks aprovados com invocação CLI exata Node -e: exc
 ### Adaptação de transporte da operação SQL
 
 Evolution e Storage foram conferidos vazios para os alvos autorizados em 18/10/2026 às 22:24 UTC. O deployment 4bdd3c83 está SUCCESS e o preDeployCommand foi restaurado para vazio. Duas chamadas do SQL com múltiplas instruções retornaram Invalid or expired requestState; leituras posteriores confirmaram os registros operacionais intactos. Trata-se de erro técnico retornado pelo conector, sem causa confirmada. Uma instrução DO inócua passou. A operação revisada passa a uma única instrução DO atômica, preservando os 17 guards, ordem de exclusão e verificações. Inclui deadline explícito de 30 segundos nos limites das operações e lock_timeout de 5 segundos. NOTICE não substitui leitura independente das contagens após sucesso. Execução ainda pendente neste checkpoint.
+
+
+### Execução em blocos explícitos e reconciliação
+
+A tentativa DO única também retornou requestState inválido sem alteração. A exclusão simples e explícita de um único job done, limitada ao ID auditado e workspace, com owner e dois admins confirmados, funcionou. Não é uma recusa de aprovação reportada pelo conector. O restante será executado em quatro instruções CTE pequenas e explícitas, cada uma atômica, com autorização/materialização, lock da empresa, sessões exatas desligadas, remetentes desativados, contagens máximas e dependência filho/parent via RETURNING. A sequência completa não é uma transação única; cada recibo exige authorized=true e a conferência final será independente. Revisão focal independente aprovada.
+
+Preflight com os guards originais detectou 363 mensagens e 442 atividades, três acima de cada inventário inicial. Reconciliados os três pares: mesma sessão de teste 33ecf991, timestamps 21:42 e 22:12 UTC, anteriores à remoção da instância. Nenhum lead, bot ou outro cadastro adicional apareceu. Caps ajustados exclusivamente de 360 para363 mensagens e439 para442 atividades após essa evidência. Nenhum conteúdo de conversa ou identificador do WhatsApp é armazenado neste registro.
