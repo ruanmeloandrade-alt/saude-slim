@@ -8,7 +8,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { THEME_BOOTSTRAP_SCRIPT, ThemeProvider } from "../lib/theme";
@@ -20,6 +20,9 @@ import { DeviceApprovalGate } from "../components/DeviceApprovalGate";
 import { SupportRobot } from "../components/SupportRobot";
 import { WorkflowSalesbotBillingEnhancer } from "../components/system/WorkflowSalesbotBillingEnhancer";
 import { syncWorkspaceRegionalCache } from "../lib/workspace-currency-cache";
+
+import { SlimSessionGate } from "../components/auth/SlimSessionGate";
+import { isSlimRecoveryLocation } from "../lib/slim-auth-gate.core";
 
 import appCss from "../styles.css?url";
 
@@ -101,7 +104,7 @@ function RootShell({ children }: { children: ReactNode }) {
 const PUBLIC_ROUTES = new Set(["/", "/login", "/privacidade", "/termos", "/data-deletion", "/documentacao", "/afiliados", "/sobre"]);
 
 function isPublicPath(path: string) {
-  return PUBLIC_ROUTES.has(path) || path === "/blog" || path.startsWith("/blog/") || path.startsWith("/l/");
+  return PUBLIC_ROUTES.has(path) || path === "/blog" || path.startsWith("/blog/") || path.startsWith("/l/") || path.startsWith('/convite/');
 }
 
 const COPILOT_EXCLUDED_PATHS = new Set(["/contas", "/auth", "/checkout", "/checkout-retorno", "/completa", "/recuperar-acesso", "/sem-acesso"]);
@@ -172,9 +175,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider><CustomKpisProvider><ComparisonWidgetsProvider><KpiRulesProvider>
         <IdleLogoutGuard />
-        {!migratedRoute && <DeviceApprovalGate />}
         {!migratedRoute && <ConditionalSupportRobot />}
-        {!migratedRoute && <WorkflowSalesbotBillingEnhancer />}
         <CheckoutCompatibilityGuard><AuthGate><Outlet /><HomepageResourceLinks /></AuthGate></CheckoutCompatibilityGuard>
       </KpiRulesProvider></ComparisonWidgetsProvider></CustomKpisProvider></ThemeProvider>
     </QueryClientProvider>
@@ -184,78 +185,48 @@ function RootComponent() {
 function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const path = useRouterState({ select: (state) => state.location.pathname });
-  // The login page must render even if a stored session refresh waits on a down Supabase.
-  // All non-public operational pages retain the existing authentication gate.
+  const href = useRouterState({ select: (state) => state.location.href });
   const isPublicRoute = isPublicPath(path) || path === '/auth' || path.startsWith('/auth/');
-  const [initializing, setInitializing] = useState(true);
-
+  const invitationRoute = path.startsWith('/convite/');
+  const [recoveryEvent, setRecoveryEvent] = useState(false);
+  const loginPending = useRef(false);
+  const recoveryRoute = path === '/auth' && (recoveryEvent || isSlimRecoveryLocation(path, href.includes('?') ? href.slice(href.indexOf('?')).split('#')[0] : '', typeof window === 'undefined' ? '' : window.location.hash));
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    let isMounted = true;
-    let unsubscribeAuth: (() => void) | undefined;
-
+    let active = true; let unsubscribe: (() => void) | undefined;
     void import("@/integrations/supabase/client").then(({ supabase }) => {
-      if (!isMounted) return;
-
-      const check = async () => {
-        try {
-          const { data, error } = await supabase.auth.getSession();
-          if (!isMounted) return;
-          const currentPath = window.location.pathname;
-          const isAuthRoute = currentPath === "/auth" || currentPath.startsWith("/auth/");
-          const currentIsPublic = isPublicPath(currentPath);
-          if (error) {
-            console.error("AuthGate session error:", error);
-            if (!isAuthRoute && !currentIsPublic) window.location.replace("/auth");
-          } else if (!data.session && !isAuthRoute && !currentIsPublic) {
-            window.location.replace("/auth");
-          } else if (data.session && isAuthRoute) {
-            window.location.replace("/saude-slim");
-          } else if (data.session && !currentIsPublic) {
-            try {
-              await syncWorkspaceRegionalCache();
-            } catch (regionalError) {
-              console.error("Saúde Slim regional settings sync:", regionalError);
-            }
-
-          }
-        } catch (err) {
-          console.error("AuthGate check failed:", err);
-        } finally {
-          if (isMounted) setInitializing(false);
+      if (!active) return;
+      const { data } = supabase.auth.onAuthStateChange((event) => {
+        if (!active) return;
+        if (event === 'PASSWORD_RECOVERY') {
+          setRecoveryEvent(true);
+          // Persist intent across the challenge remount after GoTrue consumes the hash.
+          void router.navigate({ to: '/auth', search: previous => ({ ...previous, mode: 'recovery' }), replace: true });
         }
-      };
-
-      void check();
-      const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-        if (!isMounted) return;
-        if (event === "SIGNED_OUT" && window.location.pathname !== "/") window.location.replace("/auth");
-        if (event === "SIGNED_IN" || event === "INITIAL_SESSION") {
-          router.invalidate();
-          if (event === "SIGNED_IN") {
-            void (async () => {
-              try {
-                const [{ recordSecurityEvent }, { getDeviceKey }] = await Promise.all([
-                  import("@/lib/security-settings.functions"),
-                  import("@/hooks/use-session-heartbeat"),
-                ]);
-                await recordSecurityEvent({ data: { type: "login", device_key: getDeviceKey() } });
-              } catch { /* silencioso */ }
-            })();
-          }
-        }
+        if (event === 'SIGNED_IN') loginPending.current = true;
+        if (event === 'SIGNED_OUT') loginPending.current = false;
       });
-      unsubscribeAuth = () => sub.subscription.unsubscribe();
+      unsubscribe = () => data.subscription.unsubscribe();
     });
-
-    return () => {
-      isMounted = false;
-      unsubscribeAuth?.();
-    };
+    return () => { active = false; unsubscribe?.(); };
   }, [router]);
-
-  if (isPublicRoute) return <>{children}</>;
-  if (initializing) return <div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="h-7 w-7 animate-spin text-primary" /></div>;
-  return <>{children}</>;
+  useEffect(() => { if (path !== '/auth' || new URLSearchParams(href.split('?')[1]?.split('#')[0] ?? '').get('mode') === 'login') setRecoveryEvent(false); }, [path, href]);
+  const ready = useCallback(() => {
+    void router.invalidate();
+    void syncWorkspaceRegionalCache().catch(() => {});
+    if (loginPending.current) {
+      loginPending.current = false;
+      void (async () => {
+        try {
+          const [{ recordSecurityEvent }, { getDeviceKey }] = await Promise.all([import("@/lib/security-settings.functions"), import("@/hooks/use-session-heartbeat")]);
+          await recordSecurityEvent({ data: { type: "login", device_key: getDeviceKey() } });
+        } catch { /* Audit availability never substitutes session authorization. */ }
+      })();
+    }
+  }, [router]);
+  // Public login stays usable during an unavailable token refresh; recovery has its own gate.
+  if (isPublicRoute && !recoveryRoute && !invitationRoute) return <>{children}</>;
+  return <SlimSessionGate allowSignedOut={recoveryRoute || invitationRoute} onReady={recoveryRoute ? undefined : ready}>
+    {!isPublicRoute && !SAUDE_SLIM_MIGRATED_PATHS.has(path) && <><DeviceApprovalGate /><WorkflowSalesbotBillingEnhancer /></>}
+    {children}
+  </SlimSessionGate>;
 }

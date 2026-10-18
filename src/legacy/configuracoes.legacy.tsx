@@ -34,6 +34,8 @@ import { useIsSuperAdmin } from "@/hooks/use-roles";
 import { UserPermissionsDialog } from "@/components/settings/UserPermissionsDialog";
 import { SlimInvitationsPanel } from "@/components/settings/SlimInvitationsPanel";
 import { SlimMfaSettings } from "@/components/settings/SlimMfaSettings";
+import { SlimSecuritySettings } from "@/components/settings/SlimSecuritySettings";
+import { SlimCurrentSessionSettings } from "@/components/settings/SlimCurrentSessionSettings";
 import { AccountEmailChangeControl } from "@/components/settings/AccountEmailChangeControl";
 import { listWorkSectors } from "@/lib/permissions.functions";
 import { getNotificationSettings, saveNotificationSettings } from "@/lib/notification-settings.functions";
@@ -198,8 +200,8 @@ function ConfigPage() {
                   )}
                   {sub === "expediente" && <ExpedienteTab workspace={workspace} canManage={!!bundleQ.data?.canManageRegionalSettings} onToast={showToast} />}
                   {sub === "faturamento" && <PreferenciasTab bundle={bundleQ.data} onToast={showToast} />}
-                  {sub === "seguranca" && isSuperAdmin && <SegurancaTab onToast={showToast} />}
-                  {sub === "sessoes" && <SessoesTab onToast={showToast} />}
+                  {sub === "seguranca" && isSuperAdmin && <SlimSecuritySettings />}
+                  {sub === "sessoes" && <SlimCurrentSessionSettings />}
                   {sub === "notificacoes" && <NotificacoesTab prefs={profile?.notification_prefs} onToast={showToast} />}
                   {sub === "preferencias" && <PreferenciasTab bundle={bundleQ.data} onToast={showToast} />}
                 </>

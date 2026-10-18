@@ -3,6 +3,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { resolveServerSupabaseEnv } from "@/integrations/supabase/saude-slim-env";
 import type { Database } from "@/integrations/supabase/types";
 import { assertSlimChatMembership } from "@/lib/slim-chat-membership.core";
+import { assertSlimSessionSecurity } from "@/lib/slim-session-security.core";
 
 export type BearerContext = {
   userId: string;
@@ -19,6 +20,7 @@ export async function verifyBearer(request: Request): Promise<BearerContext> {
   });
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data.user) throw new Error("Sessão inválida.");
+  await assertSlimSessionSecurity(supabase);
   return { userId: data.user.id, supabase };
 }
 export async function assertWorkspaceMember(supabase: SupabaseClient<Database>, workspaceId: string, userId: string): Promise<void> {

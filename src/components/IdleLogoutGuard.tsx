@@ -54,7 +54,7 @@ export function IdleLogoutGuard() {
         const { recordSecurityEvent } = await import("@/lib/security-settings.functions");
         await recordSecurityEvent({ data: { type: "session_expired" } });
       } catch { /* silencioso */ }
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       try {
         window.localStorage.removeItem(LAST_ACTIVITY_KEY);
       } catch { /* ignore */ }

@@ -29,8 +29,8 @@ function LoginPage() {
   useEffect(() => {
     let active = true;
     void supabase.auth.getSession().then(({ data }) => {
-      if (active && data.session) navigate({ to: "/contas", replace: true });
-    });
+      if (active && data.session) navigate({ to: "/saude-slim", replace: true });
+    }).catch(() => { /* Keep the login form available if a stored refresh fails. */ });
     return () => { active = false; };
   }, [navigate]);
 
@@ -73,7 +73,7 @@ function LoginPage() {
       await signInExistingAccount(cleanEmail, password);
 
       // Login de conta existente termina aqui. Cadastro/onboarding pertence a /auth?mode=signup.
-      navigate({ to: "/contas", replace: true });
+      navigate({ to: "/saude-slim", replace: true });
     } catch (err) {
       const message = slimAuthFailureMessage(err);
       setError(/invalid login credentials|e-mail ou senha inválidos/i.test(message) ? "E-mail ou senha inválidos." : message);

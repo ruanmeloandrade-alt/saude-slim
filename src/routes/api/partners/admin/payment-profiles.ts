@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { resolveServerSupabaseEnv } from "@/integrations/supabase/saude-slim-env";
+import { assertSlimSessionSecurity, slimSessionSecurityResponse } from "@/lib/slim-session-security.core";
 
 function bearerToken(request: Request) {
   const match = (request.headers.get("authorization") ?? "").match(/^Bearer\s+(.+)$/i);
@@ -27,6 +28,8 @@ async function adminContext(request: Request) {
     global: { headers: { Authorization: `Bearer ${token}` } },
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
+  try { await assertSlimSessionSecurity(userClient); }
+  catch (error) { return { error: slimSessionSecurityResponse(error) } as const; }
   const { data: isAdmin, error: adminError } = await (userClient as any).rpc("partner_program_is_admin", { _user_id: userId });
   if (adminError || isAdmin !== true) {
     return { error: Response.json({ ok: false, error: "Acesso restrito ao super admin." }, { status: 403 }) } as const;

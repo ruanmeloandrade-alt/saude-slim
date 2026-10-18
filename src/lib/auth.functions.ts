@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { createClient } from "@supabase/supabase-js";
 import { resolveServerSupabaseEnv } from "@/integrations/supabase/saude-slim-env";
+import { assertSlimSessionSecurity, SlimSessionSecurityError } from "@/lib/slim-session-security.core";
 
 export const getCurrentUserRoles = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -23,6 +24,8 @@ export const getCurrentUserRoles = createServerFn({ method: "GET" }).handler(
       const uid = userRes?.user?.id;
       if (!uid) return { roles: [] as string[], isAdmin: false };
 
+      await assertSlimSessionSecurity(sb);
+
       const { data, error } = await sb
         .from("user_roles" as any)
         .select("role")
@@ -33,7 +36,8 @@ export const getCurrentUserRoles = createServerFn({ method: "GET" }).handler(
         roles,
         isAdmin: roles.includes("super_admin") || roles.includes("admin"),
       };
-    } catch {
+    } catch (error) {
+      if (error instanceof SlimSessionSecurityError) throw error;
       return { roles: [] as string[], isAdmin: false };
     }
   },

@@ -4,6 +4,7 @@ import { getRequest } from '@tanstack/react-start/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 import { resolveServerSupabaseEnv } from './saude-slim-env'
+import { assertSlimSessionSecurity } from '@/lib/slim-session-security.core'
 
 // This timeout is server-side only: it measures MKTOn server -> Supabase latency.
 // Slow end-user internet does not consume this window.
@@ -128,6 +129,8 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' })
     if (!data.claims.sub) {
       throw new Error('Unauthorized: No user ID found in token');
     }
+
+    await assertSlimSessionSecurity(supabase);
 
     return next({
       context: {

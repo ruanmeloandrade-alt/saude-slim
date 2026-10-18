@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 12 de segurança e liberação para conferência final
 
-## Estado: 🟡 escopo registrado antes da implementação
+## Estado: 🟡 implementação concluída, validação integrada em andamento
 
 Pedido de 18/10/2026 às 14h28 de Brasília: o usuário esclareceu que o documento de venda deve ser apenas um comprovante comercial, retirou a necessidade de emissão fiscal autorizada e pediu finalizar a segurança do sistema e liberá-lo para testar tudo e encerrar o projeto.
 
@@ -64,3 +64,23 @@ Baseline de advisors: quatro INFO de ledgers privados com RLS sem política deli
 - Compilação completa isolada com transforms; revisar componentes reais em computador/celular com dados sintéticos. Nenhum teste de cliente real, convite, mensagem, bot, conta, fator ou venda.
 - Versionar arquivos completos, validar igualdade de fontes, instalar migration validada e promover por CAS sem reescrever história. Observar Railway SUCCESS, healthcheck e domínio.
 - Atualizar o semáforo com comprovante concluído, segurança com o recorte/evidências efetivamente entregue e conferência final do usuário em amarelo. Recursos fora do recorte devem permanecer descritos honestamente, sem chamar todo o sistema de invulnerável.
+
+## Implementação e validação direta
+
+As três frentes estão integradas ao gate existente, sem retirar testes anteriores. Gate de entrada: 27 casos; APIs/middleware: 34; troca de senha: 17; apresentação de Segurança: 10; PostgreSQL/PGlite: 12. Os 100 casos específicos são isolados/sintéticos. As regressões existentes de autenticação (11) e gestão MFA (39) também passaram antes da compilação completa.
+
+A reconsulta em foco/renovação preserva a árvore React já autorizada da mesma conta/sessão e o rascunho; troca de conta/sessão, falha ou desafio remove essa autorização. Primeiro acesso nunca monta conteúdo privado antes da confirmação. O teste Chromium com filho stateful comprovou um único mount durante foco e TOKEN_REFRESHED, descarte ao trocar de conta e bloqueio no logout. A recuperação de senha mantém sua intenção depois de PASSWORD_RECOVERY e tem contraste legível.
+
+O painel de Segurança monta somente senha nativa, aplicativo autenticador e preferência local de inatividade. A senha usa um único PUT nativo com publishable/JWT, valida ator/sub/session_id antes do envio, prazo total de 8 segundos e corpo limitado a 128 KiB; recibo divergente ou falha incerta não declara sucesso. Os handlers antigos de MFA por e-mail/flags e códigos de recuperação ficam explicitamente indisponíveis, sem envios ou gravações. A página Sessões monta somente a sessão deste navegador e saída nativa scope local, sem apresentar o ledger antigo de heartbeat como sessões nativas. A inatividade também encerra somente a sessão local.
+
+Migration gerada pelo CLI Supabase 2.45.0: supabase/migrations/20261018175307_slim_session_security_enforcement.sql. Ela não altera contas, fatores, sessões ou registros comerciais. Confere auth.sessions id/user_id/not_after, banimento/exclusão do usuário e qualquer fator verificado. O preflight protege hook anterior e schema esperado. Políticas restritivas complementam o pre-request nas tabelas com RLS, Storage e Realtime; regras originais de empresa e papel permanecem obrigatórias.
+
+Baseline remoto imediatamente anterior: 1 usuário, 1 sessão, 0 fatores, 26 leads, 2 pedidos, 0 cadastros de grupos, 125 políticas em public/storage/realtime e hash de políticas originais e04ec8703e39f50408b2c714f07246e0. O catálogo confirmou as colunas nativas e nenhuma configuração pgrst.* em pg_db_role_setting. Uma consulta agrupada inicial da frente B ficou travada por 1.060 segundos e foi interrompida sem resultado; consultas curtas independentes obtiveram o catálogo necessário. Nenhuma mutação de dados foi usada como alternativa.
+
+## Limites do recorte entregue
+
+O cadastro de autenticador não é obrigatório para todas as contas. Quando confirmado, o fator é exigido pelos caminhos protegidos. SMS, passkeys, códigos de recuperação, aprovação de dispositivos, políticas administrativas extras e lista/revogação nativa de outros dispositivos não foram habilitados. O plano Supabase da organização é Free; o advisor de senha vazada permanece porque o recurso nativo exige Pro ou superior, conforme https://supabase.com/docs/guides/auth/password-security. Nenhuma assinatura ou configuração paga foi contratada.
+
+URLs de mídia já assinadas permanecem válidas até sua expiração e a autorização de canais Realtime já estabelecidos segue o cache do serviço. A verificação instalada controla novos acessos/autorização e não afirma revogação retroativa instantânea desses portadores. Workers service_role e fluxos públicos legítimos permanecem com seus contratos existentes.
+
+Não houve login real, mudança de senha, cadastro de fator, revogação de sessão, convite, pedido, bot ou envio de mensagem pela equipe durante este bloco. Os testes autenticados finais pertencem ao usuário. A conclusão de emissão fiscal significa aceite do comprovante comercial existente, sem alegação de nota autorizada.

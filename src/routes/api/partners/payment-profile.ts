@@ -1,4 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
+import { resolveServerSupabaseEnv } from "@/integrations/supabase/saude-slim-env";
+import { assertSlimSessionSecurity, slimSessionSecurityResponse } from "@/lib/slim-session-security.core";
+
+async function checkSessionSecurity(token: string): Promise<Response | null> {
+  try {
+    const env = resolveServerSupabaseEnv();
+    const caller = createClient(env.url, env.publishableKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+    await assertSlimSessionSecurity(caller);
+    return null;
+  } catch (error) { return slimSessionSecurityResponse(error); }
+}
 
 function bearerToken(request: Request) {
   const match = (request.headers.get("authorization") ?? "").match(/^Bearer\s+(.+)$/i);
@@ -14,6 +29,8 @@ export const Route = createFileRoute("/api/partners/payment-profile")({
       const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
       const userId = authData.user?.id;
       if (authError || !userId) return Response.json({ ok: false, error: "Sessão inválida." }, { status: 401 });
+      const denied = await checkSessionSecurity(token);
+      if (denied) return denied;
       const { data, error } = await (supabaseAdmin as any).from("partner_program_payment_profiles")
         .select("id,document_type,document_last4,pix_key_type,pix_key_last4,holder_name,verification_status,verification_reason,version,updated_at")
         .eq("user_id", userId).maybeSingle();
@@ -37,6 +54,8 @@ export const Route = createFileRoute("/api/partners/payment-profile")({
       const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
       const userId = authData.user?.id;
       if (authError || !userId) return Response.json({ ok: false, error: "Sessão inválida." }, { status: 401 });
+      const denied = await checkSessionSecurity(token);
+      if (denied) return denied;
       const { data, error } = await (supabaseAdmin as any).rpc("partner_program_set_payment_profile_service", {
         p_user_id: userId, p_document_type: documentType, p_document: document, p_pix_key_type: pixKeyType,
         p_pix_key: pixKey, p_holder_name: holderName, p_encryption_key: encryptionKey,

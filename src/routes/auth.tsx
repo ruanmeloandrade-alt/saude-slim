@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {slimAuthFailureMessage} from "@/lib/slim-auth-network.core";
+import { isSlimRecoveryLocation, safeSlimAuthReturn } from "@/lib/slim-auth-gate.core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -42,11 +43,7 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-function safeNext(next?: string) {
-  if (!next) return null;
-  if (!next.startsWith("/") || next.startsWith("//")) return null;
-  return next;
-}
+const safeNext = safeSlimAuthReturn;
 
 function normalizeWhatsApp(value: string) {
   const digits = value.replace(/\D/g, "");
@@ -140,9 +137,10 @@ function AuthPage() {
     mkt_lead: attributedLeadId,
   } = Route.useSearch();
   const back = safeNext(next);
+  const recoveryRef = useRef(searchMode === "recovery" || (typeof window !== "undefined" && isSlimRecoveryLocation(window.location.pathname, window.location.search, window.location.hash)));
   const submittingRef = useRef(false);
 
-  const [mode, setMode] = useState<AuthMode>(searchMode === "forgot" || searchMode === "recovery" ? searchMode : "login");
+  const [mode, setMode] = useState<AuthMode>(recoveryRef.current ? "recovery" : searchMode === "forgot" ? "forgot" : "login");
   const [responsibleName, setResponsibleName] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
   const [instagram, setInstagram] = useState("");
@@ -157,6 +155,12 @@ function AuthPage() {
   const [secondStepEmail, setSecondStepEmail] = useState<string | null>(null);
   const [passwordUpdated, setPasswordUpdated] = useState(false);
 
+  function returnToLogin() {
+    recoveryRef.current = false;
+    setMode("login");
+    void navigate({ to: '/auth', search: previous => ({ ...previous, mode: 'login' }), replace: true });
+  }
+
   useEffect(() => {
     if (!loading || mode !== 'login') { setSlowLogin(false); return; }
     const timeout = window.setTimeout(() => setSlowLogin(true), 4_000);
@@ -164,6 +168,7 @@ function AuthPage() {
   }, [loading, mode]);
 
   const goOn = () => {
+    if (recoveryRef.current) return;
     if (back) window.location.href = back;
     else navigate({ to: "/saude-slim" });
   };
@@ -190,7 +195,7 @@ function AuthPage() {
   useEffect(() => {
     let active = true;
     void supabase.auth.getSession().then(async ({ data }) => {
-      if (!active || !data.session || mode === "recovery") return;
+      if (!active || !data.session || recoveryRef.current || mode === "recovery") return;
       await syncCurrentSignup(data.session.access_token);
       goOn();
     }).catch(() => {
@@ -200,13 +205,14 @@ function AuthPage() {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
       if (event === "PASSWORD_RECOVERY") {
+        recoveryRef.current = true;
         submittingRef.current = false;
         setPassword("");
         setConfirmPassword("");
         setMode("recovery");
         return;
       }
-      if (event === "SIGNED_IN" && session && !submittingRef.current && mode !== "recovery") {
+      if (event === "SIGNED_IN" && session && !submittingRef.current && !recoveryRef.current && mode !== "recovery") {
         void syncCurrentSignup(session.access_token).finally(goOn);
       }
     });
@@ -372,7 +378,7 @@ function AuthPage() {
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><Mail className="h-6 w-6" /></div>
           <h1 className="mt-6 text-2xl font-semibold tracking-tight text-slate-950">Confirme seu e-mail</h1>
           <p className="mt-3 text-sm leading-7 text-slate-600">Enviamos a confirmação para <strong className="text-slate-900">{email.trim()}</strong>. Depois de confirmar, sua conta continua o cadastro automaticamente.</p>
-          <button type="button" onClick={() => { setConfirmationPending(false); setMode("login"); }} className="mt-7 text-sm font-bold text-emerald-700">Já confirmei, entrar</button>
+          <button type="button" onClick={() => { setConfirmationPending(false); returnToLogin(); }} className="mt-7 text-sm font-bold text-emerald-700">Já confirmei, entrar</button>
         </section>
       </main>
     );
@@ -388,7 +394,7 @@ function AuthPage() {
           <p className="mt-3 text-sm leading-7 text-slate-600">Sua senha foi validada. Enviamos um link de acesso para <strong className="text-slate-900">{secondStepEmail}</strong>. Abra o e-mail para concluir a entrada.</p>
           <button type="button" onClick={async () => { setLoading(true); setError(null); try { await sendEmailSecurityStep(secondStepEmail); } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível reenviar o e-mail."); } finally { setLoading(false); } }} className="mt-6 text-sm font-bold text-emerald-700">{loading ? "Enviando..." : "Reenviar e-mail"}</button>
           {error && <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{error}</div>}
-          <button type="button" onClick={() => { setSecondStepEmail(null); setMode("login"); setPassword(""); }} className="mt-4 block w-full text-xs font-semibold text-slate-500">Voltar para o login</button>
+          <button type="button" onClick={() => { setSecondStepEmail(null); returnToLogin(); setPassword(""); }} className="mt-4 block w-full text-xs font-semibold text-slate-500">Voltar para o login</button>
         </section>
       </main>
     );
@@ -396,7 +402,7 @@ function AuthPage() {
 
   if (mode === "recovery") {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#ecfdf5] px-4 py-10">
+      <main className="grid min-h-screen place-items-center bg-[#ecfdf5] px-4 py-10 text-slate-950">
         <section className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_30px_90px_rgba(15,23,42,.12)] sm:p-9">
           <Link to="/auth" className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950 shadow-sm"><HeartPulse className="h-4 w-4 text-emerald-600" />Saúde Slim</Link>
           {passwordUpdated ? (
@@ -404,7 +410,7 @@ function AuthPage() {
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><CheckCircle2 className="h-6 w-6" /></div>
               <h1 className="mt-5 text-2xl font-semibold tracking-tight">Senha redefinida</h1>
               <p className="mt-3 text-sm leading-7 text-slate-600">Sua nova senha já está ativa. Você pode entrar normalmente.</p>
-              <button type="button" onClick={() => { setMode("login"); setPassword(""); setConfirmPassword(""); }} className="mt-6 text-sm font-bold text-emerald-700">Ir para o login</button>
+              <button type="button" onClick={() => { returnToLogin(); setPassword(""); setConfirmPassword(""); }} className="mt-6 text-sm font-bold text-emerald-700">Ir para o login</button>
             </div>
           ) : (
             <>
@@ -470,7 +476,7 @@ function AuthPage() {
                     <Button type="button" disabled={loading} onClick={sendRecoveryEmail} className="h-12 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700">{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Enviar link de redefinição</Button>
                   </div>
                 )}
-                <button type="button" onClick={() => { setMode("login"); setRecoverySent(false); setError(null); }} className="mt-5 w-full text-center text-xs font-semibold text-slate-500 hover:text-emerald-700">Voltar para o login</button>
+                <button type="button" onClick={() => { returnToLogin(); setRecoverySent(false); setError(null); }} className="mt-5 w-full text-center text-xs font-semibold text-slate-500 hover:text-emerald-700">Voltar para o login</button>
               </>
             ) : (
               <>

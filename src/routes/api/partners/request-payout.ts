@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { resolveServerSupabaseEnv } from "@/integrations/supabase/saude-slim-env";
+import { assertSlimSessionSecurity, slimSessionSecurityResponse } from "@/lib/slim-session-security.core";
 
 function bearerToken(request: Request) {
   const match = (request.headers.get("authorization") ?? "").match(/^Bearer\s+(.+)$/i);
@@ -19,17 +20,6 @@ export const Route = createFileRoute("/api/partners/request-payout")({
         const userId = authData.user?.id;
         if (authError || !userId) return Response.json({ ok: false, error: "Sessão inválida." }, { status: 401 });
 
-        const { data: profile, error: profileError } = await admin
-          .from("partner_program_payment_profiles")
-          .select("verification_status")
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        if (profileError) return Response.json({ ok: false, error: "Não foi possível validar seus dados de recebimento." }, { status: 500 });
-        if (!profile || profile.verification_status !== "verified") {
-          return Response.json({ ok: false, error: "Confirme e valide CPF/CNPJ, titular e PIX antes de solicitar um pagamento." }, { status: 409 });
-        }
-
         const { createClient } = await import("@supabase/supabase-js");
         let supabaseEnv;
         try {
@@ -42,6 +32,20 @@ export const Route = createFileRoute("/api/partners/request-payout")({
           global: { headers: { Authorization: `Bearer ${token}` } },
           auth: { persistSession: false, autoRefreshToken: false },
         });
+        try { await assertSlimSessionSecurity(userClient); }
+        catch (error) { return slimSessionSecurityResponse(error); }
+
+        const { data: profile, error: profileError } = await admin
+          .from("partner_program_payment_profiles")
+          .select("verification_status")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (profileError) return Response.json({ ok: false, error: "Não foi possível validar seus dados de recebimento." }, { status: 500 });
+        if (!profile || profile.verification_status !== "verified") {
+          return Response.json({ ok: false, error: "Confirme e valide CPF/CNPJ, titular e PIX antes de solicitar um pagamento." }, { status: 409 });
+        }
+
         const { data, error } = await (userClient as any).rpc("partner_program_request_payout");
         if (error) return Response.json({ ok: false, error: error.message || "Não foi possível solicitar o pagamento." }, { status: 400 });
 
