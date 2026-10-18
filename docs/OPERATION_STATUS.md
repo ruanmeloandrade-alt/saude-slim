@@ -1,14 +1,18 @@
 # Saúde Slim | Semáforo operacional
 
-## Bloco 12 de 18/10/2026: 🟡 segurança em validação integrada
+## Bloco 12 de 18/10/2026: 🟢 segurança publicada e sistema liberado para conferência final
 
-🟢 Comprovante comercial concluído e aceito. O pedido de emissão de NF-e real foi retirado pelo usuário; não depende mais de emissor fiscal para esta entrega.
+**Versão eb9ca08e8edc7e16158fbc8c51a34d3d48100d94 online em https://slimesaude.com. Railway 2c72ee70-bd81-486f-94f9-74d0389f7a95 SUCCESS às 18:14:09 UTC, com healthcheck 1/1 aprovado às 18:14:06 UTC.** Às 18:16:26 UTC, quatro serviços online, uma réplica cada, nenhuma falha e nenhuma operação pendente. O domínio respondeu HTTP 200; seus quatro CSS são idênticos aos validados e duas APIs privadas recusaram acesso sem autenticação com HTTP 401.
 
-🟡 A regra de sessão/MFA, o desafio de entrada e a página de Segurança estão implementados e nos gates de compilação. Ainda não marcar publicados até confirmar migration, deployment e healthcheck. A conta atual pode continuar com e-mail e senha, pois cadastrar autenticador é opcional; após confirmar um fator, essa conta passa a exigir o código para acesso privado.
+🟢 Comprovante comercial concluído e aceito. O usuário confirmou que deseja somente o comprovante existente e retirou a emissão de NF-e real do escopo. Não há emissor/configuração fiscal pendentes desta entrega.
 
-🟢 Públicos/Disparos/Relatório, ficha do Funil e Mini-Inbox, SalesBots, gatilhos e Copiloto mantêm a entrega e os aceites anteriores. 🟡 A conferência final do usuário inclui mídias/grupos, checkout/pedidos e convite; esses testes não foram executados na conta real pela equipe. IA autônoma de grupos permanece fora do escopo.
+🟢 Segurança desta entrega concluída: sessão nativa válida e permissões exigidas na entrada, APIs e banco; fator nativo confirmado exige sessão verificada em dois fatores. O cadastro de autenticador continua opcional. Sem fator confirmado, a conta permanece com e-mail e senha. Troca de senha com confirmação real, prazos e sem repetição automática; saída local e proteção de rascunhos em reconsulta. A página mostra os controles disponíveis, sem indicar métodos incompletos como ativos.
 
-Este checkpoint e a tabela abaixo prevalecem sobre relatos históricos. Escopo e evidências: docs/tasks/2026-10-18-slim-security-release-block12.md.
+🟢 100 testes específicos de segurança, regressões anteriores e compilação completa passaram. Os componentes reais foram conferidos com o CSS final em computador e celular, incluindo 13 casos interativos de entrada/recuperação/sessão. Migration 20261018180658 instalada; 66 regras restritivas complementam as 125 políticas originais, que conservaram o mesmo hash. Corpos/grants das quatro funções conferidos. Não houve alteração de conta, senha, fator ou sessão real pela equipe.
+
+🟢 Públicos/Disparos/Relatório, ficha do Funil e Mini-Inbox, SalesBots, gatilhos e Copiloto mantêm a entrega e os aceites anteriores. 🟡 Resta o aceite final do usuário, especialmente mídia/grupos, checkout/pedidos e convite. São conferências do uso real das funções publicadas; não foram simuladas como concluídas. ⚪ IA autônoma de grupos e NF-e real permanecem fora do escopo.
+
+Este checkpoint e a tabela abaixo prevalecem sobre os relatos históricos. Não há bloqueio técnico identificado para iniciar a conferência final do escopo entregue. Métodos adicionais de segurança e limites de serviços estão discriminados no escopo: docs/tasks/2026-10-18-slim-security-release-block12.md.
 
 ## Bloco 11 de 18/10/2026: 🟢 Públicos, relatório e ficha publicados
 
@@ -64,7 +68,7 @@ Orientação atual do usuário, atualizada em 17/10 às 21:38 de Brasília: segu
 | Públicos/disparos/tracking | 🟢 Publicado e dois testes reais confirmados | Bloco 11 f7f75c6, Railway fe2bfd76 SUCCESS. Disparos dentro de Públicos, Relatório detalhado por campanha/público/destinatário, filtros e paginação. SalesBot do usuário às 12h27 BRT de 18/10 com execução finished e texto às 12h29 com mensagem sent correlacionados ao banco. 28/28 casos do relatório, regressões e 7/7 interações reais sintéticas. Aceite/processamento não confirma entrega ou leitura. |
 | Novos contatos duplicados entre cadastros | 🟢 Publicado e verificado | Bloco 8 em b4185b0, Railway 5eacbcf7 SUCCESS e healthcheck 1/1 em 18/10 às 02:45 UTC; quatro serviços online. Migration instalada em 20261018024038. Barreira comum para Funil, checkout e integração; 50 verificações, incluindo 12 com conexões PostgreSQL independentes, e build completo na primeira tentativa. Os 26 contatos, dois pedidos, um produto e quatro movimentos mantiveram hashes/contagens. Rejeição conhecida preserva rascunho e atualiza clientes; aliases históricos não foram mesclados. |
 | Convites por link | 🟢 Publicado; 🟡 aceite autenticado | Bloco 9 em 4dfbd18, Railway 9764d252 SUCCESS e healthcheck 1/1 em 18/10 às 03:50 UTC. Migration 20261018034452, 83 casos novos, regressões e build completo aprovados. Geração/renovação/revogação com recibo, aceite atômico e e-mail confirmado. Administração completa sem prazo escolhida explicitamente, para contas já provisionadas. Dados e políticas anteriores preservados; nenhum convite/acesso real de QA. |
-| Segurança | 🟡 Bloco 12 em validação integrada para publicação | Regra nativa de sessão e MFA implementada no login, APIs, banco e autorização de mídia. Cadastro TOTP opcional; fator confirmado exige sessão AAL2. Painel mostra senha, autenticador e inatividade; sessões mostram apenas o navegador atual. Métodos avançados sem implementação não são apresentados como proteção ativa. Escopo: docs/tasks/2026-10-18-slim-security-release-block12.md. |
+| Segurança | 🟢 Bloco 12 publicado e validado | Versão eb9ca08, Railway 2c72ee70 SUCCESS, healthcheck 1/1 e migration 20261018180658. Regra nativa de sessão/MFA na entrada, APIs, banco e novas autorizações de mídia. Cadastro opcional; fator confirmado exige AAL2. 100 casos específicos, regressões, build e revisão de componentes reais aprovados. Painel mostra senha, autenticador, inatividade e sessão deste navegador; métodos adicionais indisponíveis permanecem explícitos. |
 | Comprovante comercial | 🟢 Concluído e aceito pelo usuário | Em 18/10/2026, o usuário confirmou que deseja somente o comprovante existente. Emissão fiscal real foi retirada do escopo; não há emissor ou configuração fiscal pendentes desta entrega. |
 | Frontend/módulos restantes | 🟡 | Correções anteriores preservadas; homologação total de janelas autenticadas pendente. |
 

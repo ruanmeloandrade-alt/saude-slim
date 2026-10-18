@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 12 de segurança e liberação para conferência final
 
-## Estado: 🟡 implementação concluída, validação integrada em andamento
+## Estado: 🟢 publicado, conferido e liberado para o aceite final do usuário
 
 Pedido de 18/10/2026 às 14h28 de Brasília: o usuário esclareceu que o documento de venda deve ser apenas um comprovante comercial, retirou a necessidade de emissão fiscal autorizada e pediu finalizar a segurança do sistema e liberá-lo para testar tudo e encerrar o projeto.
 
@@ -84,3 +84,31 @@ O cadastro de autenticador não é obrigatório para todas as contas. Quando con
 URLs de mídia já assinadas permanecem válidas até sua expiração e a autorização de canais Realtime já estabelecidos segue o cache do serviço. A verificação instalada controla novos acessos/autorização e não afirma revogação retroativa instantânea desses portadores. Workers service_role e fluxos públicos legítimos permanecem com seus contratos existentes.
 
 Não houve login real, mudança de senha, cadastro de fator, revogação de sessão, convite, pedido, bot ou envio de mensagem pela equipe durante este bloco. Os testes autenticados finais pertencem ao usuário. A conclusão de emissão fiscal significa aceite do comprovante comercial existente, sem alegação de nota autorizada.
+
+## Instalação do banco e promoção da versão
+
+Código funcional versionado em eb9ca08e8edc7e16158fbc8c51a34d3d48100d94, árvore 802cb3cd8827f72118ecf6cd374bed4f8a8d3900. São 32 arquivos alterados/novos. A compilação completa npm run build em cópia isolada passou na primeira execução, com 1.314 fontes não documentais byte a byte iguais às enviadas ao GitHub. Os gates anteriores continuam ativos.
+
+A primeira chamada de instalação retornou Invalid or expired requestState. A reconciliação somente leitura confirmou ausência da função, zero políticas novas e nenhuma migration registrada antes da repetição. A chamada seguinte instalou a migration slim_session_security_enforcement sob versão 20261018180658. O schema cache do PostgREST recebeu reload schema após a instalação; isso é operação de atualização de cache, sem alteração de dados.
+
+A conferência remota confirmou 66 políticas novas, todas RESTRICTIVE, e as 125 políticas anteriores com o mesmo hash e04ec8703e39f50408b2c714f07246e0. As quatro funções têm os mesmos corpos da migration testada, search_path fixo, privilégios mínimos e o contrato INVOKER/DEFINER esperado. O hook public.slim_check_api_request foi instalado preservando as demais configurações do authenticator. Usuários, sessão, fatores, leads, pedidos e cadastro de grupos mantiveram as contagens do baseline. Nenhuma conta precisou de cadastro forçado de MFA.
+
+Advisors às 18:09:33 UTC: os mesmos quatro INFO de ledgers privados deliberadamente fechados, quatro WARN das RPCs Inbox existentes e um WARN de proteção de senha vazada. Não apareceram novos avisos. As RPCs Inbox autenticadas agora passam pela verificação central antes de sua execução; seus guards anteriores de empresa/ator continuam obrigatórios. Nenhum advisor foi silenciado para mudar a cor do semáforo.
+
+A versão foi promovida por CAS à branch restauracao/sistema-completo-20261014, sem reescrever história. Railway iniciou o deployment 2c72ee70-bd81-486f-94f9-74d0389f7a95 em 18/10/2026 às 18:09:19 UTC. O resultado terminal, domínio e healthcheck foram confirmados no encerramento abaixo.
+
+## Revisão final no navegador isolado
+
+Os mesmos componentes reais foram repetidos com o CSS do build final: styles-NNUnQaCy.css, SHA-256 097adcf892fed44acf55c7e03d67810de776d4a9df8e24e1df3d49f4fb6164a7. Desafio/recuperação passaram nos oito casos interativos; Segurança foi renderizada em 1440 e 390 px, com campos vazios/preenchidos; Sessões passou cinco casos com saída local sintética. As dez capturas entre as frentes foram revistas, sem transbordamento, erros JavaScript ou chamadas externas. Senhas permaneceram mascaradas; troca de conta descarta rascunhos antigos e foco/renovação da mesma sessão preservam o trabalho.
+
+As capturas e métricas foram geradas em /tmp/slim-auth-gate-block12-qa e /tmp/slim-security-release-render-20261018, usando autenticação e transporte sintéticos. Os resultados e hashes relevantes ficam registrados neste documento; não representam teste na conta autenticada do usuário.
+
+## 🟢 Publicação e liberação confirmadas
+
+Deployment 2c72ee70-bd81-486f-94f9-74d0389f7a95 concluiu SUCCESS em 18/10/2026 às 18:14:09.294 UTC; healthcheck 1/1 aprovado às 18:14:06.151384376 UTC. Conferência às 18:16:26 UTC: quatro serviços online, uma réplica cada, zero falhas, zero avisos operacionais e pendingWork vazio. A versão funcional publicada é eb9ca08e8edc7e16158fbc8c51a34d3d48100d94.
+
+O smoke HTTP de https://slimesaude.com passou: página raiz HTTP 200 e referência ao estilo final; os quatro CSS são byte a byte iguais aos aprovados. GET sem autenticação em /api/partners/payment-profile e /api/partners/admin/payment-profiles devolveu HTTP 401 com JSON, antes de acesso a dados. Esse smoke não usou a sessão do usuário.
+
+O sistema está liberado para a conferência geral do usuário. Não há pendência de emissor fiscal no escopo aceito; o comprovante comercial existente está concluído. A conferência final de mídia/grupos, checkout/pedidos e convites permanece amarela até aceite real, sem bloquear o acesso às funções publicadas. SalesBots, gatilhos, Públicos/Reativação e Copiloto conservam os aceites reais anteriores. Não foi reintroduzida IA autônoma nos grupos.
+
+Este checkpoint final é documental na branch fix/slim-security-release-20261018; não inicia outro deploy só para trocar o estado do relatório. A versão funcional e o serviço em produção permanecem os confirmados acima.
