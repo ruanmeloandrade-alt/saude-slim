@@ -1,4 +1,5 @@
 /** Validates a persisted read response; this module does not persist or authenticate an order. */
+import { normalizeCheckoutDelivery, type CheckoutFulfillment } from './slim-checkout-delivery.core.ts';
 export const ORDER_MONEY_LIMIT = 99999999999999;
 export type OrderItemSnapshot = {
   productId: string; sku: string; name: string; description: string;
@@ -14,6 +15,7 @@ export type OrderSnapshot = {
   items: OrderItemSnapshot[]; subtotalCents: number; discountCents: number; totalCents: number;
   payment: { method: string; status: 'pending' | 'paid'; installments: number };
   notes: string;
+  fulfillment?: CheckoutFulfillment; shippingCents?: number;
 };
 export type OrderReadBatch = { workspaceId: string; complete: true; orders: OrderSnapshot[] };
 const methods = new Set(['pix', 'cash', 'debit_card', 'credit_card', 'bank_transfer', 'boleto', 'other']);
@@ -90,10 +92,13 @@ export function validateOrderSnapshot(value: unknown, expectedWorkspace: string)
   const subtotalCents = integer(r.subtotalCents, 'Subtotal');
   const discountCents = integer(r.discountCents, 'Desconto');
   const totalCents = integer(r.totalCents, 'Total');
-  for (const field of ['subtotalCents', 'discountCents', 'totalCents'] as const) {
+  const delivery = normalizeCheckoutDelivery(r.fulfillment, r.shippingCents);
+  const shipping = BigInt(delivery.shippingCents ?? 0);
+  for (const field of ['subtotalCents', 'discountCents'] as const) {
     if (items.reduce((sum, item) => sum + BigInt(item[field]), 0n) !== BigInt(r[field] as number)) throw new Error('Totais do pedido não correspondem aos itens.');
   }
-  if (subtotalCents - discountCents !== totalCents) throw new Error('Total e desconto inconsistentes.');
+  if (items.reduce((sum, item) => sum + BigInt(item.totalCents), 0n) + shipping !== BigInt(totalCents)) throw new Error('Totais do pedido não correspondem aos itens e frete.');
+  if (BigInt(subtotalCents) - BigInt(discountCents) + shipping !== BigInt(totalCents)) throw new Error('Total, desconto e frete inconsistentes.');
   let cancelledAt: string | null = null;
   let cancellationReason: string | null = null;
   if (r.status === 'cancelled') {
@@ -106,7 +111,7 @@ export function validateOrderSnapshot(value: unknown, expectedWorkspace: string)
     number: str(r.number, 'Número do pedido', 80, true), status: r.status as OrderSnapshot['status'], confirmedAt, cancelledAt, cancellationReason,
     customer: { id: orderUuid(customer.id, 'Cliente'), name: str(customer.name, 'Nome do cliente', 160, true), email: str(customer.email, 'E-mail', 254), phone: str(customer.phone, 'Telefone', 40) },
     issuer: { name: str(issuer.name, 'Emitente', 200, true), legalName: str(issuer.legalName, 'Razão social', 240), document: str(issuer.document, 'Documento do emitente', 40) },
-    items, subtotalCents, discountCents, totalCents,
+    items, subtotalCents, discountCents, totalCents, ...delivery,
     payment: { method: payment.method as string, status: payment.status as 'pending' | 'paid', installments },
     notes: str(r.notes, 'Observações', 2000),
   };
@@ -160,6 +165,7 @@ export function buildOrderReadModel(value: unknown, workspaceId: string, filters
       confirmedCount: active.length, cancelledCount: rows.length - active.length,
       distinctCustomers: new Set(active.map(o => o.customer.id)).size,
       subtotalCents: sum(active, 'subtotalCents'), discountCents: sum(active, 'discountCents'), totalCents: sum(active, 'totalCents'),
+      shippingCents: exact(active.reduce((n, order) => n + BigInt(order.shippingCents ?? 0), 0n)),
       receivedDeclaredCents: sum(active.filter(o => o.payment.status === 'paid'), 'totalCents'),
       pendingPaymentCents: sum(active.filter(o => o.payment.status === 'pending'), 'totalCents'),
       cancelledTotalCents: sum(rows.filter(o => o.status === 'cancelled'), 'totalCents'),

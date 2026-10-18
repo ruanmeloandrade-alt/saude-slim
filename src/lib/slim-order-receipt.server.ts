@@ -1,6 +1,7 @@
 /** Deterministic, dependency-free commercial PDF. Not a fiscal issuer or a DANFE. */
 import {Buffer} from 'node:buffer';
 import {formatCheckoutCents, verifyCheckoutReceipt, type CheckoutQuote, type ConfirmedCheckout} from './slim-checkout.core.ts';
+import {normalizeCheckoutDelivery} from './slim-checkout-delivery.core.ts';
 const CP1252:Record<number,number>={8364:128,8218:130,402:131,8222:132,8230:133,8224:134,8225:135,710:136,8240:137,352:138,8249:139,338:140,381:142,8216:145,8217:146,8220:147,8221:148,8226:149,8211:150,8212:151,732:152,8482:153,353:154,8250:155,339:156,382:158,376:159};
 function clean(v:string){return v.normalize('NFC').replace(/[\r\n\t]+/g,' ').replace(/[\x00-\x1f\x7f]/g,'').trim();}
 function text(v:string){
@@ -33,12 +34,26 @@ export function buildSlimOrderReceiptPdf(input:{quote:CheckoutQuote;receipt:Conf
     if(i.quantity<1||BigInt(i.quantity)*BigInt(i.unitPriceCents)!==BigInt(i.subtotalCents)||i.subtotalCents-i.discountCents!==i.totalCents)throw new Error('Item inconsistente.');
     return {subtotal:a.subtotal+BigInt(i.subtotalCents),discount:a.discount+BigInt(i.discountCents),total:a.total+BigInt(i.totalCents)};
   },{subtotal:0n,discount:0n,total:0n});
-  if(totals.subtotal!==BigInt(q.subtotalCents)||totals.discount!==BigInt(q.discountCents)||totals.total!==BigInt(q.totalCents))throw new Error('Totais inconsistentes no documento.');
+  const delivery=normalizeCheckoutDelivery(q.fulfillment,q.shippingCents);
+  const shipping=BigInt(delivery.shippingCents??0);
+  for(const value of [q.subtotalCents,q.discountCents,q.totalCents])formatCheckoutCents(value);
+  if(totals.subtotal!==BigInt(q.subtotalCents)||totals.discount!==BigInt(q.discountCents)||totals.total+shipping!==BigInt(q.totalCents)||BigInt(q.subtotalCents)-BigInt(q.discountCents)+shipping!==BigInt(q.totalCents))throw new Error('Totais inconsistentes no documento.');
   const lines:string[]=[];const add=(s:string)=>lines.push(...wrap(s));
   add(`Emitente: ${issuer.legalName||issuer.name}`);if(issuer.document)add(`Documento do emitente: ${issuer.document}`);
   add(`Pedido: ${r.number} | Data: ${created.toISOString().slice(0,19).replace('T',' ')} UTC`);
   add(`Identificador: ${r.orderId}`);lines.push('');
   add(`Cliente: ${customer.name}`);if(customer.phone)add(`Telefone: ${customer.phone}`);if(customer.email)add(`E-mail: ${customer.email}`);
+  if(delivery.fulfillment){
+    const f=delivery.fulfillment;lines.push('');
+    add(`Modalidade: ${f.mode==='pickup'?'Retirada':'Entrega'}`);
+    if(f.mode==='delivery'){
+      add(`Destinatário: ${f.recipient}`);add(`Telefone de entrega: ${f.phone}`);
+      add(`Endereço: ${f.street}, ${f.number}${f.complement?` | Complemento: ${f.complement}`:''}`);
+      add(`Bairro: ${f.neighborhood} | Cidade: ${f.city} | UF: ${f.state}`);
+      add(`CEP: ${f.postalCode.slice(0,5)}-${f.postalCode.slice(5)}`);
+      if(f.notes)add(`Observações de entrega: ${f.notes}`);
+    }
+  }
   lines.push('','ITENS DO PEDIDO','-'.repeat(84));
   q.items.forEach((i,index)=>{
     add(`${index+1}. ${i.name}${i.sku?` | SKU: ${i.sku}`:''}`);
@@ -46,7 +61,9 @@ export function buildSlimOrderReceiptPdf(input:{quote:CheckoutQuote;receipt:Conf
     add(`Quantidade: ${i.quantity} | Unitário: ${formatCheckoutCents(i.unitPriceCents)} | Subtotal: ${formatCheckoutCents(i.subtotalCents)}`);
     add(`Desconto: ${formatCheckoutCents(i.discountCents)} | Total do item: ${formatCheckoutCents(i.totalCents)}`);lines.push('');
   });
-  add(`Subtotal: ${formatCheckoutCents(q.subtotalCents)}`);add(`Desconto total: ${formatCheckoutCents(q.discountCents)}`);add(`TOTAL DO PEDIDO: ${formatCheckoutCents(q.totalCents)}`);lines.push('');
+  add(`Subtotal: ${formatCheckoutCents(q.subtotalCents)}`);add(`Desconto total: ${formatCheckoutCents(q.discountCents)}`);
+  if(delivery.fulfillment)add(`Frete: ${formatCheckoutCents(delivery.shippingCents!)}`);
+  add(`TOTAL DO PEDIDO: ${formatCheckoutCents(q.totalCents)}`);lines.push('');
   add(`Forma de pagamento: ${METHODS[q.payment.method]}${q.payment.installments>1?` (${q.payment.installments} parcelas)`:''}`);
   add(q.payment.status==='paid'?'Situação: pagamento informado como recebido pelo operador.':'Situação: pagamento pendente. Este documento não comprova recebimento.');
   if(q.notes){lines.push('');add(`Observações: ${q.notes}`);}

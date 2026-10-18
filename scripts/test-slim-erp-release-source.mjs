@@ -22,5 +22,5 @@ test('recovery performs reads only',()=>{const r=ui.split('async function recove
 test('same-workspace background refresh preserves checkout review',()=>{assert(!ui.includes('identity.isFetching?'));assert(ui.includes('key={`${identity.data.workspaceId}:${identity.data.actorId}:${mode}`}'));});
 test('actual cancel requires reason and explicit operator decision',()=>{assert(ui.includes('window.prompt('));assert(ui.includes('if(!reason?.trim())return;'));});
 test('previous regression gates remain',()=>{const p=read('scripts/apply-salesbot-save-contract.mjs');for(const name of ['apply-salesbot-save-contract.base','test-slim-money-source','test-slim-chat-membership','test-slim-metrics-integration','test-slim-checkout-preparation','test-slim-erp-release'])assert(p.includes(name));});
-test('new inbox, freight, autonomous copilot and goals changes not added',()=>{for(const name of ['sendSlimOrderDocument','shippingCents','ObjectiveCanvas','createGroup','SupportRobot'])assert(!ui.includes(name));});
+test('unrelated inbox, autonomous copilot and goals changes not added',()=>{for(const name of ['sendSlimOrderDocument','ObjectiveCanvas','createGroup','SupportRobot'])assert(!ui.includes(name));});
 console.log(`${n}/${n} ERP real-source contract checks passed; no authenticated browser or external message tested.`);

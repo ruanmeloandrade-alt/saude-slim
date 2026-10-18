@@ -73,5 +73,5 @@ writeFileSync(new URL('receipt-multipage.pdf',out),buildSlimOrderReceiptPdf({...
 const src=readFileSync(new URL('../src/components/erp/SlimCheckout.tsx',import.meta.url),'utf8');
 await check('UI requires a valid ledger transport before confirmation',()=>{assert(src.includes('!transport'));assert(src.includes('Confirmação')||src.includes('confirmação'));assert(src.includes('disabled={loading||Boolean(loadError)||!transport||scopeChanged}'));});
 await check('component does not write to legacy leads or product links',()=>{assert(!src.includes('.from('));assert(!src.includes('supabaseAdmin'));assert(!src.includes('fetch('));});
-await check('new Inbox and freight requests not implemented in this component',()=>{for(const name of ['sendEvolution','shippingCents','ObjectiveCanvas','createGroup'])assert(!src.includes(name));});
+await check('unrelated Inbox and goal requests remain outside checkout',()=>{for(const name of ['sendEvolution','ObjectiveCanvas','createGroup'])assert(!src.includes(name));});
 console.log(`${n}/${n} isolated checkout/document checks passed. Transport doubles only; no live ERP or database writes tested.`);

@@ -5,6 +5,7 @@ import { assertSlimOperator } from '@/lib/slim-workspace-operator.server';
 import { checked, erpRows, loadErpOrder, loadErpOrders, lookupErpAttempt, quoteFromOrder, receiptFromOrder } from '@/lib/slim-erp-data.server';
 import { orderUuid, validateOrderSnapshot } from '@/lib/slim-order-read.core';
 import { parseMoneyCents } from '@/lib/slim-money.core';
+import { normalizeCheckoutDelivery } from '@/lib/slim-checkout-delivery.core';
 import { assertErpContext, confirmReceiptShape, erpRejection, ERP_LIMIT } from '@/lib/slim-erp-release.core';
 
 // This release never instantiates a privileged client or sends customer data to a provider.
@@ -15,12 +16,20 @@ const customer = z.discriminatedUnion('kind',[
   z.object({kind:z.literal('existing'),id:z.string().uuid()}).strict(),
   z.object({kind:z.literal('new'),name:z.string().trim().min(1).max(160),email:z.union([z.literal(''),z.string().email().max(254)]),phone:z.string().max(40)}).strict(),
 ]);
+const fulfillment = z.discriminatedUnion('mode',[
+  z.object({mode:z.literal('pickup')}).strict(),
+  z.object({mode:z.literal('delivery'),recipient:z.string().max(160),phone:z.string().max(40),postalCode:z.string().max(9),street:z.string().max(200),number:z.string().max(30),complement:z.string().max(120),neighborhood:z.string().max(100),city:z.string().max(100),state:z.string().max(2),notes:z.string().max(500)}).strict(),
+]);
 const QUOTE = WS.extend({
   customer, items:z.array(z.object({productId:z.string().uuid(),name:z.string().min(1).max(500),description:z.string().max(10000),sku:z.string().max(200),quantity:z.number().int().min(1).max(999999),unitPriceCents:cents,subtotalCents:cents,discountCents:cents,totalCents:cents}).strict()).min(1).max(100),
   subtotalCents:cents,discountCents:cents,totalCents:cents,
+  fulfillment:fulfillment.optional(),shippingCents:cents.optional(),
   payment:z.object({method:z.enum(['pix','cash','debit_card','credit_card','bank_transfer','boleto','other']),status:z.enum(['pending','paid']),installments:z.number().int().min(1).max(24)}).strict(),
   notes:z.string().max(2000),
-}).strict();
+}).strict().superRefine((quote,ctx)=>{
+  try{normalizeCheckoutDelivery(quote.fulfillment,quote.shippingCents);}
+  catch(error){ctx.addIssue({code:z.ZodIssueCode.custom,path:['fulfillment'],message:error instanceof Error?error.message:'Entrega ou frete inválidos.'});}
+});
 async function scope(context:any,expected?:string,write=false) {
   const sb=context.supabase;
   const profile=checked(await sb.from('profiles').select('current_workspace_id').eq('id',context.userId).maybeSingle(),'Não foi possível identificar a empresa ativa.');

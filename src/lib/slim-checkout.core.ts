@@ -1,4 +1,6 @@
 /** Pure checkout domain. No database, tokens, network calls or stock mutations. */
+import { normalizeCheckoutDelivery, type CheckoutFulfillment } from './slim-checkout-delivery.core.ts';
+export type { CheckoutFulfillment } from './slim-checkout-delivery.core.ts';
 export type CatalogItem = { id: string; workspaceId: string; name: string; description: string; sku: string; priceCents: number; stock: number; active: boolean };
 export type CheckoutCustomer = { kind: 'existing'; id: string } | { kind: 'new'; name: string; email: string; phone: string };
 export type CheckoutDraft = {
@@ -7,12 +9,15 @@ export type CheckoutDraft = {
   discount: { kind: 'amount'; cents: number } | { kind: 'percent'; basisPoints: number };
   payment: { method: 'pix'|'cash'|'debit_card'|'credit_card'|'bank_transfer'|'boleto'|'other'; status: 'pending'|'paid'; installments: number };
   notes: string;
+  fulfillment?: CheckoutFulfillment;
+  shippingCents?: number;
 };
 export type CheckoutQuote = {
   workspaceId: string; customer: CheckoutCustomer;
   items: Array<{ productId: string; name: string; description: string; sku: string; quantity: number; unitPriceCents: number; subtotalCents: number; discountCents: number; totalCents: number }>;
   subtotalCents: number; discountCents: number; totalCents: number;
   payment: CheckoutDraft['payment']; notes: string;
+  fulfillment?: CheckoutFulfillment; shippingCents?: number;
 };
 const MAX = 99999999999999;
 const METHODS = new Set(['pix','cash','debit_card','credit_card','bank_transfer','boleto','other']);
@@ -61,7 +66,9 @@ export function calculateCheckout(ws: string, draft: CheckoutDraft, catalog: rea
   if(!payment||!METHODS.has(payment.method)||!['pending','paid'].includes(payment.status))throw new Error('Informe forma e situação do pagamento.');
   integer(payment.installments,'Parcelas',24);if(payment.installments<1||(payment.method!=='credit_card'&&payment.installments!==1))throw new Error('Parcelamento inválido para a forma de pagamento.');
   if(typeof draft.notes!=='string'||draft.notes.length>2000)throw new Error('Observações: limite de 2.000 caracteres.');
-  return {workspaceId:ws,customer,items,subtotalCents,discountCents:Number(discount),totalCents:Number(subtotal-discount),payment:{...payment},notes:draft.notes.trim()};
+  const delivery=normalizeCheckoutDelivery(draft.fulfillment,draft.shippingCents);
+  const totalCents=fromBigInt(subtotal-discount+BigInt(delivery.shippingCents??0),'Total com frete');
+  return {workspaceId:ws,customer,items,subtotalCents,discountCents:Number(discount),totalCents,payment:{...payment},notes:draft.notes.trim(),...delivery};
 }
 export function formatCheckoutCents(cents: number): string {
   integer(cents,'Valor');const n=BigInt(cents);const whole=String(n/100n).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
