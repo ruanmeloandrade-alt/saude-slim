@@ -428,8 +428,9 @@ export const createEmployee = createServerFn({ method: "POST" })
       );
     }
 
-    // Aponta workspace ativo se ainda não tiver
-    await admin.from("profiles").update({ current_workspace_id: wsId }).eq("id", userId).is("current_workspace_id", null);
+    // A identidade nova entra na empresa contratante; a reutilizada mantém sua escolha.
+    const { selectSlimEmployeeWorkspace } = await import("@/lib/slim-employee-workspace.server");
+    await selectSlimEmployeeWorkspace(admin, { workspaceId: wsId, userId, reusedExistingUser });
 
     return { ok: true, userId, reusedExistingUser };
   });

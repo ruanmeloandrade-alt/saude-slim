@@ -34,7 +34,6 @@ src/lib/whatsapp-groups.functions.ts, whatsapp-group-sync-robust.functions.ts e 
 
 ## Diagnóstico inicial e decisões
 A listagem do Inbox usa list_inbox_group_conversations_page, capaz de recuperar conversas do histórico. A Central lê somente whatsapp_groups via listWorkspaceGroups; suas ações exigem UUID persistido. A causa precisa ser resolvida no catálogo e no contrato de sincronização, não apenas renderizando grupos virtuais sem destino para salvar regras. Consultas reais e desenho final em andamento.
-
 ## Adendo de aceite do funcionário, conferido antes da correção
 A leitura real de 18/10 às 19:04 UTC confirmou funcionário criado às 18:44:59 UTC, login às 18:45:38 UTC, conta e vínculo ativos e uma sessão nativa válida. O perfil estava selecionando a empresa vazia criada automaticamente para essa nova identidade, em vez da operação Saúde Slim. A leitura de 19:06 UTC encontrou 26 leads e três bots individuais na Slim operacional, e zero leads/grupos/bots na empresa inicial do funcionário.
 
@@ -43,3 +42,29 @@ O código explica o resultado: handle_new_user cria empresa e preenche o perfil;
 Recorte adicional autorizado pelo pedido de conferir/finalizar a conta: selecionar a empresa contratante após o provisionamento de uma identidade nova, confirmando a escrita, e preservar a escolha prévia de identidades reutilizadas. Corrigir somente o campo de empresa ativa da conta de funcionário recém-criada e identificada, sob condições de vínculo ativo, origem na empresa pessoal vazia e seleção anterior conferida. Não modificar conta Auth, senha, sessão, fatores, permissões, memberships ou empresas; não excluir a empresa vazia. A restrição anterior sobre contas refere-se a ações de QA e não impede este reparo concreto do contexto operacional.
 
 A correção será testada com dados sintéticos, versionada antes da operação administrativa e incluída na mesma publicação dos grupos. O aceite do login real é verde; o acesso à empresa operacional será registrado após a correção verificada.
+
+## Implementação integrada e evidência antes da publicação
+- RPC invoker slim_sync_group_catalog recupera pares sessão/JID autorizados por INSERT...ON CONFLICT DO NOTHING, sem alterar configurações existentes. Migration 20261018185403_slim_group_catalog_recovery.sql; instalação ainda pendente neste checkpoint.
+- listWorkspaceGroups usa catálogo persistido e recupera somente metadados visíveis ao operador; visualizador consulta sem inserir. Nenhuma chamada à Evolution ao abrir a lista.
+- Sincronização explícita consulta a Evolution uma vez, GET com prazo de 18 s e até 2 MB, sem redirecionamento/retry/consultas extras de foto. Operação total até 30 s. Histórico permanece configurável quando o provedor falha; nomes/participantes só constam atualizados após resposta válida.
+- Central compartilha empresa/sessão e catálogo entre Grupos, Regras e SalesBots. Todas as sessões funciona, erros não viram lista vazia, consulta/agendamento são invalidados juntos. Rascunhos por grupo são preservados e o salvamento exige recibo. Ações de bots usam UUID da linha.
+- Agendamento mantém sessão/JID originais, exige operador e grava regras com o cliente sujeito a RLS antes de acessar o runtime interno. Prazo incerto orienta conferência, sem prometer rollback.
+- Novo funcionário recebe a empresa contratante após vínculo confirmado; identidade reutilizada mantém seleção prévia. Resultado comparado com perfil observado, prazo de 10 s e sem repetição.
+- Operações administrativas parametrizadas em supabase/operations recuperam somente os metadados da Slim e corrigem somente a empresa ativa do funcionário identificado. Serão executadas após versionamento da versão validada; não alteram permissões, Auth, mensagens ou contas comerciais.
+
+### Evidência real consultada
+Em 18/10 às 19:04/19:06 UTC, havia 95 mensagens de quatro grupos (85 recebidas e dez enviadas), zero cadastros de grupos e três SalesBots, todos de scope individual. O catálogo vazio de SalesBots de grupo é real; nenhum bot de grupo foi inventado ou criado para QA.
+
+O envio real encontrado é o texto “Teste”, registro df7af0d7, em 18/10 às 15:34:45 UTC (12:34:45 de Brasília), from_me=true, com message_id do provedor, sessão de origem 33ecf991 e grupo de sufixo 467105. A consulta exata de “oi” não retornou mensagem enviada; o aceite de envio está fundamentado no teste localizado e no relato do usuário, sem afirmar entrega ou leitura do destinatário.
+
+Funcionário d1811cad: criado às 18:44:59 UTC, login às 18:45:38 UTC, e-mail confirmado, conta ativa, vínculo member/funcionario ativo e uma sessão nativa válida. O perfil apontava para sua empresa inicial vazia (zero leads, bots e grupos), distinta da Slim operacional com 26 leads. Não foi lida senha/token nem executado login de QA. Checkout e comprovante comercial estão aceitos pelo usuário.
+
+### Validação disponível
+71 casos novos portáteis aprovados: SQL do catálogo 12, runtime do catálogo/provedor 23, UI 8, agendamento 16 e empresa inicial 12. Mais 8 interações Chromium com componentes reais e dados sintéticos. A compilação integrada e recaptura com CSS final estão em andamento; nenhum PASS de produção é antecipado.
+
+Baseline de segurança às 19:13:25 UTC: 192 políticas, hash 3c1767d874321020684cfbafc8ec5460, corpo do guard slim_assert_session_security com hash cea919fe8a00fd3be21482665196f997. Baseline do histórico dos grupos: 95 mensagens, hash projetado 108fd3b0f4d299ef9eec89470ad8b198. Produção funcional permanece eb9ca08 neste checkpoint.
+
+## 🟢 Compilação integrada aprovada antes da publicação
+npm run build terminou com exit 0 na primeira tentativa em /tmp/slim-block13-build-io0qgev9. As 1.326 fontes não documentais copiadas conservaram os hashes até a conferência posterior. Todos os gates anteriores e 71 casos novos passaram. Não houve alteração em dependências ou uso de GitHub Actions. Operação parametrizada de empresa inicial é SQL administrativo separado, sem alteração no artefato compilado.
+
+A sessão autenticada do dono foi acessada pelo Browser conectado somente em leitura: Configurações mostrava dois membros ativos e nenhum convite pendente. A conferência interativa da Central será feita após a publicação, sem iniciar bot ou mensagem. Recaptura Chromium com CSS final em andamento. Instalação da RPC, reparos administrativos e deployment ainda não concluídos neste checkpoint.

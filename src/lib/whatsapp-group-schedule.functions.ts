@@ -4,10 +4,23 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { adminClient } from "@/lib/meta-server";
 import { createRootContext } from "./execution-context";
 import { resolveOrCreateGroupTechnicalLead } from "./whatsapp-group-context.server";
+import { authorizeSlimGroupCatalog, slimGroupCatalogQuery, withSlimGroupCatalogRequest, type SlimGroupCatalogDb } from "./slim-group-catalog.server";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-type AnySb = { from: (table: string) => any };
+type AnySb = SlimGroupCatalogDb;
+
+/** Applies the same deadline/no-retry policy to existing internal query chains. */
+function requestDb(db: AnySb, signal: AbortSignal): AnySb {
+  const wrap = (query: any): any => new Proxy(query, {
+    get(target, key) {
+      if (key === "then") return (resolve: any, reject: any) => slimGroupCatalogQuery(target, signal).then(resolve, reject);
+      const value = Reflect.get(target, key);
+      return typeof value === "function" ? (...args: any[]) => wrap(value.apply(target, args)) : value;
+    },
+  });
+  return { from: (table) => wrap(db.from(table)), rpc: (name, args) => wrap(db.rpc(name, args)) };
+}
 
 type ScheduledRule = {
   id: string;
@@ -89,46 +102,18 @@ function isConnectedSession(session: { status?: unknown; metadata?: unknown } | 
   return metadata.deleted !== true && ["conectado", "connected", "open"].includes(status);
 }
 
-async function ensureActiveSession(admin: AnySb, group: GroupRow): Promise<GroupRow> {
-  const { data: current, error } = await admin
+async function ensureActiveSession(db: AnySb, group: GroupRow): Promise<GroupRow> {
+  const { data: current, error } = await db
     .from("whatsapp_web_sessions")
-    .select("id, status, metadata, provider")
+    .select("id, workspace_id, status, metadata, provider")
     .eq("id", group.session_id)
     .eq("workspace_id", group.workspace_id)
     .maybeSingle();
-  if (error) throw new Error(error.message ?? "Não foi possível validar a sessão de WhatsApp do grupo.");
-  if (isConnectedSession(current)) return group;
-
-  const { data: candidates, error: candidatesError } = await admin
-    .from("whatsapp_web_sessions")
-    .select("id, status, metadata, provider, last_connected_at")
-    .eq("workspace_id", group.workspace_id)
-    .eq("provider", "evolution")
-    .order("last_connected_at", { ascending: false })
-    .limit(20);
-  if (candidatesError) throw new Error(candidatesError.message ?? "Não foi possível localizar a sessão WhatsApp conectada.");
-
-  const connected = ((candidates ?? []) as Array<{ id: string; status?: unknown; metadata?: unknown }>)
-    .filter(isConnectedSession);
-  if (connected.length === 0) {
-    throw new Error("Nenhuma sessão Evolution conectada está disponível neste workspace.");
+  if (error) throw new Error("Não foi possível validar a sessão de origem do WhatsApp. Nenhum agendamento foi alterado.");
+  if (current?.id !== group.session_id || current?.workspace_id !== group.workspace_id || !isConnectedSession(current)) {
+    throw new Error("A sessão de origem deste grupo está desconectada ou indisponível. Reconecte essa mesma sessão antes de salvar os agendamentos.");
   }
-  if (connected.length > 1) {
-    throw new Error("Este grupo pertence a uma sessão antiga e existem várias sessões conectadas. Sincronize o grupo na sessão correta antes de agendar.");
-  }
-
-  const sessionId = connected[0].id;
-  const { data: rebound, error: reboundError } = await admin
-    .from("whatsapp_groups")
-    .update({ session_id: sessionId, updated_at: new Date().toISOString() })
-    .eq("id", group.id)
-    .eq("workspace_id", group.workspace_id)
-    .select("id, workspace_id, session_id, group_jid, name, subject, rules")
-    .single();
-  if (reboundError || !rebound) {
-    throw new Error(reboundError?.message ?? "Não foi possível reassociar o grupo à sessão WhatsApp conectada.");
-  }
-  return rebound as GroupRow;
+  return group;
 }
 
 async function syncScheduledRuns(admin: AnySb, group: GroupRow, rules: ScheduledRule[]) {
@@ -212,8 +197,10 @@ async function syncScheduledRuns(admin: AnySb, group: GroupRow, rules: Scheduled
 export const listGroupScheduleStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => ListSchema.parse(input))
-  .handler(async ({ data, context }) => {
-    const userSb = context.supabase as unknown as AnySb;
+  .handler(async ({ data, context }) => withSlimGroupCatalogRequest(async (signal) => {
+    const caller = context.supabase as unknown as AnySb;
+    await authorizeSlimGroupCatalog(caller, data.workspaceId, context.userId, signal, false);
+    const userSb = requestDb(caller, signal);
     const { data: group, error: groupError } = await userSb
       .from("whatsapp_groups")
       .select("id, workspace_id, session_id, group_jid, name, subject, rules")
@@ -224,7 +211,7 @@ export const listGroupScheduleStatus = createServerFn({ method: "GET" })
     if (!group) throw new Error("Grupo não encontrado neste workspace.");
 
     const rules = scheduledRulesFrom((group.rules ?? {}) as Record<string, unknown>);
-    const admin = adminClient() as unknown as AnySb;
+    const admin = requestDb(adminClient() as unknown as AnySb, signal);
     const { data: runs, error: runsError } = await admin
       .from("salesbot_runs")
       .select("id, salesbot_id, status, waiting_until, updated_at, variables")
@@ -252,7 +239,7 @@ export const listGroupScheduleStatus = createServerFn({ method: "GET" })
         updatedAt: run?.updated_at ?? null,
       };
     });
-  });
+  }));
 
 /**
  * Salva as regras do grupo e sincroniza os gatilhos de data/hora com o mesmo
@@ -261,8 +248,10 @@ export const listGroupScheduleStatus = createServerFn({ method: "GET" })
 export const saveGroupRulesAndSchedules = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => SaveSchema.parse(input))
-  .handler(async ({ data, context }) => {
-    const userSb = context.supabase as unknown as AnySb;
+  .handler(async ({ data, context }) => withSlimGroupCatalogRequest(async (signal) => {
+    const caller = context.supabase as unknown as AnySb;
+    await authorizeSlimGroupCatalog(caller, data.workspaceId, context.userId, signal, true);
+    const userSb = requestDb(caller, signal);
     const { data: visibleGroup, error: visibleError } = await userSb
       .from("whatsapp_groups")
       .select("id, workspace_id, session_id, group_jid, name, subject, rules")
@@ -272,20 +261,25 @@ export const saveGroupRulesAndSchedules = createServerFn({ method: "POST" })
     if (visibleError) throw new Error(visibleError.message ?? "Não foi possível validar o grupo.");
     if (!visibleGroup) throw new Error("Grupo não encontrado neste workspace.");
 
+    if (JSON.stringify(data.rules).length > 100_000) throw new Error("As regras excedem o limite de configuração do grupo.");
     const schedules = scheduledRulesFrom(data.rules);
-    const admin = adminClient() as unknown as AnySb;
-    const activeGroup = await ensureActiveSession(admin, visibleGroup as GroupRow);
-    await validateGroupBots(admin, data.workspaceId, schedules);
+    const activeGroup = await ensureActiveSession(userSb, visibleGroup as GroupRow);
+    await validateGroupBots(userSb, data.workspaceId, schedules);
 
-    const { data: savedGroup, error: saveError } = await admin
+    const { data: savedGroup, error: saveError } = await userSb
       .from("whatsapp_groups")
       .update({ rules: data.rules, updated_at: new Date().toISOString() })
       .eq("id", activeGroup.id)
       .eq("workspace_id", data.workspaceId)
+      .eq("session_id", activeGroup.session_id)
+      .eq("group_jid", activeGroup.group_jid)
       .select("id, workspace_id, session_id, group_jid, name, subject, rules")
       .single();
-    if (saveError || !savedGroup) throw new Error(saveError?.message ?? "Não foi possível salvar as regras do grupo.");
+    if (saveError || savedGroup?.id !== activeGroup.id || savedGroup?.workspace_id !== data.workspaceId || savedGroup?.session_id !== activeGroup.session_id || savedGroup?.group_jid !== activeGroup.group_jid) {
+      throw new Error("Não foi possível confirmar o salvamento das regras na sessão de origem. Confira o grupo antes de repetir; nenhum agendamento foi sincronizado.");
+    }
 
+    const admin = requestDb(adminClient() as unknown as AnySb, signal);
     const sync = await syncScheduledRuns(admin, savedGroup as GroupRow, schedules);
-    return { ok: true, reboundSession: activeGroup.session_id !== (visibleGroup as GroupRow).session_id, ...sync };
-  });
+    return { ok: true, reboundSession: false, ...sync };
+  }));

@@ -15,7 +15,7 @@ import {
   type GroupSalesbotSessionRow,
 } from "@/lib/group-salesbot-management.functions";
 
-type Target = { element: HTMLElement; index: number };
+type Target = { element: HTMLElement; botId: string };
 
 function discoverGroupCreateLink(): HTMLAnchorElement | null {
   if (typeof document === "undefined") return null;
@@ -30,8 +30,8 @@ function discoverTargets(): Target[] {
   if (!central) return [];
 
   return Array.from(central.querySelectorAll<HTMLButtonElement>('button[title="Duplicar bot"]'))
-    .map((button, index) => ({ element: button.parentElement as HTMLElement | null, index }))
-    .filter((item): item is Target => !!item.element);
+    .map((button) => ({ element: button.parentElement as HTMLElement | null, botId: button.closest<HTMLElement>('[data-slim-group-bot-id]')?.dataset.slimGroupBotId ?? '' }))
+    .filter((item): item is Target => !!item.element && !!item.botId);
 }
 
 function discoverToolbarHost(): HTMLElement | null {
@@ -46,7 +46,7 @@ function discoverBuilderActivationHost(): HTMLElement | null {
 }
 
 function sameTargets(a: Target[], b: Target[]): boolean {
-  return a.length === b.length && a.every((item, index) => item.element === b[index]?.element && item.index === b[index]?.index);
+  return a.length === b.length && a.every((item, index) => item.element === b[index]?.element && item.botId === b[index]?.botId);
 }
 
 function safeFileName(value: string): string {
@@ -140,7 +140,7 @@ export function GroupBotActionsEnhancer() {
   }, [refreshSessions, sessionBot]);
 
   const mapped = useMemo(
-    () => targets.map((target) => ({ target, bot: bots[target.index] })).filter((item) => !!item.bot),
+    () => targets.map((target) => ({ target, bot: bots.find(bot => bot.id === target.botId) })).filter((item) => !!item.bot),
     [targets, bots],
   );
 

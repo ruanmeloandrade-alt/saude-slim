@@ -35,6 +35,11 @@ import './apply-slim-error-log-bound.mjs';
 import './apply-slim-stage-single-lead.mjs';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+// Block 13: apply the catalogue presentation after the archived IA entry points are removed.
+execFileSync(process.execPath, [fileURLToPath(new URL('./apply-slim-group-catalog-ui.mjs', import.meta.url))], {stdio: 'inherit'});
+for (const file of ['test-slim-group-catalog-postgres.mjs', 'test-slim-group-catalog-runtime.mjs', 'test-slim-group-catalog-ui.mjs', 'test-slim-group-schedule-scope.mjs', 'test-slim-employee-workspace.mjs']) {
+ execFileSync(process.execPath, ['--experimental-strip-types', fileURLToPath(new URL('./' + file, import.meta.url))], {stdio: 'inherit'});
+}
 for (const file of ['test-slim-inbox-group-target.mjs', 'test-slim-group-salesbots-only.mjs', 'test-slim-group-media.mjs', 'test-slim-inbox-group-media.mjs']) {
  execFileSync(process.execPath, ['--experimental-strip-types', fileURLToPath(new URL('./' + file, import.meta.url))], {stdio: 'inherit'});
 }

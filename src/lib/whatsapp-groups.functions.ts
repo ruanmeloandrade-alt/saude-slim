@@ -5,6 +5,31 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export * from "./whatsapp-groups.functions.legacy";
 export { syncSessionGroups } from "./whatsapp-group-sync-robust.functions";
 
+// Central, rule editors and schedule selectors share the persisted Inbox catalogue.
+export const listWorkspaceGroups = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ workspaceId: z.string().uuid(), sessionId: z.string().uuid().optional() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { listSlimWorkspaceGroups } = await import("./slim-group-catalog.server");
+    return listSlimWorkspaceGroups(context.supabase as any, data.workspaceId, data.sessionId, context.userId);
+  });
+
+export const saveGroupRules = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ workspaceId: z.string().uuid(), groupId: z.string().uuid(), rules: z.record(z.string(), z.unknown()) }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { saveSlimGroupConfiguration } = await import("./slim-group-catalog.server");
+    return saveSlimGroupConfiguration(context.supabase as any, data, context.userId);
+  });
+
+export const setGroupAutomation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => z.object({ workspaceId: z.string().uuid(), groupId: z.string().uuid(), botId: z.string().uuid().nullable().optional(), agentId: z.string().uuid().nullable().optional() }).parse(input))
+  .handler(async ({ data, context }) => {
+    const { saveSlimGroupConfiguration } = await import("./slim-group-catalog.server");
+    return saveSlimGroupConfiguration(context.supabase as any, data, context.userId);
+  });
+
 type AnySb = {
   from: (table: string) => any;
   rpc: (
