@@ -7,6 +7,7 @@ import { orderUuid, validateOrderSnapshot } from '@/lib/slim-order-read.core';
 import { parseMoneyCents } from '@/lib/slim-money.core';
 import { normalizeCheckoutDelivery } from '@/lib/slim-checkout-delivery.core';
 import { assertErpContext, confirmReceiptShape, erpRejection, ERP_LIMIT } from '@/lib/slim-erp-release.core';
+import { isSlimContactPhoneConflict, SLIM_CONTACT_PHONE_CONFLICT } from '@/lib/slim-contact-errors.core';
 
 // This release never instantiates a privileged client or sends customer data to a provider.
 const WS = z.object({workspaceId:z.string().uuid()});
@@ -68,7 +69,7 @@ export const confirmSlimErpOrder=createServerFn({method:'POST'}).middleware([req
   const result=await sb.rpc('slim_confirm_order',{_workspace_id:ws,_request_id:data.requestId,_quote:data.quote});
   if(result.error){
     const rejection=erpRejection(result.error);
-    if(rejection)return {state:'rejected' as const,message:rejection};
+    if(rejection)return {state:'rejected' as const,message:rejection,...(isSlimContactPhoneConflict(result.error)?{rejectionCode:SLIM_CONTACT_PHONE_CONFLICT}:{})};
     throw new Error('Resultado da confirmação indisponível. Consulte esta tentativa antes de repetir.');
   }
   const receipt=confirmReceiptShape(result.data,ws,data.requestId,data.quote.totalCents);

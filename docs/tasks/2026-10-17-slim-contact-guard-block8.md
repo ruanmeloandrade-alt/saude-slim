@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 8 de prevenção de novos contatos duplicados
 
-## Estado: 🟡 escopo revisado antes da implementação
+## Estado: 🟢 implementação, 50 verificações e build aprovados; 🟡 instalação e publicação
 
 Base funcional 42b11fc16158b7b40f45c56b85cebc12fa3acaaa. Branch fix/slim-contact-guard-block8-20261017. Produção restauracao/sistema-completo-20261014, repositório ruanmeloandrade-alt/saude-slim. Supabase vyzvfcgpjjzvcjegzzza, empresa c49945db-1960-461a-9339-a43b8403bdd9. Somente Saúde Slim.
 
@@ -43,3 +43,27 @@ Antes de instalar, conferir metadados/contratos relevantes e agregados/hash de c
 ## Reversão
 
 Se houver incompatibilidade real, preparar uma correção compatível ou remover somente a barreira nova por migration revisada, sem apagar dados ou reescrever histórico Git. Não desativar validações existentes nem alterar a implantação de outro bloco. Este escopo é versionado antes do código da proteção.
+
+## Execução
+
+Escopo versionado em 55f39934e3117df06c3706afd52f2f0004edb312 antes da implementação. Consulta agregada somente leitura: 26 contatos, 25 com telefone elegível, um grupo histórico de colisão e três linhas excedentes. Nenhum contato de source whatsapp_group, instagram, facebook ou messenger com chave telefônica elegível nesta consulta. Hash SHA-256 do corpo do normalizador instalado: 13b638b254fabc1d3e3898016842732a045f95b0bca8d978c0a0640b3a5877e7. Esses dados não autorizam mesclar ou remover registros e não foram expostos como telefones ou nomes.
+
+Editar/Excluir do bloco 7 terminou a implantação: 42b11fc, Railway b6567ceb SUCCESS às 02:15:28 UTC de 18/10 e healthcheck 1/1 às 02:15:25 UTC; os quatro serviços foram conferidos online. O trabalho neste bloco continua sem esperar a conferência comercial do usuário.
+
+## Implementação e validação
+
+Nova migration 20261018021846_slim_contact_phone_guard.sql criada pelo CLI oficial com escalonamento normal aprovado para seu cache/telemetria, sem alterar HOME. O EROFS inicial do sandbox não foi uma recusa de revisão. Nenhuma recusa automática ocorreu nesta implementação. A migration acrescenta somente uma função/trigger privada, comentários e preflight; os arquivos históricos permanecem intactos. Instalação tem lock_timeout 5s e statement_timeout 30s.
+
+O guard AFTER ROW e VOLATILE usa exclusivamente phone integral do normalizador conferido, preserva atualizações sem mudança efetiva de identidade e revalida criação, reativação, unmerge e mudança de empresa/telefone. NULL é elegível. Identificadores de canais permanecem nas colunas próprias; JIDs de grupos não se tornam telefone. A função privada tem execução direta revogada de PUBLIC/anon/authenticated/service_role, search_path vazio e visibilidade somente para detectar colisões escondidas por política de leitura; não amplia a escrita do chamador. Somente a empresa Slim recebe a proteção. A consulta após o lock exige READ COMMITTED e limita espera a 5s.
+
+A aplicação reconhece apenas 23505 acompanhado do marcador exato slim_leads_contact_phone_guard. O checkout retorna rejeição confirmada e atualiza a leitura do catálogo sem desmontar o formulário; itens, endereço, frete e pagamento ficam preenchidos. Outros erros/timeout permanecem incertos, com referência preservada e sem repetição. createSlimCanonicalContact ficou intacto; os testes comprovam sua recuperação tanto pelo índice WhatsApp anterior quanto pelo novo guard, sem novo INSERT.
+
+Gates concluídos, sem somar repetição de rodadas ou regressões:
+
+- scripts/test-slim-contact-guard-runtime.mjs: 12/12 com handlers, Workspace, Checkout e sessão reais, IO sintético e transformação real da rejeição em memória.
+- scripts/test-slim-contact-guard-postgres.mjs: 26/26, incluindo execução final após o ajuste dos limites DDL. Fixture reutiliza Funil/outbox, checkout/frete, documentos e revisão de pedidos atuais. Preserva aliases, vínculo e venda sintéticos; cobre RLS parcial, lote, BEFORE trigger, isolamento e rollback.
+- scripts/test-slim-contact-guard-concurrency.mjs: 12/12 e exit 0 no PostgreSQL 16.15 local, com processos psql e PIDs independentes. O observador exige pg_locks advisory não concedido e pg_blocking_pids antes de liberar a transação. Cobre Funil × checkout em ambas as ordens, cadastro direto, rollback, alteração/reativação, lote, outra empresa, timeout medido em 5.010 ms com 55P03 e deadlock com rollback integral com 40P01. Não usa DATABASE_URL/TCP nem declara aprovação se faltar ambiente; banco descartável removido ao terminar.
+- Regressões focadas: ERP 37/37 e UI de Editar/Excluir 25/25 preservadas. Revisão cruzada somente leitura sem bloqueador, incluindo o teste real.
+- npm run build em /tmp/slim-contact-guard-build-5qw2ut3k: exit 0 na primeira tentativa, todos os gates anteriores e saída Nitro concluídos. Log /tmp/slim-contact-guard-build.log. Os dez arquivos de código/teste/migration do bloco continuaram com os mesmos hashes após o build; diff --check limpo. O gate concorrente real é local, não adiciona PostgreSQL/download ao build de produção.
+
+Total: 50 verificações novas. A semântica da leitura após o lock foi conferida na documentação primária de [volatilidade das funções](https://www.postgresql.org/docs/current/xfunc-volatility.html) e [visibilidade dos triggers](https://www.postgresql.org/docs/current/trigger-datachanges.html), além da prova executada com conexões independentes. Nenhum contato, pedido, estoque ou envio real foi usado como QA.

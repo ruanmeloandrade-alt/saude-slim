@@ -1,10 +1,12 @@
 /** Narrow ERP release rules. No database writes, credentials or messaging transport. */
+import {isSlimContactPhoneConflict, SLIM_CONTACT_PHONE_MESSAGE} from './slim-contact-errors.core.ts';
 export const ERP_LIMIT = 99999999999999;
 export function erpReadableError(error: unknown): string {
   const text = error instanceof Error ? error.message : '';
   return text || 'Não foi possível concluir a operação do ERP.';
 }
 export function erpRejection(error: unknown): string | null {
+  if (isSlimContactPhoneConflict(error)) return SLIM_CONTACT_PHONE_MESSAGE;
   if (!error || typeof error !== 'object') return null;
   const e = error as {code?: unknown; message?: unknown};
   if (!['22023','22P02','22003','23514','23503','42501'].includes(String(e.code))) return null;

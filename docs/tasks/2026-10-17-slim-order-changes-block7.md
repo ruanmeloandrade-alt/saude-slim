@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 7 de edição e exclusão revisadas de pedidos
 
-## Estado: 🟢 implementação, 110 testes novos, compilação e banco aprovados; 🟡 implantação Railway
+## Estado: 🟢 publicado, banco e healthcheck aprovados; 🟡 conferência comercial do usuário
 
 Base 5abfbda7022842061481686ab0d431b3c6f9d1a4. Branch fix/slim-order-changes-block7-20261017. Produção restauracao/sistema-completo-20261014, repositório ruanmeloandrade-alt/saude-slim. Supabase vyzvfcgpjjzvcjegzzza, empresa c49945db-1960-461a-9339-a43b8403bdd9. Somente Saúde Slim.
 
@@ -83,3 +83,7 @@ A compilação completa final terminou com exit 0 em /tmp/slim-order-changes-bui
 Implementação versionada em 42b11fc16158b7b40f45c56b85cebc12fa3acaaa antes da instalação. A chamada normal de apply_migration aprovou slim_order_changes_delivery_reviewed, versão aplicada 20261018021019. Nenhuma recusa de revisão ocorreu. Conferência posterior: ledger vazio, RLS ativa e somente SELECT autorizado por empresa, DML direto negado a authenticated e leitura negada a anon; três RPCs públicas INVOKER, autenticadas; os três hashes das funções anteriores permaneceram idênticos. Triggers novos e guards documentais existentes ativos. Advisors com os mesmos três registros INFO de tabelas privadas sem política, quatro avisos antigos de funções públicas SECURITY DEFINER e aviso antigo de proteção contra senha vazada; sem apontamento novo desta migration.
 
 Agregados e hashes completos antes/depois da instalação permaneceram iguais: 2 pedidos, 1 produto, 4 movimentos de estoque, 0 documentos e 0 entregas documentais. Nenhuma operação comercial de QA foi executada. A produção foi avançada por compare-and-swap de 5abfbda para 42b11fc; Railway iniciou b6567ceb-a933-4c0f-8848-087f0445765e às 02:11:39 UTC de 18/10. SUCCESS e healthcheck ainda aguardados neste checkpoint.
+
+## Publicação confirmada
+
+Railway b6567ceb-a933-4c0f-8848-087f0445765e, versão 42b11fc16158b7b40f45c56b85cebc12fa3acaaa: SUCCESS às 02:15:28.080 UTC de 18/10/2026, healthcheck 1/1 às 02:15:25.227637166 UTC, lido diretamente nos logs. Conferência às 02:19:39 UTC: quatro serviços online, uma réplica em cada serviço, nenhuma réplica travada, falha recente, alerta ou operação pendente. Usuário informado de que Editar/Excluir e a aba Alterações estão disponíveis. A equipe não executou alteração comercial real e não declarou homologação autenticada do usuário. Evidência documental segue no próximo bloco funcional, sem deploy somente de documentação.

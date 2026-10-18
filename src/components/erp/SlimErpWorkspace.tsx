@@ -9,6 +9,7 @@ import {CheckoutRejected,type CheckoutTransport} from '@/lib/slim-checkout-sessi
 import {checkoutJournal} from '@/lib/slim-checkout-journal.core';
 import {buildOrderReadModel,formatOrderCents,type OrderSnapshot} from '@/lib/slim-order-read.core';
 import {erpReadableError} from '@/lib/slim-erp-release.core';
+import {SLIM_CONTACT_PHONE_CONFLICT} from '@/lib/slim-contact-errors.core';
 import {SlimCheckout} from './SlimCheckout';
 import {SlimOrderHistory} from './SlimOrderHistory';
 import {SlimOrderChangeDialog,type SlimOrderChangeTarget} from './SlimOrderChangeDialog';
@@ -52,11 +53,18 @@ function Workspace({mode,workspaceId,actorId}:{mode:Mode;workspaceId:string;acto
   confirm:async(requestId,quote)=>{
    try{journal().begin(requestId);}catch(e){throw new CheckoutRejected(erpReadableError(e));}
    const response=await confirm({data:{workspaceId,requestId,quote}});
-   if(response.state==='rejected'){clearJournal(requestId);throw new CheckoutRejected(response.message);}
+   if(response.state==='rejected'){
+    clearJournal(requestId);
+    if(live.current&&'rejectionCode' in response&&response.rejectionCode===SLIM_CONTACT_PHONE_CONFLICT){
+     // Refresh only the client/catalog read; the current checkout and its draft stay mounted.
+     void contextQ.refetch().catch(error=>{if(live.current)setOperationError(`Não foi possível atualizar os clientes: ${erpReadableError(error)}`);});
+    }
+    throw new CheckoutRejected(response.message);
+   }
    const verified=verifyCheckoutReceipt(quote,requestId,response.receipt);clearJournal(requestId);return verified;
   },
   lookup:async(requestId)=>{const result=await lookup({data:{workspaceId,requestId}});if(result.state==='confirmed'||result.state==='rejected')clearJournal(requestId);return result;},
- }),[workspaceId,actorId,confirm,lookup]);
+ }),[workspaceId,actorId,confirm,lookup,contextQ.refetch]);
  async function openReceipt(orderId:string) {
   if(pdfBusy)return;setPdfBusy(true);setOperationError('');
   try{const result=await loadReceipt({data:{workspaceId,orderId}});if(live.current)setPdf(result);}
