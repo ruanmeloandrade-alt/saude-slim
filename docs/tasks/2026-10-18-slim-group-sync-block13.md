@@ -34,3 +34,12 @@ src/lib/whatsapp-groups.functions.ts, whatsapp-group-sync-robust.functions.ts e 
 
 ## Diagnóstico inicial e decisões
 A listagem do Inbox usa list_inbox_group_conversations_page, capaz de recuperar conversas do histórico. A Central lê somente whatsapp_groups via listWorkspaceGroups; suas ações exigem UUID persistido. A causa precisa ser resolvida no catálogo e no contrato de sincronização, não apenas renderizando grupos virtuais sem destino para salvar regras. Consultas reais e desenho final em andamento.
+
+## Adendo de aceite do funcionário, conferido antes da correção
+A leitura real de 18/10 às 19:04 UTC confirmou funcionário criado às 18:44:59 UTC, login às 18:45:38 UTC, conta e vínculo ativos e uma sessão nativa válida. O perfil estava selecionando a empresa vazia criada automaticamente para essa nova identidade, em vez da operação Saúde Slim. A leitura de 19:06 UTC encontrou 26 leads e três bots individuais na Slim operacional, e zero leads/grupos/bots na empresa inicial do funcionário.
+
+O código explica o resultado: handle_new_user cria empresa e preenche o perfil; createEmployee confirma o vínculo com a Slim, mas só seleciona a empresa contratante quando o perfil está nulo. O login não oferece troca de empresa na navegação atual. Esse defeito impede considerar o acesso operacional concluído somente pelo login.
+
+Recorte adicional autorizado pelo pedido de conferir/finalizar a conta: selecionar a empresa contratante após o provisionamento de uma identidade nova, confirmando a escrita, e preservar a escolha prévia de identidades reutilizadas. Corrigir somente o campo de empresa ativa da conta de funcionário recém-criada e identificada, sob condições de vínculo ativo, origem na empresa pessoal vazia e seleção anterior conferida. Não modificar conta Auth, senha, sessão, fatores, permissões, memberships ou empresas; não excluir a empresa vazia. A restrição anterior sobre contas refere-se a ações de QA e não impede este reparo concreto do contexto operacional.
+
+A correção será testada com dados sintéticos, versionada antes da operação administrativa e incluída na mesma publicação dos grupos. O aceite do login real é verde; o acesso à empresa operacional será registrado após a correção verificada.
