@@ -1,6 +1,6 @@
 # Saúde Slim | Semáforo operacional
 
-## Checkpoint de 17/10/2026: 🟢 Copiloto aprovado; 🟡 checkout em execução
+## Checkpoint de 17/10/2026: 🟢 Copiloto aprovado; 🟡 checkout para conferência após publicação
 
 Escopo exclusivo: Saúde Slim, Supabase vyzvfcgpjjzvcjegzzza, GitHub ruanmeloandrade-alt/saude-slim, produção restauracao/sistema-completo-20261014.
 
@@ -24,7 +24,8 @@ Orientação atual do usuário: concluir um bloco por vez, pausar para conferên
 | IA de grupos | ⚪ Retirada pelo usuário em 17/10 | Atendimento autônomo e respectivas métricas saíram da lista de trabalho. As entradas de IA da Central de Grupos foram retiradas; SalesBots, regras e gatilhos permanecem. Dados arquivados não foram excluídos. |
 | Mini-Inbox da ficha do Funil | 🔴 Bloqueio anterior | Integração recusada anteriormente, WIP não publicado e não contornado. |
 | Copiloto | 🟢 Publicado e teste real aprovado pelo usuário | Commit 20930d87, Railway b3d7b984 SUCCESS, healthcheck 1/1 às 23:30:57 UTC e migração 20261017232621 instalada. 169 verificações específicas, regressões e build completo isolado aprovados. Quatro propostas com aprovação/rejeição no servidor, recibos e recuperação; 11 consultas. O usuário confirmou em 17/10 que o Copiloto passou no teste. Aceite registrado conforme seu relato; novas funcionalidades ficam para depois. |
-| ERP/checkout/estoque | 🟡 / 🔴 | Correções anteriores preservadas; endereço/frete, E2E e Editar/Excluir pedidos pendentes, sem retentar migração bloqueada. |
+| Checkout: entrega, endereço e frete | 🟢 Código e banco validados; 🟡 conferência do usuário | Implementação 67d56cb8: retirada/entrega, destinatário, telefone, endereço e frete no snapshot, revisão, histórico, Dashboard e PDF. 154 testes novos e build completo isolado aprovados na primeira rodada. Migration slim_checkout_delivery_freight, versão 20261018002739, instalada e conferida. Pedido e estoque anteriores preservados; sem QA comercial em produção. |
+| ERP/estoque e manutenção dos pedidos | 🟡 / 🔴 | Correções anteriores preservadas. Homologação comercial completa e Editar/Excluir pedidos seguem pendentes; migração bloqueada não foi retentada. |
 | Públicos/disparos/tracking | 🟡 | Proteções de fila publicadas; E2E de entrega pendente. |
 | Segurança/convites e unicidade global | 🔴 Bloqueios anteriores | Migrações não reaplicadas. |
 | Fiscal NF-e | 🔴 Pendente | PDF é comprovante comercial, não nota fiscal autorizada. |
@@ -32,7 +33,7 @@ Orientação atual do usuário: concluir um bloco por vez, pausar para conferên
 
 Nenhum lead real foi movido, nenhum WhatsApp foi enviado e nenhuma venda ou documento foi alterado pela equipe durante estes testes. O teste real acima foi executado anteriormente pelo usuário e apenas consultado. A abertura de mídia exige autenticação, empresa ativa e a mensagem da conversa correta. A recuperação de grupo guarda o arquivo no Storage privado e substitui somente seu ponteiro escalar, sob clique do operador; não regrava o raw em lote. Os 17 anexos inline dos grupos encontrados na consulta do bloco 1 permanecem preservados até serem abertos. Novos recebimentos deixam de buscar mídia antecipadamente e removem base64 do snapshot salvo, mantendo chaves de recuperação e metadados. Eventos antigos do Realtime ainda podem transportar payload grande pelo provedor. Testes de build e banco isolado não são homologação visual. O bloco 1 não aplicou migração; o bloco 2 aplicou somente a migração nova de criação/lote e recibos do Funil, previamente versionada e testada. O bloco 3 aplicou somente o ledger aditivo privado do Copiloto, também versionado e testado antes da instalação; suas cinco RPCs públicas são invoker e o acesso direto às duas tabelas é negado.
 
-Detalhes do bloco atual: docs/tasks/2026-10-17-slim-copilot-approval-block3.md. Funil e SalesBots: docs/tasks/2026-10-17-slim-funil-salesbot-block2.md. Inbox e evidência da passagem real para IA: docs/tasks/2026-10-17-slim-inbox-block1.md. Registros anteriores: docs/tasks/2026-10-16-slim-stage-trigger-release.md, docs/tasks/2026-10-16-slim-inbox-payload-relief.md, docs/tasks/2026-10-16-slim-inbox-media-on-demand.md, docs/tasks/2026-10-16-slim-automation-error-safety.md, docs/tasks/2026-10-17-slim-evolution-attachment-recovery.md, docs/tasks/2026-10-17-slim-group-inbox-restoration.md e docs/tasks/2026-10-17-slim-group-text-bounded.md. Histórico anterior preservado em docs/history/OPERATION_STATUS-before-stage-and-media-20261016.md.
+Detalhes do bloco atual: docs/tasks/2026-10-17-slim-checkout-delivery-block4.md. Copiloto aprovado: docs/tasks/2026-10-17-slim-copilot-approval-block3.md. Funil e SalesBots: docs/tasks/2026-10-17-slim-funil-salesbot-block2.md. Inbox e evidência da passagem real para IA: docs/tasks/2026-10-17-slim-inbox-block1.md. Registros anteriores: docs/tasks/2026-10-16-slim-stage-trigger-release.md, docs/tasks/2026-10-16-slim-inbox-payload-relief.md, docs/tasks/2026-10-16-slim-inbox-media-on-demand.md, docs/tasks/2026-10-16-slim-automation-error-safety.md, docs/tasks/2026-10-17-slim-evolution-attachment-recovery.md, docs/tasks/2026-10-17-slim-group-inbox-restoration.md e docs/tasks/2026-10-17-slim-group-text-bounded.md. Histórico anterior preservado em docs/history/OPERATION_STATUS-before-stage-and-media-20261016.md.
 
 ## Aceite do bloco 2 e próxima pausa
 
@@ -54,4 +55,14 @@ O Copiloto agora separa proposta de decisão: mover etapa, enviar texto individu
 
 Os 169 testes novos incluem 23 de texto, 33 de backend, 70 de PostgreSQL isolado, nove de integração e 34 de interface. As regressões anteriores e a compilação completa passaram localmente e no Railway. A leitura do Supabase às 23:32 UTC confirmou 25 leads, um pedido, zero eventos pendentes e zero propostas/auditorias de QA; hashes de estado e funções existentes preservados.
 
-🟢 Aceite do usuário em 17/10: o agente/Copiloto passou no teste. Não há nova rodada de homologação pendente deste bloco. Funcionalidades futuras do Copiloto ficam adiadas. 🟡 Bloco seguinte em execução: entrega/endereço/frete; pausar para conferência quando publicado.
+🟢 Aceite do usuário em 17/10: o agente/Copiloto passou no teste. Não há nova rodada de homologação pendente deste bloco. Funcionalidades futuras do Copiloto ficam adiadas. 🟡 Bloco de entrega/endereço/frete validado para publicação; pausar para conferência quando o deployment estiver concluído.
+
+## 🟢 Bloco 4: entrega, endereço e frete validados
+
+Código funcional 67d56cb8866b5a3d14f9a5cb9badfecc60002302. O checkout distingue retirada e entrega, congela destinatário, telefone, endereço e frete na revisão e preserva esses campos no pedido e PDF. Desconto somente nos produtos, frete separado e total integrado ao histórico e Dashboard. Pedido antigo mantém snapshot e documento original; cancelamento continua estornando apenas produtos, uma única vez.
+
+154 verificações novas aprovadas (63 domínio/PDF, 63 PostgreSQL isolado, 11 UI e 17 integração), com regressões e npm run build completo na primeira rodada, em cópia isolada. Migração instalada sob versão 20261018002739; conferência às 00:28:05 UTC de 18/10 confirmou um pedido e um produto com os mesmos hashes anteriores, frete histórico zero e permissões preservadas. Não foram criados pedidos nem alterados estoques reais pela equipe.
+
+A implantação deste checkpoint é acompanhada no [serviço web do Railway](https://railway.com/project/ae81dbf0-2b77-4729-9055-c25ec98d6117/service/9f4b1d9b-ee8a-4048-b5f2-99087988deb5?environmentId=f9d4ca40-bba7-4409-822e-d5de5ad62dbe). O resultado do deployment e healthcheck é informado no encerramento da entrega, sem antecipar sucesso neste registro. Não há publicação documental separada nesta rodada.
+
+🟡 Conferência do usuário após a publicação: em Novo pedido, selecionar Entrega, informar destinatário/endereço/frete, revisar o total e conferir histórico/PDF no pedido que decidir registrar. Retirada permanece com frete zero. Pausar após essa entrega. Copiloto continua 🟢 aprovado, com novas funcionalidades adiadas; demais pendências e bloqueios permanecem registrados na tabela.

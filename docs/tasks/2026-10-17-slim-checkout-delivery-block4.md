@@ -70,3 +70,17 @@ Nenhum pedido, contato, estoque ou WhatsApp de QA foi criado/alterado em produç
 ## 🟢 Compilação completa
 
 `npm run build` terminou com código zero em cópia isolada, na primeira rodada deste bloco. Todos os gates anteriores foram preservados e executados, incluindo os 154 testes novos. Nenhum transform foi executado no checkout compartilhado. Sem instalação de dependências ou GitHub Actions. A publicação segue somente após versionamento desta implementação e aplicação conferida da migration.
+
+## 🟢 Migration aplicada e conferida
+
+Implementação versionada no commit 67d56cb8866b5a3d14f9a5cb9badfecc60002302 antes da aplicação. Supabase confirmou sucesso de slim_checkout_delivery_freight, versão 20261018002739. A versão do arquivo CLI (20261018001819) e o registro atribuído pelo MCP são diferentes; ambos se referem à mesma migration, sem duplicação ou reaplicação.
+
+Leitura posterior às 00:28:05 UTC de 18/10: um pedido, um produto, frete histórico zero. Hash de pedido d50cfcaf0c4ceafde73cfdb1fd707f31 e hash de estoque 6f002ae1d3e263ae53228d1baa3a36d1, ambos idênticos ao baseline. Constraint financeira inclui frete, desconto limitado aos produtos e teto monetário. Coluna shipping_cents legível por authenticated, INSERT/UPDATE diretos negados, anon sem leitura. Wrapper público continua invoker.
+
+Advisor não acrescentou avisos em relação ao bloco anterior. Permanecem três informações de [RLS privado sem política](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy), quatro avisos das [RPCs antigas do Inbox](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable) e o aviso anterior de [proteção de senhas vazadas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection). Nenhum deles foi reaberto neste bloco.
+
+## Publicação e pausa
+
+Código, aceite do Copiloto, testes e este checkpoint seguem juntos para restauracao/sistema-completo-20261014 em uma única publicação. O commit funcional acima identifica exatamente a implementação testada; o checkpoint seguinte acrescenta somente documentação. Confirmar deployment SUCCESS, healthcheck e leitura pós-publicação antes de encerrar. O resultado operacional é comunicado na entrega, sem supor que uma publicação ainda em andamento passou.
+
+Após publicar, pausar para a conferência do usuário do endereço/frete na revisão, histórico e comprovante. Não executar uma venda real de QA pela equipe. Não iniciar outro bloco durante a pausa. Copiloto permanece aprovado conforme relato do usuário; funcionalidades futuras dele ficam adiadas.
