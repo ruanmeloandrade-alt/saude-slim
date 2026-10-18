@@ -454,7 +454,7 @@
  --chat-divider: var(--border);
  --chat-accent: var(--primary);
  --chat-accent-fg: var(--primary-foreground);
- --chat-meta: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
+ --chat-meta: var(--chat-text-muted);
  --chat-warning: var(--warning, oklch(0.78 0.16 75));
  --chat-group-avatar: color-mix(in oklab, var(--primary) 14%, var(--card) 86%);
  --chat-audio-control: color-mix(in oklab, var(--primary) 22%, var(--card) 78%);
@@ -665,17 +665,17 @@
 }
 
 [data-theme="dark"] [data-chat-surface] {
- --chat-panel: oklch(0.19 0.034 160);
- --chat-panel-hover: oklch(0.24 0.035 160);
- --chat-panel-active: oklch(0.30 0.07 158);
- --chat-bg: oklch(0.15 0.028 160);
- --chat-thread-bg: oklch(0.17 0.03 160);
+ --chat-panel: oklch(0.24 0.034 160);
+ --chat-panel-hover: oklch(0.29 0.035 160);
+ --chat-panel-active: oklch(0.36 0.07 158);
+ --chat-bg: oklch(0.18 0.028 160);
+ --chat-thread-bg: oklch(0.205 0.028 160);
  --chat-pattern: oklch(0.68 0.16 158 / 0.12);
- --chat-bubble-in: oklch(0.24 0.035 160);
- --chat-bubble-out: oklch(0.32 0.10 158);
- --chat-divider: oklch(0.31 0.035 160);
+ --chat-bubble-in: oklch(0.31 0.035 160);
+ --chat-bubble-out: oklch(0.39 0.08 158);
+ --chat-divider: oklch(0.40 0.035 160);
  --chat-text: oklch(0.97 0.01 155);
- --chat-text-muted: oklch(0.75 0.035 155);
+ --chat-text-muted: oklch(0.82 0.025 155);
  --chat-accent: oklch(0.68 0.16 158);
  --chat-accent-fg: oklch(0.09 0.03 160);
  --chat-group-avatar: oklch(0.42 0.12 145);
@@ -686,6 +686,13 @@
 
 
 
+[data-chat-thread-bg] {
+ background-color: var(--chat-thread-bg);
+ color: var(--chat-text);
+ overscroll-behavior: contain;
+}
+[data-chat-surface] input { min-width: 0; }
+[data-chat-surface] input::placeholder { color: var(--chat-text-muted); opacity: 1; }
 [data-chat-thread-bg][data-chat-wallpaper="plain"] {
  background-image: none;
 }

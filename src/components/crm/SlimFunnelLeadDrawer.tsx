@@ -188,7 +188,7 @@ export const SlimFunnelLeadDrawer = forwardRef<SlimFunnelLeadDrawerHandle, { onE
         </div>
         <div className="slim-funnel-drawer-body" data-tab={tab}>
           <SlimFunnelLeadDetails lead={lead} />
-          <section className="slim-funnel-drawer-chat" aria-label="Conversa do cliente">
+          <section data-chat-surface className="slim-funnel-drawer-chat" aria-label="Conversa do cliente">
             <SlimEmbeddedChatThread key={contextKey} embedded conversation={conversation} channel="leads" workspaceId={context.workspaceId}
               cacheScope={{ workspaceId: context.workspaceId, userId: context.actorId }} onInteractionStateChange={onThreadInteraction} />
           </section>

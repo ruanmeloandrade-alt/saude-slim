@@ -34,3 +34,9 @@ Executar os gates existentes relevantes da ficha/Mini-Inbox e uma compilação c
 ## Execução e divisão
 
 Root registra escopo, revisa, integra e publica. Agente de UI implementa somente os três arquivos de apresentação após confirmação do commit de escopo. Agente de render prepara a verificação visual isolada e informa evidências. Nenhum agente altera código do outro nem realiza operações comerciais. Segurança e NF-e continuam pendentes, sem ampliar esta correção.
+
+## 🟢 Implementação e compilação local em 18/10
+
+Escopo publicado antes do código no commit 7170ce4dafcc85674a58c0cc1bef5640e5f533d6. A implementação altera apenas os três arquivos previstos: atributo de superfície no contêiner do chat, correção de flex/overflow e legibilidade da ficha, paleta/fundo/metadados compartilhados do chat. Revisão independente confirmou a especificidade sobre o Sheet e a preservação das abas móveis. Nenhuma lógica de dados ou transporte foi modificada.
+
+npm run build terminou com exit 0 na primeira tentativa, sessão 77413, em /tmp/slim-funnel-inbox-design-build-u3omvlns, com log /tmp/slim-funnel-inbox-design-build.log. Os gates existentes passaram, incluindo 15 verificações de detalhe, 12 do thread integrado e 21 da ficha. São 48 regressões anteriores, não testes novos. Artefato Nitro e hashes dos três arquivos fonte foram conferidos. Os transforms rodaram somente na cópia isolada. A produção ainda permanece 4dfbd18 neste checkpoint; renderização final e publicação seguem pendentes.
