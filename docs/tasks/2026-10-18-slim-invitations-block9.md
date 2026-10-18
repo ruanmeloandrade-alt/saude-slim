@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 9 de convites por link com acesso explícito
 
-## Estado: 🟢 testes e compilação aprovados; 🟡 instalação e publicação pendentes
+## Estado: 🟢 publicado e verificado; 🟡 aceite autenticado com o usuário
 
 Base b4185b0cb61169571b7d3cac002e5490643def21. Branch fix/slim-invitations-block9-20261018. Produção restauracao/sistema-completo-20261014, repositório ruanmeloandrade-alt/saude-slim. Supabase vyzvfcgpjjzvcjegzzza, empresa c49945db-1960-461a-9339-a43b8403bdd9. Somente Saúde Slim.
 
@@ -89,7 +89,7 @@ O aceite concede vínculo a uma conta já provisionada pelo administrador. Cadas
 
 A validade do convite era conferida antes das travas de membro/perfil. Uma espera poderia atravessar o vencimento. A implementação final revalida o TTL após adquirir essas travas e também antes da confirmação final. Se o convite vencer durante a espera ou durante o aceite, a operação rejeita ou reverte integralmente, sem consumir convite, criar vínculo ou selecionar a empresa. A expiração do vínculo existente também é reavaliada; não se prolonga acesso durante o aceite.
 
-## Gates pré-publicação: 🟢 83 casos novos e compilação aprovada; 🟡 instalação e publicação pendentes
+## Gates: 🟢 83 casos novos, compilação, instalação e publicação aprovados
 
 | Gate executado | Resultado | Evidência e limite |
 |---|---|---|
@@ -99,7 +99,7 @@ A validade do convite era conferida antes das travas de membro/perfil. Uma esper
 | node scripts/test-slim-invitations-concurrency.mjs <descritor local> | 🟢 9/9, exit 0 | PostgreSQL efêmero local com conexões independentes: instalação, sete disputas de advisory lock e uma disputa na linha do perfil atravessando a validade do convite. Não usa um serviço externo nem contas reais. |
 | Regressão scripts/test-slim-audience-contract.mjs | 🟢 11/11; não somar aos 83 novos | Ajuste somente do teste para executar a prévia real, wrapper RPC e validator: indisponibilidade sanitizada, retry desabilitado e DTO invalid distinto. Passou na cópia já transformada, sem placeholder ou skip. |
 | Compilação completa em cópia isolada | 🟢 Segunda tentativa aprovada, exit 0 | npm run build em /tmp/slim-invitations-build-final-rkvl3a5r; log /tmp/slim-invitations-build-final.log e sessão 55393. Todos os gates existentes e os três gates portáteis novos passaram. Artefato .output/server/index.mjs presente; hashes SHA-256 dos 16 arquivos não documentais conferidos contra o checkout. A primeira tentativa interrompida permanece registrada abaixo. |
-| Versionamento funcional, instalação e deployment | 🟡 Pendentes | A produção permanece b4185b0; migration ainda não instalada. Conferência de hashes/grants/RLS, Railway SUCCESS, healthcheck e quatro serviços será registrada após a execução. |
+| Versionamento funcional, instalação e deployment | 🟢 Publicados e conferidos | Código 4dfbd18c0989ff2d7b79d00c9223d6205319ac6a; migration instalada em 20261018034452. Deployment 9764d252-3079-4b45-96e6-4cf0b0ced0f0 SUCCESS, healthcheck 1/1 e quatro serviços online. Hashes de dados e políticas anteriores preservados. Aceite real do convite segue com o usuário. |
 
 As oito disputas do PostgreSQL usaram 16 backends independentes em pares, com um terceiro observador comprovando a espera por pg_locks e pg_blocking_pids antes de liberar a primeira transação. O caso de TTL provou que o link ainda era válido quando a espera pela linha do perfil foi observada e já havia vencido antes da liberação; o resultado final preservou integralmente convite, membro e perfil. Isso é evidência de concorrência real entre conexões locais, separada dos testes sequenciais do PGlite.
 
@@ -112,3 +112,31 @@ Nenhum convite, mensagem, conta, vínculo, permissão ou perfil real foi criado 
 ## Compilação final aprovada
 
 Em 18/10, npm run build terminou com exit code 0 na segunda tentativa, sessão 55393, cópia /tmp/slim-invitations-build-final-rkvl3a5r. Todos os gates de regressão permaneceram ativos e a saída Nitro .output/server/index.mjs foi conferida. Os hashes dos 16 arquivos não documentais coincidem com os arquivos que serão versionados; transforms foram executados somente na cópia isolada. Avisos de diretiva use client em dependências de animação não impediram a geração. Nenhuma mudança de runtime foi necessária entre as duas tentativas; mudou somente a verificação de compatibilidade do teste legado. O PostgreSQL efêmero exclusivo dos testes foi encerrado após os nove casos de concorrência aprovados. Instalação e publicação ainda serão executadas; não houve teste autenticado real pela equipe.
+
+## 🟢 Instalação e publicação confirmadas
+
+Código funcional versionado em 4dfbd18c0989ff2d7b79d00c9223d6205319ac6a, árvore 6526a600e740972a846d5f73c64a49caa5576107, filho do escopo 215b14fa. Os 18 arquivos do commit foram comparados com o índice local e a árvore remota antes da instalação; o checkout ficou limpo. A branch de produção foi atualizada por CAS a partir de b4185b0, sem force push. Não houve recusa de aprovação automática nesta implementação.
+
+A migration slim_invitations_explicit_access foi instalada pelo conector oficial sob revisão normal, versão de banco 20261018034452. O arquivo originado pelo CLI continua 20261018031459_slim_invitations_explicit_access.sql. As três colunas adicionadas estão nullable e sem default. Os corpos das 16 funções instaladas coincidem com os MD5 derivados do SQL versionado; flags INVOKER/DEFINER, grants e search_path foram conferidos. As seis implementações privadas têm row_security=off, lock_timeout=5s e statement_timeout=20s e validam a autorização prevista no escopo. Nenhuma RPC permite execução anônima; somente a prévia é executável por service_role. O ledger privado está vazio, com RLS e sem acesso direto dos papéis anon/authenticated/service_role.
+
+### Preservação dos dados e políticas na instalação
+
+As leituras agregadas imediatamente antes e depois da migration retornaram os mesmos valores, sem expor dados de contas, e-mails ou tokens:
+
+| Tabela limitada à Slim | Linhas antes/depois | MD5 do estado antes/depois |
+|---|---|---|
+| workspace_invitations | 0 / 0 | d41d8cd98f00b204e9800998ecf8427e |
+| workspace_members | 1 / 1 | 28d3168bd873e4214e0e81633c3f95a7 |
+| profiles dos usuários vinculados à Slim | 1 / 1 | 39efd032b5cd38cefe8df855d553cfed |
+| module_permissions | 0 / 0 | d41d8cd98f00b204e9800998ecf8427e |
+| user_permissions | 0 / 0 | d41d8cd98f00b204e9800998ecf8427e |
+
+RLS, ACL e políticas das seis tabelas públicas lidas — incluindo workspaces — também permaneceram idênticas. A instalação não concedeu vínculos nem alterou perfis/permissões reais.
+
+O advisor manteve os quatro avisos preexistentes de RPCs de automação e o aviso de proteção contra senhas vazadas; nenhum novo WARN apareceu. O total de INFO sobre RLS sem política passou de três para quatro porque o novo ledger privado bloqueia deliberadamente o acesso direto. Não foi criada uma política permissiva para silenciar esse aviso. Referências: [ledger privado/RLS](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy), [RPCs DEFINER preexistentes](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable) e [proteção de senhas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+### Produção
+
+Railway deployment 9764d252-3079-4b45-96e6-4cf0b0ced0f0, commit 4dfbd18c0989ff2d7b79d00c9223d6205319ac6a, branch restauracao/sistema-completo-20261014. SUCCESS confirmado em 18/10/2026 às 03:50:21.958 UTC; healthcheck 1/1 aprovado às 03:50:19.252991010 UTC. A conferência de 03:54:22 UTC encontrou web, Evolution, Redis e Postgres online, uma réplica cada, zero réplicas travadas, zero serviços com problemas e nenhuma operação pendente.
+
+O verde é técnico: gerar/copiar/abrir/aceitar um convite na sessão autenticada do usuário continua uma conferência distinta. O fluxo atende contas já provisionadas internamente e exige escolha explícita de administração sem prazo; não habilita cadastro público, permissões granulares ou prazo de acesso. Nenhum convite, conta, vínculo, fator, perfil ou mensagem real foi usado pela equipe para QA. Este registro final será versionado na branch de trabalho sem gerar um deployment documental separado.
