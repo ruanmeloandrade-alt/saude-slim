@@ -33,7 +33,7 @@ export const listWorkspaceChannels = createServerFn({ method: "GET" })
 
     const [wa, ig, fb] = await Promise.all([
       sb.from("whatsapp_web_sessions")
-        .select("id, phone_number, push_name, status, updated_at, metadata")
+        .select("id, phone_number, status, updated_at, metadata")
         .eq("workspace_id", wsId),
       sb.from("meta_instagram_accounts")
         .select("id, username, instagram_id")
@@ -43,13 +43,14 @@ export const listWorkspaceChannels = createServerFn({ method: "GET" })
         .eq("workspace_id", wsId),
     ]);
 
+    if (wa.error) throw new Error("Não foi possível consultar as sessões de WhatsApp. Atualize a lista para tentar novamente.");
+
     const statusRank = (s: string | null | undefined) =>
       s === "conectado" || s === "connected" ? 0 : s === "conectando" || s === "connecting" ? 1 : s === "desconectado" || s === "disconnected" ? 2 : 3;
 
     const waRows = ((wa.data ?? []) as Array<{
       id: string;
       phone_number: string | null;
-      push_name: string | null;
       status: string | null;
       updated_at?: string | null;
       metadata?: { deleted?: boolean } | null;
@@ -77,8 +78,7 @@ export const listWorkspaceChannels = createServerFn({ method: "GET" })
 
     const waList = Array.from(byIdentity.values()).map((r) => ({
       id: r.id,
-      label: r.phone_number || r.push_name || "WhatsApp conectado",
-      subtitle: r.push_name && r.push_name !== r.phone_number ? r.push_name : undefined,
+      label: r.phone_number || "WhatsApp conectado",
       status: r.status ?? undefined,
     }));
     const igList = ((ig.data ?? []) as Array<{ id: string; username: string | null; instagram_id: string }>).map((r) => ({
