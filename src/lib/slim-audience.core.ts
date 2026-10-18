@@ -1,3 +1,5 @@
+import { audienceIsGroup, audienceRecentMessageIds, audienceSilenceCutoff } from './slim-audience-message-window.core.ts';
+import type { IdentityContact } from './slim-contact-identity.core.ts';
 export type SlimAudienceDb = { from: (table: string) => any };
 export type SlimLead = Record<string, any> & { id: string; name: string; phone: string | null; email: string | null };
 const text = (v: unknown) => String(v ?? '').trim().toLocaleLowerCase('pt-BR');
@@ -27,7 +29,7 @@ function dateBound(value: unknown, end = false): number | null {
   if (!Number.isFinite(n)) throw new Error('Data inválida no filtro do público.');
   return n + (end && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? 86399999 : 0);
 }
-export function audienceMatches(lead: SlimLead, f: Record<string, any>, refs: { sourceProviders?: Map<string,string>; products?: Set<string>; tasks?: Map<string,any[]>; fields?: Map<string,Map<string,string>> } = {}, now = Date.now()): boolean {
+export function audienceMatches(lead: SlimLead, f: Record<string, any>, refs: { sourceProviders?: Map<string,string>; products?: Set<string>; tasks?: Map<string,any[]>; fields?: Map<string,Map<string,string>>; recentMessageIds?: Set<string> } = {}, now = Date.now()): boolean {
   if (lead.merged_into_id || ['archived','deleted','merged'].includes(lead.status)) return false;
   if ((f.status ?? 'active') !== 'any' && lead.status !== (f.status ?? 'active')) return false;
   for (const [key,column] of [['pipelineIds','pipeline_id'],['stageIds','stage_id'],['sourceIds','crm_source_id'],['responsibleIds','responsible_id'],['companyIds','company_id']]) if (f[key]?.length && !f[key].includes(lead[column])) return false;
@@ -41,7 +43,11 @@ export function audienceMatches(lead: SlimLead, f: Record<string, any>, refs: { 
   if (to !== null && (!Number.isFinite(created) || created > to)) return false;
   const updated = Date.parse(lead.updated_at);
   if (f.updatedWithinDays && (!Number.isFinite(updated) || updated < now - f.updatedWithinDays*86400000)) return false;
-  if (f.noMessageForDays && (!Number.isFinite(updated) || updated >= now - f.noMessageForDays*86400000)) return false;
+  const silenceCutoff = audienceSilenceCutoff(f.noMessageForDays, now);
+  if (silenceCutoff !== null) {
+    if (!refs.recentMessageIds) throw new Error('Histórico de mensagens não conferido para este público.');
+    if (audienceIsGroup(lead) || !Number.isFinite(created) || created > silenceCutoff || refs.recentMessageIds.has(lead.id)) return false;
+  }
   if (f.lastMessageFrom && f.lastMessageFrom !== 'any') {
     if (f.lastMessageFrom === 'none' ? Boolean(lead.last_message_from) : lead.last_message_from !== f.lastMessageFrom) return false;
   }
@@ -68,10 +74,11 @@ export function audienceMatches(lead: SlimLead, f: Record<string, any>, refs: { 
   });
 }
 export async function querySlimAudience(db: SlimAudienceDb, ws: string, f: Record<string,any>, limit?: number): Promise<SlimLead[]> {
+  const now = Date.now(), silenceCutoff = audienceSilenceCutoff(f.noMessageForDays, now);
   dateBound(f.createdFrom); dateBound(f.createdTo);
   if (f.valueMin != null && f.valueMax != null && f.valueMin>f.valueMax) throw new Error('Valor mínimo maior que o máximo.');
   const [leads,sources,products,tasks,fields] = await Promise.all([
-    readAudienceRows(db,ws,'leads','id,name,email,phone,value,stage_id,last_message_from,tags,created_at,updated_at,status,pipeline_id,crm_source_id,responsible_id,company_id,conversation_status,custom_data,merged_into_id'),
+    readAudienceRows(db,ws,'leads','id,workspace_id,name,email,phone,source,value,stage_id,last_message_from,tags,created_at,updated_at,status,pipeline_id,crm_source_id,responsible_id,company_id,conversation_status,custom_data,merged_into_id'),
     f.channelProviders?.length ? readAudienceRows(db,ws,'crm_sources','id,provider') : [],
     f.hasProducts !== undefined ? readAudienceRows(db,ws,'lead_products','id,lead_id') : [],
     f.taskState && f.taskState !== 'any' ? readAudienceRows(db,ws,'tasks','id,lead_id,status,end_at') : [],
@@ -79,8 +86,9 @@ export async function querySlimAudience(db: SlimAudienceDb, ws: string, f: Recor
   ]);
   const byTask = new Map<string,any[]>();for(const t of tasks) byTask.set(t.lead_id,[...(byTask.get(t.lead_id)??[]),t]);
   const byField = new Map<string,Map<string,string>>();for(const v of fields) {const m=byField.get(v.lead_id)??new Map();m.set(v.field_id,fieldDisplay(v.value));byField.set(v.lead_id,m);}
-  const refs={sourceProviders:new Map(sources.map(s=>[s.id,s.provider])),products:new Set<string>(products.map(p=>p.lead_id)),tasks:byTask,fields:byField};
-  const result = (leads as SlimLead[]).filter(l=>audienceMatches(l,f,refs)).sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))||a.id.localeCompare(b.id));
+  const recentMessageIds = silenceCutoff === null ? undefined : await audienceRecentMessageIds(db, ws, leads as IdentityContact[], silenceCutoff);
+  const refs={sourceProviders:new Map(sources.map(s=>[s.id,s.provider])),products:new Set<string>(products.map(p=>p.lead_id)),tasks:byTask,fields:byField,recentMessageIds};
+  const result = (leads as SlimLead[]).filter(l=>audienceMatches(l,f,refs,now)).sort((a,b)=>String(b.updated_at).localeCompare(String(a.updated_at))||a.id.localeCompare(b.id));
   return limit == null ? result : result.slice(0,limit);
 }
 export function audienceMessage(template: string, lead: {name?: string;email?: string|null}): string {

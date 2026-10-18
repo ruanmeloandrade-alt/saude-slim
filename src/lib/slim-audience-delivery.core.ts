@@ -1,5 +1,10 @@
 import { audienceMessage, contactBlocked } from './slim-audience.core.ts';
 export type DeliveryOutcome = { state: 'sent'|'skipped'|'failed'|'uncertain'; code?: string; messageId?: string; note?: string };
+export function audienceDeliveryIssueText(code: string): string {
+  if (code === 'LOCAL_PERSISTENCE_FAILED') return 'A resposta do WhatsApp foi recebida, mas houve falha ao gravar o histórico. Confira a conversa; o disparo não será repetido automaticamente.';
+  if (code === 'NO_PROVIDER_RECEIPT') return 'Sem comprovante válido do WhatsApp. Confira a conversa antes de qualquer nova tentativa.';
+  return `${code}. Confira a conversa antes de tentar novamente.`;
+}
 export type DeliveryDependencies = {
   allowed: () => Promise<boolean>;
   lead: () => Promise<Record<string,any>|null>;
@@ -15,7 +20,7 @@ export type DeliveryDependencies = {
 };
 /** No network or credentials in this core. A provider failure is never an invitation to resend. */
 export async function deliverAudienceItem(d:DeliveryDependencies):Promise<DeliveryOutcome>{
-  let outboundAttempted=false; let acknowledged=false; let agent:Awaited<ReturnType<DeliveryDependencies['activateAgent']>>|null=null;
+  let outboundAttempted=false; let acknowledgedMessageId:string|undefined; let agent:Awaited<ReturnType<DeliveryDependencies['activateAgent']>>|null=null;
   try {
     if (!await d.allowed()) return {state:'skipped',code:'CAMPAIGN_STOPPED'};
     const lead=await d.lead();
@@ -49,12 +54,15 @@ export async function deliverAudienceItem(d:DeliveryDependencies):Promise<Delive
       if(agent&&!uncertain) await agent.rollback();
       return {state:uncertain?'uncertain':'failed',code:`PROVIDER_${r.status}`};
     }
-    acknowledged=true;
-    if(!r.messageId) return {state:'uncertain',code:'NO_PROVIDER_RECEIPT'};
-    await d.persist(lead,phone.digits,message,r.messageId);
-    return {state:'sent',messageId:r.messageId};
+    const messageId=typeof r.messageId==='string'?r.messageId.trim():'';
+    if(!messageId) return {state:'uncertain',code:'NO_PROVIDER_RECEIPT'};
+    acknowledgedMessageId=messageId;
+    await d.persist(lead,phone.digits,message,messageId);
+    return {state:'sent',messageId};
   }catch{
     if(agent&&!outboundAttempted) await agent.rollback().catch(()=>undefined);
-    return {state:outboundAttempted?'uncertain':'failed',code:acknowledged?'LOCAL_PERSISTENCE_FAILED':outboundAttempted?'PROVIDER_RESULT_UNKNOWN':'PRECONDITION_FAILED'};
+    // A failed local write cannot undo a provider acknowledgement or justify another send.
+    if(acknowledgedMessageId) return {state:'sent',messageId:acknowledgedMessageId,code:'LOCAL_PERSISTENCE_FAILED'};
+    return {state:outboundAttempted?'uncertain':'failed',code:outboundAttempted?'PROVIDER_RESULT_UNKNOWN':'PRECONDITION_FAILED'};
   }
 }

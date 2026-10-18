@@ -3,6 +3,7 @@ import {useServerFn} from '@tanstack/react-start';
 import {useState} from 'react';
 import {toast} from 'sonner';
 import {listSlimAudienceCampaigns,cancelSlimAudienceCampaign} from '@/lib/slim-audience-queue.functions';
+import {audienceDeliveryIssueText} from '@/lib/slim-audience-delivery.core';
 const labels:Record<string,string>={queued:'Na fila',running:'Em execução',completed:'Processamento encerrado',cancelled:'Cancelado'};
 export function SlimAudienceQueue(){
  const list=useServerFn(listSlimAudienceCampaigns);const cancel=useServerFn(cancelSlimAudienceCampaign);const [busy,setBusy]=useState<string|null>(null);
@@ -15,7 +16,7 @@ export function SlimAudienceQueue(){
    (q.data as any).campaigns.map((c:any)=><div key={c.id} className="rounded-lg border border-border p-3 space-y-2">
     <div className="flex flex-wrap justify-between gap-2"><strong className="text-sm">{c.audience_name}</strong><span className="text-xs">{labels[c.status]??c.status}</span></div>
     <p className="text-xs">{c.kind==='salesbot'?'Bots iniciados':'Aceitos pelo WhatsApp'}: {c.states.sent??0} · Pendentes: {c.states.pending??0} · Em execução: {c.states.running??0} · Falhas: {c.states.failed??0} · Incertos: {c.states.uncertain??0} · Ignorados/cancelados: {(c.states.skipped??0)+(c.states.cancelled??0)}</p>
-    {!!c.issues?.length&&<p className="text-xs text-amber-700">Atenção: {c.issues.join(', ')}. Confira a conversa antes de tentar novamente.</p>}
+    {!!c.issues?.length&&<p className="text-xs text-amber-700">Atenção: {c.issues.map(audienceDeliveryIssueText).join(' ')}</p>}
     {['queued','running'].includes(c.status)&&<button type="button" disabled={busy===c.id} onClick={()=>stop(c.id)} className="rounded-md border border-border px-3 py-1 text-xs">{busy===c.id?'Encerrando...':'Encerrar pendentes'}</button>}
    </div>)}
  </section>;
