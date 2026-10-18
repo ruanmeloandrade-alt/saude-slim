@@ -1,5 +1,17 @@
 # Saúde Slim | Semáforo operacional
 
+## Bloco 11 de 18/10/2026: 🟡 integração e validação
+
+Pedido atual: Disparo em massa dentro de Públicos; Relatório detalhado de campanhas e reativações; somente mensagens no Mini-Inbox; controles SalesBot e Agente IA na ficha. Escopo f928cf3 registrado antes da implementação. A gestão TOTP nativa integra as pendências executáveis deste bloco. A integração de pedidos ERP às métricas já existia no runtime transformado e será preservada. Produção continua no bloco 10 até a validação e promoção; nenhuma publicação nova está declarada neste checkpoint.
+
+🟢 Os testes reais de Públicos/Reativação feitos pelo usuário foram localizados: em 18/10 às 12h27 de Brasília, SalesBot com execução vinculada e concluída; às 12h29, texto com comprovante e correspondente registro WhatsApp em sent. São dois cenários aprovados, não confirmação de entrega/leitura nem cobertura de todas as falhas. Copiloto, gatilho do Funil e passagem para IA individual mantêm os aceites anteriores. IA autônoma de grupos permanece retirada.
+
+🟢 Pedidos ERP nas métricas: integração existente confirmada em apply-slim-legacy-review.mjs e metricPurchasesIncludingErp; nenhum ajuste funcional adicional neste bloco. A atribuição continua pela última execução do mesmo cliente nos 30 dias anteriores, uma conversão por execução; regularizações substituem a origem antiga, cancelamentos não convertem e fonte indisponível não vira zero. Os 18 testes de um rascunho redundante não compõem esta entrega.
+
+🔴 A exigência geral de MFA em todos os acessos e a emissão fiscal NF-e continuam frentes próprias. O recorte TOTP corrige a configuração nativa, sem impor MFA global. NF-e ainda precisa do emissor e contrato fiscal real; o documento atual é comercial. Nenhum fator de usuário, mensagem, bot ou pedido de QA foi criado pela equipe.
+
+Escopo e evidências: docs/tasks/2026-10-18-slim-audiences-report-drawer-actions-block11.md. Os checkpoints cronológicos abaixo ficam preservados; o registro mais recente prevalece sobre estados históricos.
+
 ## Checkpoint de 18/10/2026: 🟢 design da ficha e do Mini-Inbox corrigido e publicado
 
 Escopo exclusivo: Saúde Slim, Supabase vyzvfcgpjjzvcjegzzza, GitHub ruanmeloandrade-alt/saude-slim, produção restauracao/sistema-completo-20261014.

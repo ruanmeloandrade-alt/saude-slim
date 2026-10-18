@@ -33,6 +33,7 @@ import {
 import { useIsSuperAdmin } from "@/hooks/use-roles";
 import { UserPermissionsDialog } from "@/components/settings/UserPermissionsDialog";
 import { SlimInvitationsPanel } from "@/components/settings/SlimInvitationsPanel";
+import { SlimMfaSettings } from "@/components/settings/SlimMfaSettings";
 import { AccountEmailChangeControl } from "@/components/settings/AccountEmailChangeControl";
 import { listWorkSectors } from "@/lib/permissions.functions";
 import { getNotificationSettings, saveNotificationSettings } from "@/lib/notification-settings.functions";
@@ -1194,9 +1195,12 @@ function SegurancaTab({ onToast }: { onToast: (m: string, t?: "ok" | "err") => v
   };
 
   /* Códigos de recuperação — o texto puro só existe nesta tela, nunca é armazenado */
+  // SLIM_NATIVE_MFA_V1: legacy recovery has no complete backend; do not mount or call it.
+  const recoveryAvailable = false;
   const statusQ = useQuery({
     queryKey: ["recovery-codes-status"],
     queryFn: () => getRecoveryCodesStatus(),
+    enabled: recoveryAvailable,
   });
   const gerar = useMutation({
     mutationFn: () => generateRecoveryCodes(),
@@ -1325,7 +1329,7 @@ function SegurancaTab({ onToast }: { onToast: (m: string, t?: "ok" | "err") => v
 
 
         {/* Códigos de recuperação */}
-        <div className="mt-3 rounded-xl border border-border bg-card p-4">
+        {recoveryAvailable && <div className="mt-3 rounded-xl border border-border bg-card p-4">
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-lg grid place-items-center bg-amber-500/10 text-amber-600 shrink-0"><KeyRound className="w-[18px] h-[18px]" /></div>
             <div className="min-w-0 flex-1">
@@ -1358,13 +1362,13 @@ function SegurancaTab({ onToast }: { onToast: (m: string, t?: "ok" | "err") => v
                 ))}
               </div>
               <div className="mt-3 flex flex-wrap gap-2 justify-end">
-                <GhostBtn onClick={copiarEApagar}><Copy className="w-3.5 h-3.5" />Copiar e ocultar</GhostBtn>
+              <GhostBtn onClick={copiarEApagar}><Copy className="w-3.5 h-3.5" />Copiar e ocultar</GhostBtn>
                 <GhostBtn onClick={baixarEApagar}><Download className="w-3.5 h-3.5" />Baixar .txt e ocultar</GhostBtn>
                 <GhostBtn onClick={() => { setNovosCodigos(null); onToast("Códigos ocultados."); }}><EyeOff className="w-3.5 h-3.5" />Já anotei</GhostBtn>
               </div>
             </>
           )}
-        </div>
+        </div>}
 
 
 
@@ -1497,7 +1501,7 @@ function SegurancaTab({ onToast }: { onToast: (m: string, t?: "ok" | "err") => v
           </SecurityRow>
           <SecurityRow
             icon={Lock} title="Bloquear senhas vazadas" tone="text-emerald-600 bg-emerald-500/10"
-            desc="Impede o uso de senhas que já apareceram em vazamentos públicos conhecidos. Ativo para toda a plataforma."
+            desc="Depende da configuração do serviço de autenticação. Esta preferência não comprova o bloqueio de senhas vazadas."
             on={adv.hibp} onToggle={() => saveSec("block_leaked_passwords", !adv.hibp)}
           />
           <SecurityRow
@@ -1514,7 +1518,7 @@ function SegurancaTab({ onToast }: { onToast: (m: string, t?: "ok" | "err") => v
       <div className="rounded-xl border border-dashed border-border bg-muted/20 p-3 flex items-start gap-2">
         <Sparkles className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
         <p className="text-[11px] text-muted-foreground">
-          Trocar senha já está funcionando. Os métodos de dois fatores e as proteções avançadas estão com a interface pronta e serão ativados junto com as notificações.
+          O autenticador usa o estado nativo da conta. As proteções gerais de acesso dependem de implementação e configuração próprias; salvar uma preferência não as ativa em toda a aplicação.
         </p>
       </div>
         </>
@@ -3004,170 +3008,8 @@ function SecurityHistory({ onToast }: { onToast: (m: string, k?: "ok" | "err") =
 
 /* ---------- Verificação em duas etapas (2FA) ---------- */
 
-function TwoFactorSection({ onToast }: { onToast: (m: string, t?: "ok" | "err") => void }) {
-  const qc = useQueryClient();
-  const fnStatus = useServerFn(getMfaStatus);
-  const fnSendEmail = useServerFn(sendEmailMfaCode);
-  const fnVerifyEmail = useServerFn(verifyEmailMfaCode);
-  const fnSet = useServerFn(setMfaMethod);
-
-  const q = useQuery({ queryKey: ["mfa-status"], queryFn: () => fnStatus({}) as any });
-  const st = q.data as any;
-
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [emailCode, setEmailCode] = useState("");
-  const [sending, setSending] = useState(false);
-  const [checking, setChecking] = useState(false);
-
-  const [totpOpen, setTotpOpen] = useState(false);
-  const [totp, setTotp] = useState<{ id: string; qr: string; secret: string } | null>(null);
-  const [totpCode, setTotpCode] = useState("");
-  const [totpBusy, setTotpBusy] = useState(false);
-
-  const refresh = () => qc.invalidateQueries({ queryKey: ["mfa-status"] });
-
-  /* ----- Código por e-mail ----- */
-  const enviarEmail = async () => {
-    setSending(true);
-    const r: any = await fnSendEmail({}).catch((e: any) => ({ ok: false, error: e?.message }));
-    setSending(false);
-    if (!r?.ok) return onToast(r?.error ?? "Não consegui enviar o código.", "err");
-    setEmailOpen(true);
-    onToast(`Código enviado para ${r.destination}.`);
-  };
-  const conferirEmail = async () => {
-    if (emailCode.length !== 6) return onToast("Digite os 6 dígitos.", "err");
-    setChecking(true);
-    const r: any = await fnVerifyEmail({ data: { code: emailCode } }).catch((e: any) => ({ ok: false, error: e?.message }));
-    setChecking(false);
-    if (!r?.ok) return onToast(r?.error ?? "Código incorreto.", "err");
-    setEmailCode(""); setEmailOpen(false); refresh();
-    onToast("Código por e-mail ativado.");
-  };
-  const desligarEmail = async () => {
-    await fnSet({ data: { method: "email", enabled: false } });
-    refresh(); onToast("Código por e-mail desativado.");
-  };
-
-  /* ----- Aplicativo autenticador (TOTP nativo) ----- */
-  const iniciarTotp = async () => {
-    setTotpBusy(true);
-    const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `Saúde Slim ${Date.now()}` });
-    setTotpBusy(false);
-    if (error || !data) return onToast(error?.message ?? "Não consegui gerar o QR Code.", "err");
-    setTotp({ id: data.id, qr: (data as any).totp?.qr_code ?? "", secret: (data as any).totp?.secret ?? "" });
-    setTotpOpen(true);
-  };
-  const validarTotp = async () => {
-    if (!totp || totpCode.length !== 6) return onToast("Digite os 6 dígitos do aplicativo.", "err");
-    setTotpBusy(true);
-    const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: totp.id, code: totpCode });
-    if (error) { setTotpBusy(false); return onToast("Código inválido. Confira o horário do celular e tente de novo.", "err"); }
-    await fnSet({ data: { method: "totp", enabled: true } });
-    setTotpBusy(false); setTotpCode(""); setTotp(null); setTotpOpen(false); refresh();
-    onToast("Aplicativo autenticador ativado.");
-  };
-  const desligarTotp = async () => {
-    const { data } = await supabase.auth.mfa.listFactors();
-    for (const f of data?.totp ?? []) await supabase.auth.mfa.unenroll({ factorId: f.id });
-    await fnSet({ data: { method: "totp", enabled: false } });
-    refresh(); onToast("Aplicativo autenticador desativado.");
-  };
-
-  return (
-    <div>
-      <SectionHeader
-        title="Verificação em duas etapas (2FA)"
-        desc="Opcional. Além da senha, confirmamos que é você mesmo. Ative um método principal e mantenha os códigos de recuperação guardados."
-      />
-      <div className="space-y-3">
-        {/* Aplicativo autenticador */}
-        <SecurityRow
-          icon={QrCode} title="Aplicativo autenticador" badge="Recomendado" tone="text-primary bg-primary/10"
-          desc="Google Authenticator, Authy ou 1Password gerando um código de 6 dígitos a cada 30 segundos. Funciona sem internet e sem depender de e-mail ou operadora."
-          on={!!st?.totpEnabled}
-          onToggle={() => (st?.totpEnabled ? void desligarTotp() : void iniciarTotp())}
-        >
-          <div className="grid grid-cols-1 md:grid-cols-[auto_minmax(0,1fr)] gap-4">
-            <div className="w-36 h-36 rounded-lg border border-border bg-card grid place-items-center overflow-hidden shrink-0">
-              {totp?.qr
-                ? <img src={totp.qr} alt="QR Code do aplicativo autenticador" className="w-full h-full object-contain" />
-                : <div className="text-center text-muted-foreground"><Check className="w-7 h-7 mx-auto mb-1 text-success" /><span className="text-[10px]">Método ativo</span></div>}
-            </div>
-            <div className="space-y-3 min-w-0">
-              {totp?.secret && (
-                <div>
-                  <div className="text-[11px] text-muted-foreground mb-1">Chave secreta (caso não consiga ler o QR)</div>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 truncate text-xs font-mono rounded-lg border border-border bg-muted/40 px-2.5 py-2">{totp.secret}</code>
-                    <GhostBtn onClick={() => { navigator.clipboard?.writeText(totp.secret); onToast("Chave copiada."); }}><Copy className="w-3.5 h-3.5" />Copiar</GhostBtn>
-                  </div>
-                </div>
-              )}
-              {totpOpen ? (
-                <div className="flex items-end gap-2">
-                  <div className="w-40">
-                    <Field label="Código de 6 dígitos">
-                      <Inp value={totpCode} onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" inputMode="numeric" />
-                    </Field>
-                  </div>
-                  <Btn type="button" loading={totpBusy} onClick={() => void validarTotp()}><Check className="w-3.5 h-3.5" />Validar e ativar</Btn>
-                </div>
-              ) : (
-                <p className="text-[11px] text-muted-foreground">
-                  Ativo nesta conta. Ao entrar de um dispositivo novo, o Saúde Slim pede o código do aplicativo.
-                </p>
-              )}
-            </div>
-          </div>
-        </SecurityRow>
-
-        {/* Código por e-mail */}
-        <SecurityRow
-          icon={Mail} title="Código por e-mail" tone="text-violet-600 bg-violet-500/10"
-          desc={st?.email ? `Código de 6 dígitos enviado para ${st.email}, válido por 10 minutos. Ótimo como método reserva.` : "Código de 6 dígitos enviado para o e-mail do seu perfil, válido por 10 minutos."}
-          on={!!st?.emailEnabled}
-          onToggle={() => (st?.emailEnabled ? void desligarEmail() : void enviarEmail())}
-        >
-          {emailOpen ? (
-            <div className="flex flex-col sm:flex-row sm:items-end gap-2">
-              <div className="w-full sm:w-44">
-                <Field label="Código recebido no e-mail">
-                  <Inp value={emailCode} onChange={(e) => setEmailCode(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="000000" inputMode="numeric" />
-                </Field>
-              </div>
-              <Btn type="button" loading={checking} onClick={() => void conferirEmail()}><Check className="w-3.5 h-3.5" />Confirmar</Btn>
-              <GhostBtn onClick={() => void enviarEmail()} disabled={sending}><Send className="w-3.5 h-3.5" />Reenviar</GhostBtn>
-            </div>
-          ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] text-muted-foreground">
-                Confirmado{st?.emailVerifiedAt ? ` em ${new Date(st.emailVerifiedAt).toLocaleDateString("pt-BR")}` : ""}.
-              </span>
-              <GhostBtn onClick={() => void enviarEmail()} disabled={sending}><Send className="w-3.5 h-3.5" />Enviar código de teste</GhostBtn>
-            </div>
-          )}
-        </SecurityRow>
-
-        {/* SMS — caminho pronto, aguardando número dedicado */}
-        <SecurityRow
-          icon={Smartphone} title="Código por SMS" tone="text-sky-600 bg-sky-500/10" soon
-          desc="Caminho pronto no sistema. Falta contratar um número dedicado de disparo (Twilio/Zenvia): enviar do número da empresa põe a linha em risco de bloqueio."
-          on={false} onToggle={() => onToast("SMS entra quando o número dedicado de disparo estiver contratado.")}
-        />
-
-        {/* Passkey */}
-        <PasskeyRow onToast={onToast} onChanged={refresh} enabled={!!st?.passkeyEnabled} />
-
-      </div>
-
-      {!st?.emailSenderReady && (
-        <p className="text-[11px] text-muted-foreground mt-2">
-          Para o código por e-mail sair, conecte um remetente em Integrações → Central de e-mail.
-        </p>
-      )}
-    </div>
-  );
+function TwoFactorSection({ onToast: _onToast }: { onToast: (m: string, t?: "ok" | "err") => void }) {
+  return <SlimMfaSettings />;
 }
 
 /* ---------- Chave de segurança / Passkey (WebAuthn real) ---------- */

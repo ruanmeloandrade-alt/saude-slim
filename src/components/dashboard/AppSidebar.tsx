@@ -28,7 +28,6 @@ const OPERATION_GROUPS: NavGroup[] = [
     { label: "Funil de vendas", icon: Tags, to: "/crm/funis-de-venda" },
     { label: "Clientes", icon: Users, to: "/crm/leads" },
     { label: "Inbox", icon: Inbox, to: "/inbox/leads", activeWhen: p => p === "/inbox" || p.startsWith("/inbox/") },
-    { label: "Disparo em massa", icon: Megaphone, to: "/disparo-em-massa" },
     { label: "Automações", icon: RotateCcw, to: "/crm/automacoes" },
     { label: "Cérebro IA", icon: Bot, to: "/crm/agente-ia" },
     { label: "Públicos", icon: Users, to: "/crm/publicos" },

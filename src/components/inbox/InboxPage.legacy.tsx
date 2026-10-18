@@ -3255,7 +3255,8 @@ function ChatThread({
       seen.add(a.id);
       unique.push(a);
     }
-    return unique.map((a) => ({
+    // Render only messages, regardless of whether rows came from live data, a snapshot or an older page.
+    return unique.filter((a) => a.type === "message_in" || a.type === "message_out").map((a) => ({
       id: a.id,
       from: a.from === "us" ? "me" : "them",
       text:

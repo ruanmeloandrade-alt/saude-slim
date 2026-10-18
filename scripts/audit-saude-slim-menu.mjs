@@ -70,7 +70,7 @@ const modules = [
   ['Home: Histórico de Vendas', '/saude-slim'], ['Home: Dashboard detalhada', '/painel'],
   ['Vendas: Pedidos', '/pedidos'], ['Vendas: Fornecedores', '/crm/empresas'],
   ['Vendas: Estoque', '/crm/estoque'], ['Vendas: Produtos', '/crm/produtos'],
-  ['Vendas: Disparo em massa', '/disparo-em-massa'], ['CRM: Funil', '/crm/funis-de-venda'],
+  ['CRM: Públicos — URL anterior de disparos', '/disparo-em-massa'], ['CRM: Funil', '/crm/funis-de-venda'],
   ['CRM: Clientes', '/crm/leads'], ['CRM: Inbox', '/inbox/leads'],
   ['CRM: Automações', '/crm/automacoes'], ['CRM: Cérebro IA', '/crm/agente-ia'],
   ['CRM: Públicos', '/crm/publicos'], ['Configurações: Geral', '/configuracoes'], ['Configurações: Integrações', '/integracoes'],

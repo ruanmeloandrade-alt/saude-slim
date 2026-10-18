@@ -58,7 +58,12 @@ edit('src/server.ts',({once})=>{
  ensureSlimAudienceWorker();
  const handler = await getServerEntry();`);
 });
-edit('src/routes/disparo-em-massa.tsx',({once})=>{
+edit('src/routes/disparo-em-massa.tsx',({once,get})=>{
+ if(get().includes('// SLIM_AUDIENCE_MASS_REDIRECT_V1')){
+  const panel=fs.readFileSync(new URL('src/components/crm/SlimMassBroadcastPanel.tsx',root),'utf8');
+  if(!get().includes("redirect({to:'/crm/publicos',search:{aba:'disparos'},replace:true})")||!panel.includes('// SLIM_AUDIENCE_MASS_PANEL_V1')||!panel.includes('requestId:requestTracker(')||!panel.includes('requestTracker.reset();')||!panel.includes('result.queued'))throw new Error('Mass broadcast tab must preserve redirect, tracker and queue acknowledgement.');
+  return;
+ }
  once('import { createFileRoute, Link }',`import {SlimAudienceQueue} from "@/components/crm/SlimAudienceQueue";
 import {createAudienceRequestTracker} from "@/lib/slim-audience-request";
 import { createFileRoute, Link }`);
@@ -67,11 +72,17 @@ import { createFileRoute, Link }`);
  once('toast.success(`Disparo concluído: ${result.sent} enviados, ${result.failed} falhas.`);','requestTracker.reset();\n      toast.success(`Disparo registrado: ${result.queued} destinatários na fila. Acompanhe o progresso abaixo.`);');
  once('            </header>','            </header>\n            <SlimAudienceQueue />\n            {(audiencesQuery.error||sessionsQuery.error)&&<p role="alert" className="text-destructive text-sm">Falha ao carregar públicos ou canais. Atualize antes de enviar.</p>}');
 });
-edit('src/routes/crm.publicos.tsx',({once,section})=>{
+edit('src/routes/crm.publicos.tsx',({once,section,get})=>{
+ if(get().includes('// SLIM_AUDIENCE_TABS_V1')){
+  once('import { createFileRoute, useNavigate }',`import {createAudienceRequestTracker} from "@/lib/slim-audience-request";
+import { createFileRoute, useNavigate }`);
+  if(!get().includes('<SlimAudienceQueue scope={scope}')||!get().includes('<SlimMassBroadcastPanel active=')||!get().includes('<SlimAudienceReport active='))throw new Error('Audience tabs must preserve queue, composer and report.');
+ }else{
  once('import { createFileRoute }',`import {SlimAudienceQueue} from "@/components/crm/SlimAudienceQueue";
 import {createAudienceRequestTracker} from "@/lib/slim-audience-request";
 import { createFileRoute }`);
  section('export const Route', 'function FilterChips',s=>{const p=s.indexOf('</header>');if(p<0)throw new Error('Audience header missing');return s.slice(0,p)+'</header>\n            <SlimAudienceQueue />'+s.slice(p+9);});
+ }
  section('function BroadcastDialog(', 'function ReactivateDialog(',s=>{
   s=s.replace('  const doBroadcast = useServerFn(broadcastCrmAudience);','  const doBroadcast = useServerFn(broadcastCrmAudience);\n  const [requestTracker]=useState(()=>createAudienceRequestTracker());');
   s=s.replace('id: target.id, sessionId, message, limit, delayMs }','id: target.id, sessionId, message, limit, delayMs, requestId:requestTracker({id:target.id,sessionId,message,limit,delayMs}) }');

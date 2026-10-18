@@ -227,7 +227,7 @@ function LeadsPage() {
                 <div className="flex flex-wrap items-center gap-2">
                   <Button size="sm" onClick={openNew}><Plus className="h-4 w-4" /> Novo cliente</Button>
                   <Button size="sm" variant="outline" onClick={() => setDupOpen(true)}><Users className="h-4 w-4" /> Duplicatas</Button>
-                  <Button size="sm" variant="outline" onClick={() => navigate({ to: "/crm/publicos" })}>
+                  <Button size="sm" variant="outline" onClick={() => navigate({ to: "/crm/publicos", search:{aba:"disparos"} })}>
                     <Target className="h-4 w-4" /> Disparo em massa
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => leadsQuery.refetch()} disabled={leadsQuery.isFetching}>

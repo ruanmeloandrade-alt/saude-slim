@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 import { resolveBrowserSupabaseEnv } from './saude-slim-env';
 import {fetchSlimAuthWithDeadline} from '@/lib/slim-auth-network.core';
+import {fetchSlimMfaWithDeadline} from '@/lib/slim-mfa-transport.core';
 
 function isNewSupabaseApiKey(value: string): boolean {
   return value.startsWith('sb_publishable_') || value.startsWith('sb_secret_');
@@ -28,7 +29,7 @@ function createSupabaseFetch(supabaseKey: string): typeof fetch {
     // One bounded password request; refreshing an existing session is also bounded,
     // so stale refresh locks cannot keep the login form blocked indefinitely.
     // Never retry auth automatically: a prior request may have been accepted.
-    return fetchSlimAuthWithDeadline(input, { ...init, headers });
+    return fetchSlimMfaWithDeadline(input, { ...init, headers }, fetchSlimAuthWithDeadline);
   };
 }
 

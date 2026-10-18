@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { normalizeSlimMfaSnapshot } from './slim-mfa.core';
 
 type AnySb = { from: (t: string) => any; rpc: (n: string, a: Record<string, unknown>) => Promise<any> };
 
@@ -27,46 +28,25 @@ export type MfaStatus = {
   email: string | null;
   /** Central de e-mail do workspace configurada (necessária para enviar o código). */
   emailSenderReady: boolean;
+  source: 'native';
+  currentLevel: 'aal1' | 'aal2';
+  unavailableMethods: string[];
 };
 
 /** Situação atual da verificação em duas etapas do usuário. */
 export const getMfaStatus = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<MfaStatus> => {
-    const sb = context.supabase as unknown as AnySb;
-    const userId = context.userId;
-
-    const { data: row } = await sb
-      .from("user_mfa_settings")
-      .select("email_enabled, email_verified_at, totp_enabled, passkey_enabled")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    const claims = context.claims as { email?: string } | undefined;
-
-    let emailSenderReady = false;
-    const wsId = await activeWorkspace(sb, userId);
-    if (wsId) {
-      const { data: integ } = await sb
-        .from("integrations")
-        .select("status")
-        .eq("workspace_id", wsId)
-        .eq("provider", "email_sender")
-        .maybeSingle();
-      emailSenderReady = !!integ;
-    }
-
-    const r = row as
-      | { email_enabled: boolean; email_verified_at: string | null; totp_enabled: boolean; passkey_enabled: boolean }
-      | null;
-
+    const { data, error } = await context.supabase.auth.getUser();
+    if (error || !data?.user) throw new Error('Não foi possível confirmar os autenticadores da conta.');
+    const claims = context.claims as { aal?: string };
+    const status = normalizeSlimMfaSnapshot(data.user, { currentLevel: claims.aal ?? 'aal1' }, context.userId);
     return {
-      emailEnabled: !!r?.email_enabled,
-      emailVerifiedAt: r?.email_verified_at ?? null,
-      totpEnabled: !!r?.totp_enabled,
-      passkeyEnabled: !!r?.passkey_enabled,
-      email: claims?.email ?? null,
-      emailSenderReady,
+      emailEnabled: false, emailVerifiedAt: null,
+      totpEnabled: status.factors.some(factor => factor.status === 'verified'),
+      passkeyEnabled: false, email: data.user.email ?? null, emailSenderReady: false,
+      source: 'native', currentLevel: status.currentLevel,
+      unavailableMethods: ['email', 'sms', 'passkey', 'recovery_codes'],
     };
   });
 

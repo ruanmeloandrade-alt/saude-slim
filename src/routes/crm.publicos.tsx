@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+// SLIM_AUDIENCE_TABS_V1
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -8,6 +9,9 @@ import {
   Target, Mail, Phone, Radio, Filter, X, ExternalLink, Building2, ListChecks, TrendingUp, MessageSquare, UserCog, Zap, Bot,
 
 } from "lucide-react";
+import {SlimAudienceQueue} from "@/components/crm/SlimAudienceQueue";
+import {SlimAudienceReport,useSlimAudienceScope} from "@/components/crm/SlimAudienceReport";
+import {SlimMassBroadcastPanel} from "@/components/crm/SlimMassBroadcastPanel";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { PermissionGate } from "@/components/permissions/PermissionGate";
 import { Button } from "@/components/ui/button";
@@ -33,6 +37,10 @@ import { listConversationAgents } from "@/lib/conversation-agents.functions";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/crm/publicos")({
+  validateSearch:(search:Record<string,unknown>):{aba?:'listas'|'disparos'|'relatorio';campanha?:string}=>({
+    aba:['listas','disparos','relatorio'].includes(String(search.aba))?search.aba as 'listas'|'disparos'|'relatorio':undefined,
+    campanha:typeof search.campanha==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(search.campanha)?search.campanha:undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Públicos · Saúde Slim" },
@@ -52,6 +60,17 @@ const EMPTY: AudienceFilters = {
 };
 
 function PublicosPage() {
+  const navigate=useNavigate(),queryClient=useQueryClient();
+  const search=Route.useSearch(),tab=search.aba??'listas';
+  const scopeQuery=useSlimAudienceScope(),scope=scopeQuery.data??null;
+  const [broadcastPending,setBroadcastPending]=useState(false);
+  const broadcastPendingRef=useRef(false);
+  const updateBroadcastPending=useCallback((pending:boolean)=>{broadcastPendingRef.current=pending;setBroadcastPending(pending);},[]);
+  function selectTab(aba:'listas'|'disparos'|'relatorio',campanha?:string){
+    if(broadcastPendingRef.current){toast.info('Aguarde o registro do disparo antes de mudar de aba.');return;}
+    void navigate({to:'/crm/publicos',search:{aba,campanha}});
+  }
+
   const load = useServerFn(listCrmAudiences);
   const remove = useServerFn(deleteCrmAudience);
   const refresh = useServerFn(refreshCrmAudience);
@@ -62,7 +81,8 @@ function PublicosPage() {
   const [audienceQuery, setAudienceQuery] = useState("");
 
   const q = useQuery({
-    queryKey: ["crm-audiences"],
+    queryKey: ["crm-audiences",scope?.workspaceId,scope?.actorId],
+    enabled:!!scope,
     queryFn: () => load(),
     staleTime: 20_000,
   });
@@ -129,6 +149,14 @@ function PublicosPage() {
                 </Button>
               </div>
             </header>
+            <nav role="tablist" aria-label="Navegação de Públicos" className="flex flex-wrap gap-2 border-b border-border pb-3">
+              {([['listas','Listas'],['disparos','Disparo em massa'],['relatorio','Relatório detalhado']] as const).map(([id,label])=><Button key={id} id={`publicos-tab-${id}`} type="button" role="tab" aria-selected={tab===id} aria-controls={`publicos-panel-${id}`} variant={tab===id?'secondary':'ghost'} size="sm" disabled={broadcastPending} onClick={()=>selectTab(id)}>{label}</Button>)}
+            </nav>
+            {scopeQuery.error?<p role="alert" className="text-sm text-destructive">{scopeQuery.error instanceof Error?scopeQuery.error.message:'Não foi possível conferir a empresa ativa.'}</p>:!scope?<p role="status" className="text-sm text-muted-foreground">Conferindo a empresa ativa...</p>:null}
+            <div id="publicos-panel-listas" role="tabpanel" aria-labelledby="publicos-tab-listas" hidden={tab!=='listas'||!scope} style={{display:tab==='listas'&&scope?'block':'none'}} className="space-y-4">
+            <SlimAudienceQueue scope={scope} onReport={id=>selectTab('relatorio',id)} />
+            {q.error&&<p role="alert" className="text-sm text-destructive">Não foi possível carregar os públicos. Atualize a página.</p>}
+
 
             <section className="grid gap-2 sm:grid-cols-3" aria-label="Resumo de públicos">
               <div className="rounded-lg border border-border bg-card px-3 py-2.5">
@@ -136,7 +164,7 @@ function PublicosPage() {
                 <div className="mt-1 text-lg font-semibold tabular-nums">{audiences.length.toLocaleString("pt-BR")}</div>
               </div>
               <div className="rounded-lg border border-border bg-card px-3 py-2.5">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Leads segmentados</div>
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Contatos nas listas</div>
                 <div className="mt-1 text-lg font-semibold tabular-nums">{totalLeads.toLocaleString("pt-BR")}</div>
               </div>
               <div className="rounded-lg border border-border bg-card px-3 py-2.5">
@@ -145,6 +173,7 @@ function PublicosPage() {
               </div>
             </section>
 
+            <p className="text-xs text-muted-foreground">As contagens são as últimas registradas de cada lista. Um mesmo contato pode aparecer em mais de um público.</p>
             <section className="overflow-hidden rounded-xl border border-border bg-card">
               <div className="flex flex-col gap-3 border-b border-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-4">
                 <div>
@@ -240,6 +269,14 @@ function PublicosPage() {
                 </ul>
               )}
             </section>
+            </div>
+            <div id="publicos-panel-disparos" role="tabpanel" aria-labelledby="publicos-tab-disparos" hidden={tab!=='disparos'||!scope} style={{display:tab==='disparos'&&scope?'block':'none'}} className="space-y-4">
+              <SlimMassBroadcastPanel active={tab==='disparos'} scope={scope} onPendingChange={updateBroadcastPending} onOpenLists={()=>selectTab('listas')} onRegistered={id=>{void queryClient.invalidateQueries({queryKey:['slim-audience-campaigns']});void queryClient.invalidateQueries({queryKey:['slim-audience-report']});selectTab('relatorio',id);}} />
+              <SlimAudienceQueue scope={scope} onReport={id=>selectTab('relatorio',id)} />
+            </div>
+            <div id="publicos-panel-relatorio" role="tabpanel" aria-labelledby="publicos-tab-relatorio" hidden={tab!=='relatorio'||!scope} style={{display:tab==='relatorio'&&scope?'block':'none'}}>
+              <SlimAudienceReport active={tab==='relatorio'} scope={scope} audiences={audiences} initialCampaignId={search.campanha} />
+            </div>
           </div>
         </div>
       </main>

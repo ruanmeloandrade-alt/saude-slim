@@ -9,6 +9,7 @@ import { resolveSlimInboxContact } from '@/lib/slim-contact-route.functions';
 import { getLeadDetail } from '@/lib/leads.functions';
 import type { CrmLead } from '@/lib/crm-mock';
 import { SlimEmbeddedChatThread } from '@/components/inbox/InboxPage.legacy';
+import { ClientAutomationControls } from '@/components/inbox/InboxLeadRouteEnhancements';
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +31,8 @@ export const SlimFunnelLeadDrawer = forwardRef<SlimFunnelLeadDrawerHandle, { onE
   const [observedActor, setObservedActor] = useState<string | null>(null);
   const observedActorRef = useRef<string | null>(null);
   const stateRef = useRef(interaction);
+  const threadInteraction = useRef(emptyInteraction());
+  const automationPending = useRef(false);
   const selectedRef = useRef(selected);
   const boundContext = useRef<SlimDrawerContext | null>(null);
   const activeThreadKey = useRef<string | null>(null);
@@ -51,6 +54,8 @@ export const SlimFunnelLeadDrawer = forwardRef<SlimFunnelLeadDrawerHandle, { onE
     activeThreadKey.current = null;
     observedActorRef.current = null;
     setObservedActor(null);
+    threadInteraction.current = emptyInteraction();
+    automationPending.current = false;
     stateRef.current = emptyInteraction();
     setInteraction(emptyInteraction());
     setSelected(null);
@@ -59,7 +64,7 @@ export const SlimFunnelLeadDrawer = forwardRef<SlimFunnelLeadDrawerHandle, { onE
   }, [queryClient]);
   const canLeave = useCallback(() => {
     const decision = slimDrawerLeaveDecision(stateRef.current);
-    if (decision === 'blocked') { toast.info('Aguarde o envio ou a transcrição terminar antes de sair da conversa.'); return false; }
+    if (decision === 'blocked') { toast.info('Aguarde o envio, a transcrição ou a operação da automação terminar antes de sair da conversa.'); return false; }
     return decision !== 'confirm' || window.confirm('Descartar o texto, anexo ou áudio preparado e sair desta conversa?');
   }, []);
   const close = useCallback(() => { if (canLeave()) clear(); }, [canLeave, clear]);
@@ -114,7 +119,16 @@ export const SlimFunnelLeadDrawer = forwardRef<SlimFunnelLeadDrawerHandle, { onE
   const canMount = !!selected && !!context && !!contextKey && !!lead && !isGroup && actorMatches && !contextMismatch && (!!boundKey || (!contactQ.error && !detailQ.error));
   activeThreadKey.current = canMount ? contextKey : null;
   const onThreadInteraction = useCallback((next: SlimDrawerInteraction) => {
-    if (contextKey && activeThreadKey.current === contextKey) onInteraction(next);
+    if (contextKey && activeThreadKey.current === contextKey) {
+      threadInteraction.current = next;
+      onInteraction({ dirty: next.dirty, pending: next.pending || automationPending.current });
+    }
+  }, [contextKey, onInteraction]);
+  const onAutomationPending = useCallback((pending: boolean) => {
+    if (contextKey && activeThreadKey.current === contextKey) {
+      automationPending.current = pending;
+      onInteraction({ dirty: threadInteraction.current.dirty, pending: threadInteraction.current.pending || pending });
+    }
   }, [contextKey, onInteraction]);
   useEffect(() => {
     if (!selected || !contextKey || !context) return;
@@ -178,7 +192,11 @@ export const SlimFunnelLeadDrawer = forwardRef<SlimFunnelLeadDrawerHandle, { onE
           {canMount && whatsappUrl && <Button size="sm" variant="outline" asChild><a href={whatsappUrl} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1.5 h-3.5 w-3.5" />WhatsApp Web</a></Button>}
           <Button type="button" size="sm" variant="ghost" aria-label="Atualizar ficha" disabled={!canMount || detailQ.isFetching || interaction.pending} onClick={() => void detailQ.refetch()}><RefreshCw className="h-3.5 w-3.5" /></Button>
         </div>
-        {interaction.pending && <p role="status" className="mt-2 text-xs text-muted-foreground">Envio ou transcrição em andamento. Aguarde para fechar ou mudar de conversa.</p>}
+        {canMount && context && <div className="slim-funnel-drawer-automations">
+          <ClientAutomationControls key={contextKey} inline leadId={context.leadId} workspaceId={context.workspaceId} actorId={context.actorId}
+            disabled={interaction.pending} onPendingChange={onAutomationPending} />
+        </div>}
+        {interaction.pending && <p role="status" className="mt-2 text-xs text-muted-foreground">Envio, transcrição ou automação em andamento. Aguarde para fechar ou mudar de conversa.</p>}
         {canMount && (contactQ.error || detailQ.error) && <p role="status" className="mt-2 text-xs text-amber-700">Não foi possível atualizar a ficha. Os dados da última leitura e o rascunho foram mantidos.</p>}
       </header>
       {canMount && lead && conversation && context ? <>
