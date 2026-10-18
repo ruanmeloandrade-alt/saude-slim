@@ -84,3 +84,9 @@ Advisor não acrescentou avisos em relação ao bloco anterior. Permanecem três
 Código, aceite do Copiloto, testes e este checkpoint seguem juntos para restauracao/sistema-completo-20261014 em uma única publicação. O commit funcional acima identifica exatamente a implementação testada; o checkpoint seguinte acrescenta somente documentação. Confirmar deployment SUCCESS, healthcheck e leitura pós-publicação antes de encerrar. O resultado operacional é comunicado na entrega, sem supor que uma publicação ainda em andamento passou.
 
 Após publicar, pausar para a conferência do usuário do endereço/frete na revisão, histórico e comprovante. Não executar uma venda real de QA pela equipe. Não iniciar outro bloco durante a pausa. Copiloto permanece aprovado conforme relato do usuário; funcionalidades futuras dele ficam adiadas.
+
+## 🟢 Publicação confirmada e nova orientação
+
+Commit d2a41dc462c26a4b00da5484333e2d5665de82ec publicado no Railway afa70fd9-b6ff-48e4-aee0-f6e001ce5d02, SUCCESS às 00:33:42 UTC de 18/10, healthcheck 1/1 às 00:33:39 UTC. Conferência às 00:34:10 UTC: quatro serviços online, uma réplica cada, nenhuma falha ou operação pendente. O banco respondeu e preservou os hashes do pedido e estoque anteriores. Nenhum pedido de QA foi executado pela equipe.
+
+Em 17/10 às 21:38 de Brasília, o usuário pediu continuidade da produção enquanto testa. Essa instrução substitui a pausa descrita acima. Checkout permanece disponível para sua conferência, sem marcar aceite ainda não recebido. A próxima entrega está registrada em docs/tasks/2026-10-17-slim-audience-receipts-block5.md.
