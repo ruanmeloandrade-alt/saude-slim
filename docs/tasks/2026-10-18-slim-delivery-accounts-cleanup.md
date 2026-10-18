@@ -1,47 +1,102 @@
 # Saúde Slim — preparação de entrega e limpeza dos testes — 18/10/2026
 
-## 🟡 Escopo autorizado
+## 🟢 Concluído e liberado para configurar o cliente
 
-O usuário forneceu explicitamente dois e-mails e senhas para criar duas contas administradoras, uma do cliente e uma dele. Solicitou remover os dados dos testes, a instância WhatsApp e bots, deixando a Saúde Slim limpa para começar a configuração do cliente.
+O usuário forneceu dois e-mails e senhas para criar duas contas administradoras, uma do cliente e uma dele, e solicitou remover os dados dos testes, a instância WhatsApp e os bots. As duas contas foram criadas e passaram pelo login real. A base operacional ficou vazia, com estrutura inicial e acessos preservados.
 
-Escopo exclusivo: projeto Supabase vyzvfcgpjjzvcjegzzza, workspace operacional c49945db-1960-461a-9339-a43b8403bdd9, repositório ruanmeloandrade-alt/saude-slim. Produção atual 5e24b2da48a21a1011c6a3894c1454c5ffa0a141. Nenhum valor de credencial, e-mail, telefone ou conteúdo de conversa será versionado.
+Escopo exclusivo: Supabase vyzvfcgpjjzvcjegzzza, workspace operacional c49945db-1960-461a-9339-a43b8403bdd9, repositório ruanmeloandrade-alt/saude-slim. Nenhuma senha, chave, e-mail, telefone ou conteúdo de conversa está registrado neste documento ou nos scripts versionados.
 
-## Dentro do escopo
+## Requisitos e limites recebidos
 
-- Criar exatamente duas identidades pelo Supabase Auth Admin já integrado ao aplicativo, com confirmação de e-mail no servidor, sem enviar e-mails. Conferir roles admin na mesma empresa, perfil inicial e conta ativa.
-- Identificar filas, instâncias e relações do tenant antes da limpeza. Remover bots, agentes, regras, históricos e cadastros operacionais de teste e arquivos de teste associados à empresa.
-- Desconectar e excluir somente as instâncias WhatsApp de teste da Saúde Slim, com leitura de verificação quando disponível. Preservar a infraestrutura Railway para uso futuro.
-- Executar a limpeza relacional em escopo explícito, sem TRUNCATE global ou alteração de schema/RLS. Preservar a empresa, funcionamento dos módulos, históricos técnicos de segurança e escopos versionados.
-- Não excluir a identidade proprietária enquanto ela possui a empresa (FK ON DELETE CASCADE). Não transferir ownership, excluir usuários existentes, conceder super_admin global ou tocar outros workspaces por inferência.
+- Criar exatamente dois administradores na empresa operacional, usando o Auth Admin existente; confirmar contas e permissões sem convites por e-mail.
+- Remover cadastros, bots, agentes, regras, públicos, campanhas, históricos e arquivos dos testes.
+- Desconectar e excluir as instâncias WhatsApp de teste da Saúde Slim.
+- Preservar a empresa, módulos, infraestrutura e estrutura padrão para nova configuração.
+- Preservar as identidades e vínculos anteriores. Não transferir propriedade, conceder super_admin global ou excluir Auth por inferência. A identidade proprietária possui FK ON DELETE CASCADE para a empresa.
+- Preservar os registros técnicos de segurança/idempotência e os documentos de entrega. Nenhuma mensagem de WhatsApp, convite por e-mail ou cobrança foi enviada pela equipe.
 
-## Inventário inicial
+## Contas e login real
 
-26 leads, 3 SalesBots, 1 agente individual, 6 execuções de bot, 2 campanhas, 2 pedidos, 1 produto, 40 grupos, 360 mensagens WhatsApp e 5 registros de sessão WhatsApp. Filas conhecidas terminadas, sem execução ativa. Dois e-mails novos confirmados por consulta; nenhum cadastro efetuado até este escopo.
+As duas identidades foram criadas pelo formulário Equipe do aplicativo, com nome correto, e-mail confirmado, senha configurada, conta ativa e vínculo admin/admin sem expiração. Ambas selecionam automaticamente a Saúde Slim operacional. Criado setor Administração.
 
-## Aceite
+O login do administrador solicitante foi testado inicialmente às22:21 UTC. Após a limpeza, o administrador cliente entrou às23:46:46 UTC e o solicitante às23:47:27 UTC. Auth confirmou os horários de last_sign_in_at; o navegador carregou a operação autenticada em ambos os casos. A última aba foi deixada no Histórico de Vendas, autenticada como solicitante.
 
-Duas novas identidades e memberships admin conferidos; ambas selecionam a empresa operacional. Dados e conexões de teste removidos no escopo autorizado, com contagens finais e limitações explícitas. Login real dos destinatários não será declarado sem evidência. Infraestrutura existente funcional. Nenhuma mensagem WhatsApp, convite por e-mail ou cobrança durante o trabalho.
+Permanecem quatro memberships: dois novos administradores, a identidade proprietária anterior e o funcionário anterior. Não houve troca de propriedade nem exclusão das duas identidades antigas.
 
-## Execução
+## Inventário e reconciliação
 
-Inventário em andamento. Sem alteração de código de produto prevista; sem novo deployment apenas para registrar operação.
+Inventário inicial: 26 leads, 3 SalesBots, 1 agente individual, 6 execuções de bot, 2 campanhas, 2 pedidos, 1 produto, 40 grupos, 360 mensagens, 439 atividades e5 sessões locais WhatsApp.
 
-### Contas concluídas e execução externa preparada
+Durante o preparo, chegaram três pares adicionais de mensagem/atividade da mesma sessão de teste, às21:42 e22:12 UTC, antes da remoção da instância. O preflight impediu a limpeza enquanto os limites eram360/439. A consulta dos metadados confirmou 363 mensagens e442 atividades, sem novos leads, bots ou outros cadastros. Ajustados somente esses dois limites após reconciliação.
 
-As duas novas identidades foram criadas pelo formulário real de Equipe no aplicativo, usando o Supabase Auth Admin existente. Conferidos e-mail confirmado, senha configurada, nomes corretos, ausência de bloqueio, membership admin/admin sem prazo e current_workspace_id operacional. Credenciais usadas somente no formulário autorizado, sem valor registrado aqui. Criado setor Administração para os novos administradores. Permanecem as duas identidades anteriores; nenhuma transferência de propriedade ou exclusão de acesso foi solicitada especificamente.
+## Desligamento e exclusão externa
 
-Antes da limpeza, desabilitados 2 SalesBots ativos, 1 agente e 1 automação de etapa, sem disparos. Operação externa usa exclusivamente variáveis já existentes no processo do web service. Para executá-la sem extrair credenciais ou criar infraestrutura, será configurado temporariamente um preDeployCommand no serviço existente e solicitado redeploy da mesma imagem 5e24b2d. Exigir recibo de conclusão e restauração do comando vazio antes do encerramento. Nenhum código de produto ou segredo é alterado. Timeout temporário 240s, script total180s, requisições15s/2MB, sem retry/redirect. Execução restrita a execute-20261018 e expiração2026-10-19T00:00Z.
+Primeiro foram desabilitados 2 SalesBots ativos, 1 agente e1 automação de etapa. Não havia jobs/execuções pendentes.
 
-Script externo: sintaxe e3mocks aprovados com invocação CLI exata Node -e: exclusão dos5alvos+6arquivos, modo padrão sóleitura com0DELETE, objeto inesperado com0DELETE; saída sem segredos. Revisão independente aprovada. A operação SQL fica em transação com guards de admin/workspace/conjunto de sessões, ausência de filas ativas, contagens máximas e relações entre empresas, preservando estrutura inicial e trilhas técnicas. Dados não são excluídos via SQL antes da confirmação externa. Não é necessário build de produto para esta execução operacional.
+A operação externa usou exclusivamente as credenciais já existentes no processo do web service, sem extrair valores. O preDeployCommand temporário tinha escopo de cinco nomes de instância e seis arquivos, flag explícita de execução e expiração em 19/10/2026 às00:00 UTC. Cada requisição tinha prazo15s, limite2MB e nenhuma repetição/redirect; operação total180s e timeout do predeploy240s.
 
+Histórico material:
+- O primeiro redeploy reutilizou uma configuração antiga e não executou a operação externa; não foi considerado evidência de limpeza.
+- O primeiro predeploy real removeu a instância conectada e interrompeu ao receber HTTP400 no logout de uma sessão antiga com QR pendente.
+- A sessão pendente foi removida pelo comando existente Remover instância no aplicativo. Nenhuma instância ou mensagem nova foi criada.
+- O rerun do deployment 4bdd3c83 confirmou os cinco nomes de instância ausentes. Às22:24:11.718 UTC, o recibo registrou 6 arquivos excluídos,0 objetos residuais e0 instâncias alvo.
+- Os cinco registros locais foram marcados desconectados/excluídos somente depois da ausência remota; depois foram removidos pelo bloco SQL final.
+- O preDeployCommand foi restaurado para[] e o timeout temporário foi retirado. Não há configuração de limpeza pendente.
 
-### Adaptação de transporte da operação SQL
+Os seis arquivos foram removidos pela API Storage. Nenhuma exclusão SQL foi aplicada a storage.objects. A infraestrutura Evolution/Railway foi preservada para o novo WhatsApp do cliente.
 
-Evolution e Storage foram conferidos vazios para os alvos autorizados em 18/10/2026 às 22:24 UTC. O deployment 4bdd3c83 está SUCCESS e o preDeployCommand foi restaurado para vazio. Duas chamadas do SQL com múltiplas instruções retornaram Invalid or expired requestState; leituras posteriores confirmaram os registros operacionais intactos. Trata-se de erro técnico retornado pelo conector, sem causa confirmada. Uma instrução DO inócua passou. A operação revisada passa a uma única instrução DO atômica, preservando os 17 guards, ordem de exclusão e verificações. Inclui deadline explícito de 30 segundos nos limites das operações e lock_timeout de 5 segundos. NOTICE não substitui leitura independente das contagens após sucesso. Execução ainda pendente neste checkpoint.
+## Execução relacional efetiva
 
+A transação original com múltiplas instruções retornou Invalid or expired requestState duas vezes. Uma adaptação para um único DO retornou o mesmo erro. As consultas posteriores confirmaram que essas tentativas não apagaram registros. O conector não informou recusa de aprovação; a causa técnica exata não foi confirmada.
 
-### Execução em blocos explícitos e reconciliação
+Um DELETE explícito, limitado ao único job done auditado, workspace, owner e dois administradores, foi aceito. Depois, a operação foi concluída em quatro blocos CTE explícitos, na ordem filhos antes de pais. Cada bloco:
+- Calculou uma autorização MATERIALIZED com empresa/owner, dois administradores ativos, perfil na empresa e cinco sessões exatas já desconectadas/excluídas.
+- Bloqueou a empresa durante a instrução e exigiu remetentes desligados e contagens dentro dos limites auditados.
+- Limitou todo DELETE à empresa autorizada. A fonte e etapa extras exigiam também os IDs exatos.
+- Usou dependência do RETURNING anterior para ordenar os efeitos e retornou as contagens efetivas.
+- Retornou authorized=true e as quantidades esperadas.
 
-A tentativa DO única também retornou requestState inválido sem alteração. A exclusão simples e explícita de um único job done, limitada ao ID auditado e workspace, com owner e dois admins confirmados, funcionou. Não é uma recusa de aprovação reportada pelo conector. O restante será executado em quatro instruções CTE pequenas e explícitas, cada uma atômica, com autorização/materialização, lock da empresa, sessões exatas desligadas, remetentes desativados, contagens máximas e dependência filho/parent via RETURNING. A sequência completa não é uma transação única; cada recibo exige authorized=true e a conferência final será independente. Revisão focal independente aprovada.
+A sequência dos quatro blocos não foi uma transação global única. O preflight original, sem mutações relacionais, passou após a reconciliação e verificou estrutura, FKs entre empresas, estados ociosos e acessos. As verificações finais foram feitas em chamadas independentes das exclusões.
 
-Preflight com os guards originais detectou 363 mensagens e 442 atividades, três acima de cada inventário inicial. Reconciliados os três pares: mesma sessão de teste 33ecf991, timestamps 21:42 e 22:12 UTC, anteriores à remoção da instância. Nenhum lead, bot ou outro cadastro adicional apareceu. Caps ajustados exclusivamente de 360 para363 mensagens e439 para442 atividades após essa evidência. Nenhum conteúdo de conversa ou identificador do WhatsApp é armazenado neste registro.
+Total: 967 registros operacionais diretamente removidos, incluindo o job individual, históricos, entidades e os dois registros extras de estrutura. Um registro privado de credencial de integração foi removido pelo cascade previsto.
+
+## Resultado conferido às23:45:53 UTC
+
+| Área | Estado final |
+|---|---|
+| Leads/clientes de teste |0|
+| SalesBots / agentes individuais / regras de etapa |0 /0 /0|
+| Públicos / campanhas / execuções e logs |0|
+| Pedidos / produtos / fornecedores / movimentos de estoque |0|
+| Grupos / mensagens WhatsApp / atividades de lead |0 /0 /0|
+| Sessões WhatsApp / integrações / credenciais privadas de integração |0 /0 /0|
+| Arquivos de teste associados ao workspace |0|
+| Funil / etapas padrão / fonte padrão / catálogo vazio |1 /4 /1 /1|
+| Novos administradores |2|
+| Memberships totais preservados |4|
+
+Todas as 47 tabelas operacionais auditadas retornaram zero. Também foram conferidos0 arquivos em Storage e0 credenciais privadas da integração removida.
+
+Os22 valores de verificação da empresa, perfis novos, memberships, permissões, setores, defaults, guard de sessão e ledgers privados permaneceram iguais antes/depois. As192 políticas conservaram o hash 3c1767d874321020684cfbafc8ec5460; o guard slim_assert_session_security conservou cea919fe8a00fd3be21482665196f997.
+
+## Produção e validação visual
+
+Versão e33b28722b733ff849b15eaba22cc250931d4931, deployment 4bdd3c83-7377-406f-a420-33dae954bb54 SUCCESS. Healthcheck1/1 aprovado às22:24:28 UTC. Conferência final: quatro serviços online, uma réplica cada, nenhum aviso crítico/alerta e nenhuma operação pendente.
+
+Não houve alteração de código funcional da aplicação neste pedido. A compilação completa e os gates da versão e33 passaram no Railway. Script externo: sintaxe e três cenários CLI sintéticos aprovados (execução dos alvos, dry-run com 0DELETE, recusa de objeto inesperado com 0DELETE). Operação SQL e ordem/FKs dos blocos receberam revisão independente.
+
+Após os dois logins reais, Integrações exibiu 0 conexões e WhatsApp pronto para conectar; Histórico de Vendas exibiu 0 registros e R$0,00. Nenhum dado comercial novo foi criado para esse smoke.
+
+## Estado de entrega e arquivos
+
+🟢 Pedido concluído. O usuário pode configurar seus produtos, públicos, bots e integrações do cliente. O WhatsApp e a chave de IA precisam da nova configuração desejada após a remoção dos testes.
+
+Contas antigas de proprietário/funcionário e ledgers técnicos permanecem. Os antigos IDs e números de testes citados em outros escopos são evidências históricas; os registros operacionais correspondentes foram apagados por esta solicitação. O aceite anterior das funcionalidades continua registrado.
+
+Arquivos:
+- scripts/operations/2026-10-18-slim-handoff-cleanup-external.mjs — operação externa limitada.
+- supabase/operations/2026-10-18-slim-handoff-cleanup.sql — adaptação DO revisada, sem sucesso de execução; não repetir após a limpeza.
+- supabase/operations/2026-10-18-slim-handoff-cleanup-batches.sql — quatro blocos efetivamente executados.
+- docs/tasks/2026-10-18-slim-handoff-cleanup-receipt.json — recibo agregado e contagens/hashes, sem credenciais ou conteúdo de cliente.
+
+A documentação final permanece na branch de trabalho, sem deployment extra apenas para atualizar status.

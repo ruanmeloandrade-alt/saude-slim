@@ -1,0 +1,209 @@
+{
+  "operation": "SLIM-HANDOFF-20261018",
+  "status": "completed",
+  "workspace_id": "c49945db-1960-461a-9339-a43b8403bdd9",
+  "database_verified_at": "2026-10-18T23:45:53.607058+00:00",
+  "database_mutations": {
+    "completed_job_deleted": 1,
+    "blocks": [
+      {
+        "block": 1,
+        "deleted": {
+          "slim_orders": 2,
+          "salesbot_run_logs": 17,
+          "crm_lead_audiences": 1,
+          "slim_order_changes": 0,
+          "slim_order_documents": 0,
+          "slim_stock_movements": 4,
+          "crm_stage_automations": 1,
+          "slim_stage_move_events": 2,
+          "slim_audience_campaigns": 2,
+          "slim_audience_deliveries": 2,
+          "slim_checkout_attempt_closures": 0,
+          "slim_order_document_deliveries": 0
+        },
+        "authorized": true
+      },
+      {
+        "block": 2,
+        "deleted": {
+          "salesbots": 3,
+          "inbox_labels": 0,
+          "salesbot_runs": 6,
+          "group_ai_agents": 0,
+          "lead_activities": 442,
+          "salesbot_blocks": 6,
+          "whatsapp_groups": 40,
+          "salesbot_revisions": 13,
+          "whatsapp_web_messages": 363,
+          "conversation_ai_agents": 1,
+          "conversation_agent_runs": 0,
+          "inbox_label_assignments": 0
+        },
+        "authorized": true
+      },
+      {
+        "block": 3,
+        "deleted": {
+          "leads": 26,
+          "tasks": 0,
+          "products": 1,
+          "crm_forms": 1,
+          "lead_products": 2,
+          "tracking_sites": 0,
+          "tracking_events": 0,
+          "crm_form_submissions": 0,
+          "lead_dedupe_dismissals": 0,
+          "supplier_product_costs": 1,
+          "lead_custom_field_values": 0,
+          "tracking_conversion_events": 0
+        },
+        "authorized": true
+      },
+      {
+        "block": 4,
+        "deleted": {
+          "companies": 1,
+          "crm_sources": 1,
+          "integrations": 1,
+          "ai_brain_chunks": 0,
+          "pipeline_stages": 1,
+          "ai_brain_sources": 0,
+          "ai_agent_settings": 0,
+          "lead_custom_fields": 0,
+          "whatsapp_web_sessions": 5,
+          "ai_agent_conversations": 0,
+          "ai_brain_blocked_terms": 0,
+          "support_robot_messages": 21
+        },
+        "authorized": true
+      }
+    ],
+    "total_direct_rows_deleted": 967
+  },
+  "final_database": {
+    "catalogs": 1,
+    "checked_at": "2026-10-18T23:45:53.607058+00:00",
+    "new_admins": 2,
+    "memberships": 4,
+    "default_stages": 4,
+    "all_policy_hash": "3c1767d874321020684cfbafc8ec5460",
+    "default_sources": 1,
+    "storage_objects": 0,
+    "all_policy_count": 192,
+    "default_pipelines": 1,
+    "operational_counts": {
+      "leads": 0,
+      "tasks": 0,
+      "products": 0,
+      "companies": 0,
+      "crm_forms": 0,
+      "salesbots": 0,
+      "slim_orders": 0,
+      "inbox_labels": 0,
+      "integrations": 0,
+      "lead_products": 0,
+      "salesbot_runs": 0,
+      "tracking_sites": 0,
+      "ai_brain_chunks": 0,
+      "group_ai_agents": 0,
+      "lead_activities": 0,
+      "salesbot_blocks": 0,
+      "tracking_events": 0,
+      "whatsapp_groups": 0,
+      "ai_brain_sources": 0,
+      "ai_agent_settings": 0,
+      "salesbot_run_logs": 0,
+      "crm_lead_audiences": 0,
+      "lead_custom_fields": 0,
+      "salesbot_revisions": 0,
+      "slim_order_changes": 0,
+      "crm_automation_jobs": 0,
+      "crm_form_submissions": 0,
+      "slim_order_documents": 0,
+      "slim_stock_movements": 0,
+      "crm_stage_automations": 0,
+      "whatsapp_web_messages": 0,
+      "whatsapp_web_sessions": 0,
+      "ai_agent_conversations": 0,
+      "ai_brain_blocked_terms": 0,
+      "conversation_ai_agents": 0,
+      "lead_dedupe_dismissals": 0,
+      "slim_stage_move_events": 0,
+      "supplier_product_costs": 0,
+      "support_robot_messages": 0,
+      "conversation_agent_runs": 0,
+      "inbox_label_assignments": 0,
+      "slim_audience_campaigns": 0,
+      "lead_custom_field_values": 0,
+      "slim_audience_deliveries": 0,
+      "tracking_conversion_events": 0,
+      "slim_checkout_attempt_closures": 0,
+      "slim_order_document_deliveries": 0
+    },
+    "integration_credentials": 0
+  },
+  "preserved_hashes": {
+    "workspace": "e5598e9056f6f0a5124289d9f90aa325",
+    "policy_hash": "4ff33b21339ef604c140a8eb387ec8ed",
+    "policy_count": 184,
+    "admin_profiles": "53a761cfc6add8a86cb72fbbed53dd5c",
+    "public.pipelines": "f0ec6eea8121113d538330e1f5272c09",
+    "public.crm_sources": "0ac8182b33ed6fee6e8f3b0c6b0b3bab",
+    "session_guard_hash": "cea919fe8a00fd3be21482665196f997",
+    "public.user_sessions": "d41d8cd98f00b204e9800998ecf8427e",
+    "public.pipeline_stages": "4df9a6679c441277b9f990c3a2dab3cf",
+    "public.product_catalogs": "16becf785e55019aeacdc8b67fe53c69",
+    "public.user_permissions": "d41d8cd98f00b204e9800998ecf8427e",
+    "public.workflow_sectors": "d0a9bc3ff30064bd2c33a691d87826f9",
+    "public.workspace_members": "d8089faff0837c8f3cbb433a544673eb",
+    "public.crm_source_funnels": "59a91336829fd2b064765044d261a317",
+    "public.module_permissions": "d41d8cd98f00b204e9800998ecf8427e",
+    "public.permission_templates": "d41d8cd98f00b204e9800998ecf8427e",
+    "public.workspace_invitations": "d41d8cd98f00b204e9800998ecf8427e",
+    "private.slim_copilot_proposals": "31e721ae7683341fef3c68e6f1c6a662",
+    "public.workflow_sector_members": "ad934db27e06d91c7f70da381c699211",
+    "private.slim_invitation_requests": "d41d8cd98f00b204e9800998ecf8427e",
+    "private.slim_funnel_write_requests": "9be0553f5bd7b1583294cea0ebad67c1",
+    "private.slim_copilot_proposal_audit": "41f9764ad0821ffa1a45374a09b9402e"
+  },
+  "external_cleanup": {
+    "deployment_id": "4bdd3c83-7377-406f-a420-33dae954bb54",
+    "completed_at": "2026-10-18T22:24:11.718351446Z",
+    "target_instance_names_verified_absent": 5,
+    "remaining_target_instances": 0,
+    "storage_objects_deleted": 6,
+    "remaining_target_objects": 0,
+    "temporary_pre_deploy_command_restored": true
+  },
+  "accounts": {
+    "new_administrators": 2,
+    "both_confirmed_active": true,
+    "both_login_tested": true,
+    "login_test_times_utc": [
+      "2026-10-18T23:46:46.028020Z",
+      "2026-10-18T23:47:27.669072Z"
+    ],
+    "existing_memberships_preserved": 2
+  },
+  "production": {
+    "commit": "e33b28722b733ff849b15eaba22cc250931d4931",
+    "deployment_id": "4bdd3c83-7377-406f-a420-33dae954bb54",
+    "status": "SUCCESS",
+    "healthcheck_passed_at": "2026-10-18T22:24:28.084640755Z",
+    "online_services": 4,
+    "pending_operations": 0
+  },
+  "browser_checks": {
+    "integrations_connected": 0,
+    "sales_records": 0,
+    "sales_total_brl": 0,
+    "final_authenticated_account": "requesting_administrator"
+  },
+  "limitations": [
+    "Existing owner and employee identities remain; no ownership transfer or Auth deletion was requested specifically.",
+    "Private security and idempotency ledgers are preserved.",
+    "The cleanup used four sequential atomic blocks plus one exact job deletion; the sequence was not one global transaction.",
+    "Historical operational test evidence referenced in earlier task documents was intentionally removed from the live business tables."
+  ]
+}

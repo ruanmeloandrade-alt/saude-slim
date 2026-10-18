@@ -1,5 +1,21 @@
 # Saúde Slim | Semáforo operacional
 
+## Bloco 14 de 18/10/2026: 🟢 duas contas administradoras e base de testes limpa
+
+**Concluído e liberado para configurar o cliente em https://slimesaude.com.** As duas contas solicitadas foram criadas com admin/admin, e-mail confirmado e empresa operacional correta. Ambas passaram por login real após a limpeza, às23:46:46 e23:47:27 UTC.
+
+🟢 WhatsApp de teste: instâncias alvo ausentes no provedor, cinco sessões locais removidas e seis arquivos excluídos pela API Storage. O comando operacional temporário foi restaurado; infraestrutura preservada para a configuração do cliente.
+
+🟢 Base operacional zerada: todas as 47 tabelas auditadas retornaram 0 às23:45:53 UTC. Foram removidos26 leads, 3 SalesBots, 1 agente, 2 campanhas, 2 pedidos, 1 produto, 40 grupos, 363 mensagens e os históricos/cadastros relacionados. Total de 967 registros diretos removidos, além de 1 credencial privada por cascade. As primeiras tentativas SQL tiveram erro técnico de requestState; o job específico e os quatro blocos explícitos seguintes concluíram, com recibos e leitura independente confirmando a exclusão.
+
+🟢 Preservados empresa, funil com 4 etapas padrão, fonte padrão, catálogo vazio, setores, permissões e registros técnicos de segurança. Permanecem os dois novos administradores e as duas identidades anteriores de proprietário e funcionário; não houve transferência de propriedade ou exclusão de Auth. Vinte e dois valores de verificação permaneceram iguais. As192 políticas e o guard de sessão conservaram seus hashes.
+
+🟢 Produção e tela conferidas: e33b28722b733ff849b15eaba22cc250931d4931, Railway 4bdd3c83-7377-406f-a420-33dae954bb54 SUCCESS, healthcheck 1/1 aprovado. Quatro serviços online, uma réplica cada, nenhuma operação pendente. Integrações mostra0 conectadas; Histórico de Vendas mostra0 registros e R$0,00. Nenhuma mensagem WhatsApp, convite por e-mail ou cobrança enviada pela equipe.
+
+O WhatsApp e a chave de IA aguardam a nova configuração do cliente, como esperado após a limpeza. Os números/IDs de testes nos blocos antigos abaixo são registros históricos: seus dados operacionais já foram apagados. Este checkpoint prevalece sobre aqueles inventários e mantém os aceites das funcionalidades.
+
+Escopo e recibo: docs/tasks/2026-10-18-slim-delivery-accounts-cleanup.md e docs/tasks/2026-10-18-slim-handoff-cleanup-receipt.json.
+
 ## Bloco 13 de 18/10/2026: 🟢 grupos sincronizados e funcionário na empresa correta
 
 **Versão final 5e24b2da48a21a1011c6a3894c1454c5ffa0a141 publicada em https://slimesaude.com. Railway 85d5c964-6b15-408b-831d-0302bfb03b7b SUCCESS às 19:43:20 UTC; healthcheck 1/1 aprovado às 19:43:17 UTC.** Conferência final: quatro serviços online, uma réplica cada, nenhuma falha e nenhuma operação pendente. Às 19:45:37 UTC, domínio HTTP 200, quatro CSS idênticos ao build validado e duas APIs privadas recusando acesso anônimo com HTTP 401.
