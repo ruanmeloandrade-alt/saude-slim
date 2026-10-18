@@ -1,6 +1,6 @@
 # Saúde Slim: bloco 8 de prevenção de novos contatos duplicados
 
-## Estado: 🟢 implementação, 50 verificações e build aprovados; 🟡 instalação e publicação
+## Estado: 🟢 instalado, publicado e verificado; dados históricos preservados
 
 Base funcional 42b11fc16158b7b40f45c56b85cebc12fa3acaaa. Branch fix/slim-contact-guard-block8-20261017. Produção restauracao/sistema-completo-20261014, repositório ruanmeloandrade-alt/saude-slim. Supabase vyzvfcgpjjzvcjegzzza, empresa c49945db-1960-461a-9339-a43b8403bdd9. Somente Saúde Slim.
 
@@ -67,3 +67,11 @@ Gates concluídos, sem somar repetição de rodadas ou regressões:
 - npm run build em /tmp/slim-contact-guard-build-5qw2ut3k: exit 0 na primeira tentativa, todos os gates anteriores e saída Nitro concluídos. Log /tmp/slim-contact-guard-build.log. Os dez arquivos de código/teste/migration do bloco continuaram com os mesmos hashes após o build; diff --check limpo. O gate concorrente real é local, não adiciona PostgreSQL/download ao build de produção.
 
 Total: 50 verificações novas. A semântica da leitura após o lock foi conferida na documentação primária de [volatilidade das funções](https://www.postgresql.org/docs/current/xfunc-volatility.html) e [visibilidade dos triggers](https://www.postgresql.org/docs/current/trigger-datachanges.html), além da prova executada com conexões independentes. Nenhum contato, pedido, estoque ou envio real foi usado como QA.
+
+## Instalação e publicação confirmadas
+
+A migration foi instalada pelo Supabase sob versão 20261018024038, nome slim_contact_phone_guard, pela revisão normal da ferramenta. Não houve recusa automática nesta etapa. O trigger está ativo, a função permanece privada, sem EXECUTE direto para anon/authenticated/service_role, e o normalizador manteve seu hash. RLS e triggers anteriores permanecem ativos.
+
+As consultas imediatamente antes/depois preservaram contagens e hashes integrais: leads 26/dc63635db690dd589ad7de16fcfd08e1; slim_orders 2/9226616ad3082d2be6df1d5dfdab65d6; products 1/852f93d0a5b1bccfeefa15ed437ead62; slim_stock_movements 4/258c9bff06258cb155df77c5c7c75385. Os advisors anteriores permaneceram iguais. O guard impede novas colisões elegíveis; não elimina fisicamente os aliases históricos.
+
+Versão funcional b4185b0cb61169571b7d3cac002e5490643def21, árvore 576ddc8bbfc69307c7f14864c42c263e0362168d. Railway 5eacbcf7-2c4a-4635-a8fe-8effbcded9d0 terminou SUCCESS em 18/10 às 02:45:26 UTC, com healthcheck 1/1 às 02:45:23 UTC. Os quatro serviços estavam online, uma réplica cada, sem falhas, crashes ou operações pendentes. A conferência operacional foi registrada às 02:45:44 UTC. Este registro acompanha o próximo escopo e não cria deploy documental separado.
