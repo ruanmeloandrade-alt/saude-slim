@@ -25,3 +25,11 @@ Duas novas identidades e memberships admin conferidos; ambas selecionam a empres
 ## Execução
 
 Inventário em andamento. Sem alteração de código de produto prevista; sem novo deployment apenas para registrar operação.
+
+### Contas concluídas e execução externa preparada
+
+As duas novas identidades foram criadas pelo formulário real de Equipe no aplicativo, usando o Supabase Auth Admin existente. Conferidos e-mail confirmado, senha configurada, nomes corretos, ausência de bloqueio, membership admin/admin sem prazo e current_workspace_id operacional. Credenciais usadas somente no formulário autorizado, sem valor registrado aqui. Criado setor Administração para os novos administradores. Permanecem as duas identidades anteriores; nenhuma transferência de propriedade ou exclusão de acesso foi solicitada especificamente.
+
+Antes da limpeza, desabilitados 2 SalesBots ativos, 1 agente e 1 automação de etapa, sem disparos. Operação externa usa exclusivamente variáveis já existentes no processo do web service. Para executá-la sem extrair credenciais ou criar infraestrutura, será configurado temporariamente um preDeployCommand no serviço existente e solicitado redeploy da mesma imagem 5e24b2d. Exigir recibo de conclusão e restauração do comando vazio antes do encerramento. Nenhum código de produto ou segredo é alterado. Timeout temporário 240s, script total180s, requisições15s/2MB, sem retry/redirect. Execução restrita a execute-20261018 e expiração2026-10-19T00:00Z.
+
+Script externo: sintaxe e3mocks aprovados com invocação CLI exata Node -e: exclusão dos5alvos+6arquivos, modo padrão sóleitura com0DELETE, objeto inesperado com0DELETE; saída sem segredos. Revisão independente aprovada. A operação SQL fica em transação com guards de admin/workspace/conjunto de sessões, ausência de filas ativas, contagens máximas e relações entre empresas, preservando estrutura inicial e trilhas técnicas. Dados não são excluídos via SQL antes da confirmação externa. Não é necessário build de produto para esta execução operacional.
