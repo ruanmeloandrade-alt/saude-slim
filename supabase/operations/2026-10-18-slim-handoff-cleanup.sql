@@ -8,11 +8,11 @@
 -- Storage objects must be removed through the Storage API, not this SQL file.
 -- A failed guard aborts the entire transaction. Do not relax it without reconciliation.
 
-SELECT pg_catalog.set_config('slim.handoff_cleanup_receipt', '{}', false);
-BEGIN;
-SET LOCAL lock_timeout = '5s';
-SET LOCAL statement_timeout = '30s';
-SET LOCAL search_path = pg_catalog, pg_temp;
+-- Single top-level DO statement: success commits implicitly; an exception rolls it back.
+-- No transaction-control or result SELECT statements are sent alongside it.
+-- The receipt is emitted as NOTICE; independently query counts after success.
+-- statement_timeout is configured locally, plus explicit 30-second deadline checks.
+-- Deadline checks abort at operation boundaries; the caller retains its request timeout.
 
 DO $cleanup$
 DECLARE
@@ -71,7 +71,12 @@ DECLARE
   v_cross_refs bigint;
   v_fk record;
   v_checked_fks integer := 0;
+  v_deadline constant timestamptz := clock_timestamp()+interval '30 seconds';
 BEGIN
+  PERFORM pg_catalog.set_config('lock_timeout','5s',true);
+  PERFORM pg_catalog.set_config('statement_timeout','30s',true);
+  PERFORM pg_catalog.set_config('search_path','pg_catalog, pg_temp',true);
+  PERFORM pg_catalog.set_config('slim.handoff_cleanup_receipt','{}',false);
   -- The workspace lock prevents new inserts through its foreign-key references.
   -- Existing records are subsequently locked individually, without locking other tenants.
   PERFORM 1 FROM public.workspaces
@@ -96,6 +101,9 @@ BEGIN
   END IF;
 
   FOREACH v_table IN ARRAY v_known_tables LOOP
+    IF clock_timestamp()>v_deadline THEN
+      RAISE EXCEPTION 'SLIM_CLEANUP_OPERATION_DEADLINE';
+    END IF;
     v_relation := to_regclass(format('%I.%I','public',v_table));
     IF v_relation IS NULL OR NOT EXISTS (
       SELECT 1 FROM pg_class WHERE oid=v_relation AND relkind='r'
@@ -181,6 +189,9 @@ BEGIN
   ) INTO v_structural_before;
 
   FOREACH v_table IN ARRAY v_delete_tables LOOP
+    IF clock_timestamp()>v_deadline THEN
+      RAISE EXCEPTION 'SLIM_CLEANUP_OPERATION_DEADLINE';
+    END IF;
     EXECUTE format('SELECT count(*) FROM public.%I WHERE workspace_id=$1',v_table)
       INTO v_count USING v_workspace;
     v_cap := (v_expected_counts->>v_table)::bigint;
@@ -211,6 +222,9 @@ BEGIN
       AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid=c.oid AND a.attname='workspace_id' AND NOT a.attisdropped)
       AND EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid=p.oid AND a.attname='workspace_id' AND NOT a.attisdropped)
   LOOP
+    IF clock_timestamp()>v_deadline THEN
+      RAISE EXCEPTION 'SLIM_CLEANUP_OPERATION_DEADLINE';
+    END IF;
     EXECUTE format(
       'SELECT count(*) FROM %I.%I c JOIN %I.%I p ON %s WHERE p.workspace_id=$1 AND c.workspace_id IS DISTINCT FROM $1',
       v_fk.child_schema,v_fk.child_table,v_fk.parent_schema,v_fk.parent_table,v_fk.join_condition
@@ -222,11 +236,17 @@ BEGIN
   END LOOP;
 
   FOREACH v_table IN ARRAY v_preserve_tables LOOP
+    IF clock_timestamp()>v_deadline THEN
+      RAISE EXCEPTION 'SLIM_CLEANUP_OPERATION_DEADLINE';
+    END IF;
     EXECUTE format('SELECT md5(coalesce(string_agg(to_jsonb(t)::text,''|'' ORDER BY to_jsonb(t)::text),'''')) FROM public.%I t WHERE workspace_id=$1',v_table)
       INTO v_hash USING v_workspace;
     v_preserved_hashes := v_preserved_hashes || jsonb_build_object('public.'||v_table,v_hash);
   END LOOP;
   FOREACH v_table IN ARRAY v_private_preserve LOOP
+    IF clock_timestamp()>v_deadline THEN
+      RAISE EXCEPTION 'SLIM_CLEANUP_OPERATION_DEADLINE';
+    END IF;
     EXECUTE format('SELECT 1 FROM private.%I WHERE workspace_id=$1 ORDER BY ctid FOR UPDATE',v_table)
       USING v_workspace;
     EXECUTE format('SELECT md5(coalesce(string_agg(to_jsonb(t)::text,''|'' ORDER BY to_jsonb(t)::text),'''')) FROM private.%I t WHERE workspace_id=$1',v_table)
@@ -236,6 +256,9 @@ BEGIN
 
   -- All mutations begin only after every authorization, count, dependency and idle guard.
   FOREACH v_table IN ARRAY v_delete_tables LOOP
+    IF clock_timestamp()>v_deadline THEN
+      RAISE EXCEPTION 'SLIM_CLEANUP_OPERATION_DEADLINE';
+    END IF;
     EXECUTE format('DELETE FROM public.%I WHERE workspace_id=$1',v_table) USING v_workspace;
     GET DIAGNOSTICS v_deleted = ROW_COUNT;
     IF v_deleted>(v_before->>v_table)::bigint THEN
@@ -254,6 +277,9 @@ BEGIN
   v_receipt := v_receipt || jsonb_build_object('crm_sources',v_deleted);
 
   FOREACH v_table IN ARRAY v_delete_tables LOOP
+    IF clock_timestamp()>v_deadline THEN
+      RAISE EXCEPTION 'SLIM_CLEANUP_OPERATION_DEADLINE';
+    END IF;
     EXECUTE format('SELECT count(*) FROM public.%I WHERE workspace_id=$1',v_table)
       INTO v_count USING v_workspace;
     IF v_count<>0 THEN RAISE EXCEPTION 'SLIM_CLEANUP_RESIDUAL_ROWS: %',v_table; END IF;
@@ -279,7 +305,13 @@ BEGIN
   END IF;
 
   FOREACH v_schema IN ARRAY ARRAY['public','private'] LOOP
+    IF clock_timestamp()>v_deadline THEN
+      RAISE EXCEPTION 'SLIM_CLEANUP_OPERATION_DEADLINE';
+    END IF;
     FOREACH v_table IN ARRAY CASE WHEN v_schema='public' THEN v_preserve_tables ELSE v_private_preserve END LOOP
+      IF clock_timestamp()>v_deadline THEN
+        RAISE EXCEPTION 'SLIM_CLEANUP_OPERATION_DEADLINE';
+      END IF;
       EXECUTE format('SELECT md5(coalesce(string_agg(to_jsonb(t)::text,''|'' ORDER BY to_jsonb(t)::text),'''')) FROM %I.%I t WHERE workspace_id=$1',v_schema,v_table)
         INTO v_hash USING v_workspace;
       IF v_hash IS DISTINCT FROM v_preserved_hashes->>(v_schema||'.'||v_table) THEN
@@ -287,6 +319,10 @@ BEGIN
       END IF;
     END LOOP;
   END LOOP;
+
+  IF clock_timestamp()>v_deadline THEN
+    RAISE EXCEPTION 'SLIM_CLEANUP_OPERATION_DEADLINE';
+  END IF;
 
   PERFORM pg_catalog.set_config('slim.handoff_cleanup_receipt',
     jsonb_build_object(
@@ -307,13 +343,7 @@ BEGIN
       'private_security_ledgers_preserved',true,
       'storage_cleanup_is_separate',true
     )::text,false);
+  RAISE NOTICE 'SLIM_CLEANUP_RECEIPT %',
+    current_setting('slim.handoff_cleanup_receipt',true);
 END;
 $cleanup$;
-COMMIT;
-
--- The connector exposes the last result set. This executes after a successful COMMIT.
-SELECT jsonb_build_object(
-  'committed',true,
-  'receipt',current_setting('slim.handoff_cleanup_receipt',true)::jsonb
-) AS cleanup_result;
-
