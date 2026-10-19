@@ -44,6 +44,7 @@ import { Route as SaudeSlimRouteImport } from './routes/saude-slim'
 import { Route as SemAcessoRouteImport } from './routes/sem-acesso'
 import { Route as SobreRouteImport } from './routes/sobre'
 import { Route as TermosRouteImport } from './routes/termos'
+import { Route as TutoriaisRouteImport } from './routes/tutoriais'
 import { Route as WorkspaceSlugRouteImport } from './routes/$workspace.$slug'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
@@ -328,6 +329,11 @@ const SobreRoute = SobreRouteImport.update({
 const TermosRoute = TermosRouteImport.update({
   id: '/termos',
   path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutoriaisRoute = TutoriaisRouteImport.update({
+  id: '/tutoriais',
+  path: '/tutoriais',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WorkspaceSlugRoute = WorkspaceSlugRouteImport.update({
@@ -968,6 +974,7 @@ export interface FileRoutesByFullPath {
   '/sem-acesso': typeof SemAcessoRoute
   '/sobre': typeof SobreRoute
   '/termos': typeof TermosRoute
+  '/tutoriais': typeof TutoriaisRoute
   '/$workspace/$slug': typeof WorkspaceSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1113,6 +1120,7 @@ export interface FileRoutesByTo {
   '/sem-acesso': typeof SemAcessoRoute
   '/sobre': typeof SobreRoute
   '/termos': typeof TermosRoute
+  '/tutoriais': typeof TutoriaisRoute
   '/$workspace/$slug': typeof WorkspaceSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1261,6 +1269,7 @@ export interface FileRoutesById {
   '/sem-acesso': typeof SemAcessoRoute
   '/sobre': typeof SobreRoute
   '/termos': typeof TermosRoute
+  '/tutoriais': typeof TutoriaisRoute
   '/$workspace/$slug': typeof WorkspaceSlugRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -1410,6 +1419,7 @@ export interface FileRouteTypes {
     | '/sem-acesso'
     | '/sobre'
     | '/termos'
+    | '/tutoriais'
     | '/$workspace/$slug'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -1555,6 +1565,7 @@ export interface FileRouteTypes {
     | '/sem-acesso'
     | '/sobre'
     | '/termos'
+    | '/tutoriais'
     | '/$workspace/$slug'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -1702,6 +1713,7 @@ export interface FileRouteTypes {
     | '/sem-acesso'
     | '/sobre'
     | '/termos'
+    | '/tutoriais'
     | '/$workspace/$slug'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -1851,6 +1863,7 @@ export interface RootRouteChildren {
   SemAcessoRoute: typeof SemAcessoRoute
   SobreRoute: typeof SobreRoute
   TermosRoute: typeof TermosRoute
+  TutoriaisRoute: typeof TutoriaisRoute
   WorkspaceSlugRoute: typeof WorkspaceSlugRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -2177,6 +2190,13 @@ declare module '@tanstack/react-router' {
       path: '/termos'
       fullPath: '/termos'
       preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutoriais': {
+      id: '/tutoriais'
+      path: '/tutoriais'
+      fullPath: '/tutoriais'
+      preLoaderRoute: typeof TutoriaisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$workspace/$slug': {
@@ -3123,6 +3143,7 @@ const rootRouteChildren: RootRouteChildren = {
   SemAcessoRoute: SemAcessoRoute,
   SobreRoute: SobreRoute,
   TermosRoute: TermosRoute,
+  TutoriaisRoute: TutoriaisRoute,
   WorkspaceSlugRoute: WorkspaceSlugRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
