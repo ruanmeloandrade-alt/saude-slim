@@ -5,7 +5,13 @@ type AnySb = { from: (table: string) => any; rpc?: (...args: any[]) => any };
 
 export async function dispatchCrmLeadCreated(
   admin: AnySb,
-  input: { workspaceId: string; leadId: string; pipelineId?: string | null; stageId?: string | null },
+  input: {
+    workspaceId: string;
+    leadId: string;
+    pipelineId?: string | null;
+    stageId?: string | null;
+    eventId?: string;
+  },
 ): Promise<JobResult[]> {
   try {
     const { dispatchLeadCreated } = await import("@/lib/salesbot-runtime.server");
@@ -21,6 +27,7 @@ export async function dispatchCrmLeadCreated(
   return enqueueLeadAutomationEvent(admin as never, {
     leadId: input.leadId,
     event: "created",
+    eventId: input.eventId ?? "lead-created:" + input.leadId,
     workspaceId: input.workspaceId,
     pipelineId: input.pipelineId ?? null,
     stageId: input.stageId ?? null,

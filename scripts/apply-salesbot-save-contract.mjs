@@ -78,3 +78,5 @@ for(const file of ['test-inbox-automation-controls.mjs','test-saude-slim-ai-vaul
 execFileSync(process.execPath,[fileURLToPath(new URL('./apply-slim-whatsapp-origin.mjs',import.meta.url))],{stdio:'inherit'});
 execFileSync(process.execPath,[fileURLToPath(new URL('./test-slim-whatsapp-origin-postgres.mjs',import.meta.url))],{stdio:'inherit'});
 execFileSync(process.execPath,[fileURLToPath(new URL('./test-slim-whatsapp-origin-runtime.mjs',import.meta.url))],{stdio:'inherit'});
+execFileSync(process.execPath,[fileURLToPath(new URL('./apply-slim-first-inbound.mjs',import.meta.url))],{stdio:'inherit'});
+execFileSync(process.execPath,['--experimental-strip-types',fileURLToPath(new URL('./test-slim-first-inbound.mjs',import.meta.url))],{stdio:'inherit'});
