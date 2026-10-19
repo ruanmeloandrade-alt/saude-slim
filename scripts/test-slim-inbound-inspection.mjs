@@ -6,6 +6,7 @@ import {
   WORKSPACE,
   SESSION,
   recoveryCandidates,
+  trustedLidForPhone,
 } from "./operations/slim-inspect-inbound.mjs";
 const phone = "5522999999999",
   jid = phone + "@s.whatsapp.net";
@@ -230,6 +231,61 @@ await inspect(
   },
   () => {},
 );
+const lid = "12345678901234@lid";
+assert.equal(
+  trustedLidForPhone([{ number: phone, exists: true, jid, lid }], phone, [phone]).lid,
+  lid,
+);
+assert.equal(
+  trustedLidForPhone([{ number: "5511999999999", exists: true, jid, lid }], phone, [phone]),
+  null,
+);
+assert.equal(
+  trustedLidForPhone([{ number: phone, exists: false, jid, lid }], phone, [phone]),
+  null,
+);
+assert.equal(
+  trustedLidForPhone(
+    [
+      { number: phone, exists: true, jid: lid },
+      { number: phone, exists: true, jid: lid },
+    ],
+    phone,
+    [phone],
+  ),
+  null,
+);
+const lidResult = await inspect(
+  env,
+  async (url, init) => {
+    if (url.includes("/chat/whatsappNumbers/")) {
+      assert.deepEqual(JSON.parse(init.body), { numbers: [phone] });
+      return Response.json([{ number: phone, exists: true, jid, lid }]);
+    }
+    if (url.includes("/chat/findMessages/")) {
+      const key = JSON.parse(init.body).where.key;
+      return Response.json({
+        messages: {
+          total: key.remoteJid === lid ? 1 : 0,
+          records:
+            key.remoteJid === lid
+              ? [
+                  message("trusted-lid", {
+                    key: { id: "trusted-lid", fromMe: false, remoteJid: lid },
+                  }),
+                ]
+              : [],
+        },
+      });
+    }
+    return fetcher(url, init);
+  },
+  () => {},
+);
+assert.equal(lidResult.length, 1);
+assert.equal(lidResult[0].key.remoteJid, lid);
+assert.equal(lidResult[0].key.remoteJidAlt, jid);
+assert.equal(lidResult[0].message.conversation, "oi");
 console.log(
   "PASS inbound inspection: scope, exact target, LID alternate, inbound only, dedupe, credentials, bounds and disabled mode",
 );

@@ -6,6 +6,8 @@ O script operacional consulta apenas os telefones informados pelo proprietário 
 
 Para cada telefone realmente retornado pela Evolution, selecionar o primeiro inbound da janela. Reprocessar o item original pelo webhook existente, sem fabricar texto, remetente ou data, somente se ainda não houver card daquela origem. Confirmar card/funil/etapa no banco. Preservar cards existentes e não reexecutar operação concluída após reinício. Persistir apenas resumo sem corpo/telefone completo em metadata da sessão, com comparação de versão. Não ativar outros bots nem importar o histórico de outras pessoas.
 
+Se o histórico por telefone estiver vazio, consultar `chat/whatsappNumbers` da mesma instância. Somente uma correspondência `exists=true` para o telefone exato pode fornecer o LID; buscar esse LID e acrescentar JID alternativo comprovado, mantendo ID, corpo, data e JID original. Nome ou dígitos do LID nunca servem como telefone. Contrato conferido nas fontes oficiais `evolution-foundation/evolution-api`: `src/api/routes/chat.router.ts`, `src/api/dto/chat.dto.ts` e `whatsapp.baileys.service.ts`.
+
 Validação isolada: replay conserva item original e direção inbound; outbound, outra origem e histórico fora da janela são rejeitados; card existente e solicitação concluída impedem replay. Cobertura de sessão/empresa, dedupe, credenciais, gravação de resumo e configuração desabilitada preservada. Syntax/lint/teste operacional aprovados. Sem dependências ou migration.
 
 Publicação: executar com inicialização temporária da próxima versão, mantendo o deployment saudável anterior ativo. Restaurar `npm start`, pre-deploy vazio e limpar variáveis operacionais após confirmar o resultado. Status: preparado; resultado real ainda pendente.

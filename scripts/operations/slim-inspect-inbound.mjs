@@ -50,6 +50,19 @@ export function recoveryCandidates(messages, since, now = Date.now()) {
   }
   return [...bySender.values()];
 }
+export function trustedLidForPhone(value, phone, allowedPhones) {
+  if (!Array.isArray(value)) return null;
+  const rows = value.filter((row) => row?.exists === true && row.number === phone);
+  if (rows.length !== 1) return null;
+  const row = rows[0],
+    lid = [row.jid, row.lid].find((j) => /^\d{8,20}@lid$/.test(j ?? ""));
+  if (!lid) return null;
+  const canonical =
+    typeof row.jid === "string" && row.jid.endsWith("@s.whatsapp.net")
+      ? row.jid.split("@")[0]
+      : phone;
+  return { lid, phone: allowedPhones.includes(canonical) ? canonical : phone };
+}
 export async function inspect(env, fetcher = fetch, log = console.log) {
   if (env.SLIM_INBOUND_RECOVERY !== "inspect") return;
   const phones = JSON.parse(env.SLIM_INBOUND_RECOVERY_TARGETS ?? "[]");
@@ -72,7 +85,7 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
   let requests = 0;
   const deadline = Date.now() + 110000;
   async function json(url, headers, body) {
-    if (++requests > 24 || Date.now() > deadline) throw new Error("REQUEST_BUDGET");
+    if (++requests > 32 || Date.now() > deadline) throw new Error("REQUEST_BUDGET");
     const r = await fetcher(url, {
       method: body ? "POST" : "GET",
       headers,
@@ -129,6 +142,8 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
   const summaries = [];
   for (const phone of phones) {
     let reported = 0;
+    let directFound = false,
+      lidResolved = false;
     for (let page = 1; page <= 2; page++) {
       const jid = phone + "@s.whatsapp.net";
       const response = await json(
@@ -137,11 +152,50 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
         { where: { key: { remoteJid: jid, remoteJidAlt: jid } }, offset: 100, page },
       );
       const found = matchingMessages(response, phones);
+      if (matchingMessages(response, [phone]).length) directFound = true;
       for (const m of found) matches.set(m.key.id, m);
       reported = Number(response?.messages?.total ?? records(response).length);
       if (records(response).length < 100 || reported <= page * 100) break;
     }
-    summaries.push({ last4: phone.slice(-4), providerTotal: reported });
+    if (!directFound) {
+      const providerHeaders = { apikey: credentials.api_key, "Content-Type": "application/json" };
+      const lookup = await json(
+        `${base.toString().replace(/\/$/, "")}/chat/whatsappNumbers/${encodeURIComponent(session[0].instance_id)}`,
+        providerHeaders,
+        { numbers: [phone] },
+      );
+      const mapping = trustedLidForPhone(lookup, phone, phones);
+      if (mapping) {
+        const response = await json(
+          `${base.toString().replace(/\/$/, "")}/chat/findMessages/${encodeURIComponent(session[0].instance_id)}`,
+          providerHeaders,
+          {
+            where: { key: { remoteJid: mapping.lid, remoteJidAlt: mapping.lid } },
+            offset: 100,
+            page: 1,
+          },
+        );
+        for (const m of records(response)) {
+          if (m?.key?.fromMe !== false || m.key.remoteJid !== mapping.lid) continue;
+          if (
+            m.key.remoteJidAlt &&
+            !phones.some((p) => m.key.remoteJidAlt === p + "@s.whatsapp.net")
+          )
+            continue;
+          const enriched = {
+            ...m,
+            key: {
+              ...m.key,
+              remoteJidAlt: m.key.remoteJidAlt ?? mapping.phone + "@s.whatsapp.net",
+            },
+          };
+          for (const matched of matchingMessages([enriched], phones))
+            matches.set(matched.key.id, matched);
+        }
+        lidResolved = true;
+      }
+    }
+    summaries.push({ last4: phone.slice(-4), providerTotal: reported, lidResolved });
   }
   const result = [...matches.values()].sort(
     (a, b) => Number(a.messageTimestamp) - Number(b.messageTimestamp),
