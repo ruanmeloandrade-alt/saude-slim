@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast as sonnerToast } from "sonner";
 import type { DbCatalog } from "@/lib/products.functions";
+import type { ProductDetails } from "@/lib/product-import-details";
 import {
   fetchSlimProductCatalogs,
   saveSlimCatalog,
@@ -56,7 +57,7 @@ export const Route = createFileRoute("/crm/produtos")({
 
 /* ============== Tipos ============== */
 
-interface Product {
+interface Product extends ProductDetails {
   id: string;
   sku: string;
   name: string;
@@ -123,6 +124,7 @@ function CrmProdutosPage() {
         description: c.description,
         cover: c.cover || PLACEHOLDER_IMG,
         products: c.products.map((p) => ({
+          ...p,
           id: p.id,
           sku: p.sku,
           name: p.name,
@@ -316,6 +318,10 @@ function CrmProdutosPage() {
     try {
       await saveProductFn({
         data: {
+          costPrice: p.costPrice,
+          minStock: p.minStock,
+          unit: p.unit,
+          stockKnown: p.stockKnown,
           id: p.id || undefined,
           catalogId: selected.id,
           sku: p.sku,
@@ -979,7 +985,7 @@ function ProductCard({
           </div>
           <div className="text-right text-[10px] text-muted-foreground">
             estoque
-            <div className="text-sm font-semibold tabular-nums text-foreground">{product.stock}</div>
+            <div className="text-sm font-semibold tabular-nums text-foreground">{product.stockKnown === false ? "Não informado" : product.stock}</div>
           </div>
         </div>
       </div>
@@ -1401,13 +1407,21 @@ function ProductDialog({
             <FormField label="Estoque">
               <input
                 type="number"
-                min={0}
-                value={form.stock || ""}
-                onChange={(e) => update("stock", Number(e.target.value))}
+                step={1}
+                value={form.stockKnown === false ? "" : form.stock}
+                placeholder="Não informado"
+                onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value === "" ? 0 : Number(e.target.value), stockKnown: e.target.value !== "" }))}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-primary/30 tabular-nums"
               />
             </FormField>
           </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <FormField label="Preço de custo"><input type="number" min={0} step="0.01" value={form.costPrice ?? ""} onChange={(e) => update("costPrice", e.target.value === "" ? null : Number(e.target.value))} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" /></FormField>
+            <FormField label="Estoque mínimo"><input type="number" min={0} step={1} value={form.minStock ?? ""} onChange={(e) => update("minStock", e.target.value === "" ? null : Number(e.target.value))} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" /></FormField>
+            <FormField label="Unidade"><input value={form.unit ?? ""} onChange={(e) => update("unit", e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" /></FormField>
+          </div>
+          {form.importSnapshot && <section className="rounded-lg border border-border p-3 text-xs"><h3 className="font-semibold">Histórico importado</h3><p className="mt-1 text-muted-foreground">Valores da planilha de origem. Não representam novos pedidos.</p><dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">{Object.entries((form.importSnapshot.raw ?? {}) as Record<string, string>).map(([label, value]) => <div key={label}><dt className="text-muted-foreground">{label}</dt><dd className="font-medium break-words">{value === "" ? "Não informado" : value}</dd></div>)}</dl></section>}
 
           <label className="flex items-center gap-2 text-xs">
             <input

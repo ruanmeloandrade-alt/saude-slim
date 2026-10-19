@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { listSaudeSlimCatalogs } from "@/lib/saude-slim-orders-client";
 import { canonicalCategory, categoryKey, cleanCategoryLabel } from "@/lib/product-categories";
+import { productDetailsPatch, productStockQuantity, type ProductDetails } from "@/lib/product-import-details";
 
 const sb = supabase as any;
 
@@ -38,7 +39,7 @@ async function knownCategories(ws: string): Promise<string[]> {
 type CatalogArgs = { id?: string; name: string; description: string; cover: string };
 type ProductArgs = { id?: string; catalogId: string; sku: string; name: string;
   description: string; image: string; price: number; promoPrice?: number | null;
-  stock: number; category: string; active: boolean };
+  stock: number; category: string; active: boolean } & ProductDetails;
 
 export const fetchSlimProductCatalogs = listSaudeSlimCatalogs;
 
@@ -79,7 +80,8 @@ export async function saveSlimProduct({ data }: { data: ProductArgs }): Promise<
     description: data.description ?? "", image: data.image ?? "",
     price: Math.max(0, Number(data.price ?? 0)),
     promo_price: data.promoPrice == null ? null : Math.max(0, Number(data.promoPrice)),
-    stock: Math.max(0, Math.trunc(Number(data.stock ?? 0))),
+    stock: productStockQuantity(data.stock ?? 0),
+    ...productDetailsPatch(data),
     category: canonicalCategory(data.category ?? "", known),
     active: !!data.active,
   };
@@ -120,7 +122,8 @@ export async function importSlimProducts({ data }: {
       name: product.name, description: product.description ?? "",
       image: product.image ?? "", price: Number(product.price ?? 0),
       promo_price: product.promoPrice ?? null,
-      stock: Math.max(0, Math.trunc(Number(product.stock ?? 0))),
+      stock: productStockQuantity(product.stock ?? 0),
+      ...productDetailsPatch(product),
       category, active: !!product.active,
     };
   });
