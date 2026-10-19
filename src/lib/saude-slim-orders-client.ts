@@ -4,6 +4,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { DbCatalog, DbProduct } from "@/lib/products.functions";
+import { productDetailsFromRow } from "@/lib/product-import-details";
 
 const sb = supabase as any;
 type Row = Record<string, any>;
@@ -37,7 +38,7 @@ export async function listSaudeSlimCatalogs(): Promise<DbCatalog[]> {
   const [cr,pr] = await Promise.all([
     sb.from("product_catalogs").select("id,name,description,cover")
       .eq("workspace_id",ws).order("created_at"),
-    sb.from("products").select("id,catalog_id,name,sku,description,image,price,promo_price,stock,category,active")
+    sb.from("products").select("id,catalog_id,name,sku,description,image,price,promo_price,stock,category,active,cost_price,minimum_stock,unit,stock_known,import_snapshot")
       .eq("workspace_id",ws).order("created_at"),
   ]);
   const catalogs = result(cr);
@@ -45,6 +46,7 @@ export async function listSaudeSlimCatalogs(): Promise<DbCatalog[]> {
   return catalogs.map((cat):DbCatalog=>({
     id:cat.id,name:cat.name,description:cat.description??"",cover:cat.cover??"",
     products:products.filter(p=>p.catalog_id===cat.id).map((p):DbProduct=>({
+      ...productDetailsFromRow(p),
       id:p.id,catalogId:p.catalog_id,name:p.name,sku:p.sku??"",
       description:p.description??"",image:p.image??"",price:Number(p.price??0),
       promoPrice:p.promo_price==null?undefined:Number(p.promo_price),

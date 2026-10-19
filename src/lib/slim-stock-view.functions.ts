@@ -15,7 +15,7 @@ async function authorize(context:any,expected:string){
 export const getSlimStockCatalog=createServerFn({method:'POST'}).middleware([requireSupabaseAuth]).inputValidator((x:unknown)=>input.parse(x)).handler(async({data,context})=>{
  const sb=await authorize(context,data.workspaceId);
  const [products,catalogs]=await Promise.all([
-  readStockRows(sb,data.workspaceId,'products','id,workspace_id,catalog_id,name,sku,category,price,promo_price,stock,active'),
+  readStockRows(sb,data.workspaceId,'products','id,workspace_id,catalog_id,name,sku,category,price,promo_price,stock,active,stock_known,minimum_stock'),
   readStockRows(sb,data.workspaceId,'product_catalogs','id,workspace_id,name'),
  ]);return buildStockCatalog(data.workspaceId,products,catalogs);
 });

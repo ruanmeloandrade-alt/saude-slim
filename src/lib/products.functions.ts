@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { canonicalCategory, cleanCategoryLabel } from "@/lib/product-categories";
+import { productDetailsFromRow, productDetailsPatch, type ProductDetails } from "@/lib/product-import-details";
 
 type AnySb = { from: (t: string) => any };
 
@@ -28,7 +29,7 @@ async function loadWorkspaceCategories(sb: AnySb, wsId: string): Promise<string[
 }
 
 
-export interface DbProduct {
+export interface DbProduct extends ProductDetails {
   id: string;
   catalogId: string;
   sku: string;
@@ -60,6 +61,10 @@ const productInput = z.object({
   price: z.number().min(0).default(0),
   promoPrice: z.number().min(0).nullable().optional(),
   stock: z.number().int().default(0),
+  costPrice: z.number().min(0).nullable().optional(),
+  minStock: z.number().int().min(0).nullable().optional(),
+  unit: z.string().optional(),
+  stockKnown: z.boolean().optional(),
   category: z.string().default(""),
   active: z.boolean().default(true),
 });
@@ -78,13 +83,14 @@ export const listProductCatalogs = createServerFn({ method: "GET" })
       .order("created_at");
     const { data: prods } = await sb
       .from("products")
-      .select("id, catalog_id, sku, name, description, image, price, promo_price, stock, category, active")
+      .select("id, catalog_id, sku, name, description, image, price, promo_price, stock, category, active, cost_price, minimum_stock, unit, stock_known, import_snapshot")
       .eq("workspace_id", wsId)
       .order("created_at");
 
     const byCatalog = new Map<string, DbProduct[]>();
     for (const p of (prods ?? []) as any[]) {
       const item: DbProduct = {
+        ...productDetailsFromRow(p),
         id: p.id,
         catalogId: p.catalog_id,
         sku: p.sku ?? "",
@@ -165,6 +171,7 @@ export const saveProduct = createServerFn({ method: "POST" })
     // para o produto entrar no mesmo grupo das métricas.
     const known = await loadWorkspaceCategories(sb, wsId);
     const patch = {
+      ...productDetailsPatch(data),
       catalog_id: data.catalogId,
       sku: data.sku,
       name: data.name,
@@ -226,6 +233,7 @@ export const bulkUpsertProducts = createServerFn({ method: "POST" })
         price: p.price,
         promo_price: p.promoPrice ?? null,
         stock: p.stock,
+        ...productDetailsPatch(p),
         category,
         active: p.active,
       };

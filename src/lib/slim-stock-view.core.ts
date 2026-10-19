@@ -1,12 +1,13 @@
 /** Read-only stock projection. Monetary arithmetic stays in integer cents. */
-export type StockProductRow = {id:string;workspace_id:string;catalog_id:string|null;name:string;sku:string|null;category:string|null;price:string|number;promo_price:string|number|null;stock:number;active:boolean};
+export type StockProductRow = {id:string;workspace_id:string;catalog_id:string|null;name:string;sku:string|null;category:string|null;price:string|number;promo_price:string|number|null;stock:number;active:boolean;stock_known?:boolean;minimum_stock?:number|null};
 export type StockCatalogRow = {id:string;workspace_id:string;name:string};
 export type StockMovementRow = {id:string;workspace_id:string;order_id:string;product_id:string;kind:'sale'|'reversal';quantity:number;balance_after:number;created_at:string};
 export type StockOrderRow = {id:string;workspace_id:string;snapshot:unknown};
 export type StockDb = {from:(table:string)=>any};
-export type StockProduct = {id:string;name:string;sku:string;category:string;catalogName:string;stock:number;active:boolean;priceCents:number};
+export type StockProduct = {id:string;name:string;sku:string;category:string;catalogName:string;stock:number;active:boolean;priceCents:number;stockKnown?:boolean;minStock?:number|null};
 export type StockMovement = {id:string;orderId:string;orderNumber:string;productId:string;productName:string;sku:string;kind:'sale'|'reversal';quantity:number;balanceBefore:number;balanceAfter:number;createdAt:string};
 const uuid=(s:unknown):s is string=>typeof s==='string'&&/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(s);
+export function stockStatus(p:StockProduct):string{return !p.active?'Inativo':p.stockKnown===false?'Não informado':p.stock<0?'Saldo negativo':p.stock===0?'Sem estoque':p.stock<=(p.minStock??5)?'Baixo estoque':'Disponível';}
 function id(s:unknown){if(!uuid(s))throw new Error('Identificador de estoque inválido.');return s;}
 function int(n:unknown,min=0,max=Number.MAX_SAFE_INTEGER):number{if(typeof n!=='number'||!Number.isSafeInteger(n)||n<min||n>max)throw new Error('Quantidade ou saldo inválido.');return n;}
 function money(n:unknown):number{
@@ -14,7 +15,7 @@ function money(n:unknown):number{
  const [a,b='']=s.split('.');const cents=BigInt(a)*100n+BigInt(b.padEnd(2,'0'));
  if(cents>99999999999999n)throw new Error('Preço acima do limite.');return Number(cents);
 }
-export function formatStockCents(cents:number):string{int(cents);const n=BigInt(cents);return `R$ ${String(n/100n).replace(/\B(?=(\d{3})+(?!\d))/g,'.')},${String(n%100n).padStart(2,'0')}`;}
+export function formatStockCents(cents:number):string{int(cents,-Number.MAX_SAFE_INTEGER);const signed=BigInt(cents),n=signed<0n?-signed:signed;return `${signed<0n?'−':''}R$ ${String(n/100n).replace(/\B(?=(\d{3})+(?!\d))/g,'.')},${String(n%100n).padStart(2,'0')}`;}
 function scoped<T extends {id:string;workspace_id:string}>(rows:T[],workspaceId:string):T[]{
  id(workspaceId);if(!Array.isArray(rows))throw new Error('Resposta de estoque incompleta.');const seen=new Set<string>();
  for(const row of rows){if(!row||row.workspace_id!==workspaceId||seen.has(id(row.id)))throw new Error('Dados de estoque duplicados ou de outra empresa.');seen.add(row.id);}return rows;
@@ -23,12 +24,13 @@ export function buildStockCatalog(workspaceId:string,products:StockProductRow[],
  const byCatalog=new Map(scoped(catalogs,workspaceId).map(c=>[c.id,c.name]));
  const rows:StockProduct[]=scoped(products,workspaceId).map(p=>{
   if(typeof p.name!=='string'||!p.name.trim()||typeof p.active!=='boolean')throw new Error('Cadastro do produto inválido.');
-  return {id:p.id,name:p.name,sku:p.sku??'',category:p.category??'',catalogName:byCatalog.get(p.catalog_id??'')??'Sem catálogo disponível',stock:int(p.stock,0,2147483647),active:p.active,priceCents:money(p.promo_price??p.price)};
+  return {id:p.id,name:p.name,sku:p.sku??'',category:p.category??'',catalogName:byCatalog.get(p.catalog_id??'')??'Sem catálogo disponível',stock:int(p.stock,-2147483648,2147483647),active:p.active,priceCents:money(p.promo_price??p.price),stockKnown:p.stock_known!==false,minStock:p.minimum_stock==null?null:int(p.minimum_stock,0,2147483647)};
  }).sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')||a.id.localeCompare(b.id));
- let units=0n,value=0n,active=0,low=0,out=0;
- for(const p of rows)if(p.active){active++;units+=BigInt(p.stock);value+=BigInt(p.stock)*BigInt(p.priceCents);if(p.stock===0)out++;else if(p.stock<=5)low++;}
- if(units>BigInt(Number.MAX_SAFE_INTEGER)||value>BigInt(Number.MAX_SAFE_INTEGER))throw new Error('Total de estoque excedeu o limite de cálculo seguro.');
- return {workspaceId,complete:true as const,products:rows,totals:{activeProducts:active,units:Number(units),valueCents:Number(value),lowStock:low,outOfStock:out}};
+ let units=0n,value=0n,active=0,low=0,out=0,unknown=0,negative=0;
+ for(const p of rows)if(p.active){active++;if(!p.stockKnown){unknown++;continue;}units+=BigInt(p.stock);value+=BigInt(p.stock)*BigInt(p.priceCents);if(p.stock<0)negative++;if(p.stock<=0)out++;else if(p.stock<=(p.minStock??5))low++;}
+ const limit=BigInt(Number.MAX_SAFE_INTEGER);
+ if(units>limit||units< -limit||value>limit||value< -limit)throw new Error('Total de estoque excedeu o limite de cálculo seguro.');
+ return {workspaceId,complete:true as const,products:rows,totals:{activeProducts:active,units:Number(units),valueCents:Number(value),lowStock:low,outOfStock:out,unknownStockProducts:unknown,negativeStockProducts:negative}};
 }
 const iso=(s:unknown):s is string=>typeof s==='string'&&/(?:Z|[+-]\d{2}:\d{2})$/.test(s)&&Number.isFinite(Date.parse(s));
 export function buildStockMovements(workspaceId:string,movements:StockMovementRow[],orders:StockOrderRow[]){
