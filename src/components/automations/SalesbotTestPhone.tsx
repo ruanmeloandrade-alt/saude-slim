@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Play, RotateCcw, X, Send, MessageCircle } from "lucide-react";
 import type { Block, Condicao, Salesbot, ValidacaoTipo } from "@/lib/salesbot-types";
+import { matchPlainSalesbotRule } from "@/lib/salesbot-text-rules";
 
 type ChatMsg = {
   id: string;
@@ -742,6 +743,8 @@ function evalCondicao(c: Condicao, lastMsg: string): boolean {
 }
 
 function runValidation(tipo: ValidacaoTipo, ref: string, val: string): boolean {
+  const plain = matchPlainSalesbotRule(tipo, ref, val);
+  if (plain !== undefined) return plain;
   const raw = val.trim();
   const wanted = ref.trim();
   switch (tipo) {

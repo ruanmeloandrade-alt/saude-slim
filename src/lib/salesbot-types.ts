@@ -39,6 +39,10 @@ export type AcaoTipo =
  | "notificar-admins";
 
 export type ValidacaoTipo =
+ | "igual"
+ | "igual-lista"
+ | "contem-lista"
+ | "resposta-igual"
  | "contem"
  | "nao-contem"
  | "desigual"
@@ -830,6 +834,10 @@ export function filterAcoesByScope(scope: SalesbotEscopo): typeof ACAO_OPCOES {
 }
 
 export const VALIDACAO_OPCOES: { value: ValidacaoTipo; label: string }[] = [
+ { value: "igual", label: "É igual a" },
+ { value: "igual-lista", label: "É um destes valores" },
+ { value: "contem-lista", label: "Contém alguma destas frases" },
+ { value: "resposta-igual", label: "Resposta é" },
  { value: "contem", label: "Contém" },
  { value: "nao-contem", label: "Não contém" },
  { value: "desigual", label: "É desigual a" },

@@ -3382,6 +3382,7 @@ function RoletaEditor({
 // -----------------------------------------------------------------------------
 
 type ValidacaoTipoStr =
+ | "igual" | "igual-lista" | "contem-lista" | "resposta-igual"
  | "contem" | "nao-contem" | "desigual" | "comprimento" | "regex"
  | "numero" | "letra" | "palavra" | "telefone" | "email" | "gama";
 
@@ -3390,10 +3391,14 @@ const VALIDACAO_META: Record<ValidacaoTipoStr, {
  desc: string;
  group: "Texto" | "Formato" | "Número";
  icon: string; // emoji leve
- value: "none" | "text" | "number" | "regex" | "range";
+ value: "none" | "text" | "number" | "regex" | "range" | "list";
  placeholder?: string;
  exemplo?: string;
 }> = {
+ igual: { label: "É igual a", desc: "O valor precisa ser exatamente o texto informado.", group: "Texto", icon: "=", value: "text", placeholder: "Valor exato" },
+ "igual-lista": { label: "É um destes valores", desc: "Passa se o valor for igual a uma das opções. Escreva uma opção por linha.", group: "Texto", icon: "=", value: "list", placeholder: "Uma opção por linha" },
+ "contem-lista": { label: "Contém alguma destas frases", desc: "Passa se a mensagem contiver alguma das frases, sem diferenciar maiúsculas. Escreva uma por linha.", group: "Texto", icon: "🔎", value: "list", placeholder: "Uma palavra ou frase por linha" },
+ "resposta-igual": { label: "Resposta é", desc: "Compara a resposta inteira, sem diferenciar maiúsculas e ignorando ponto, exclamação e espaços no final.", group: "Texto", icon: "=", value: "text", placeholder: "ex.: sair" },
  contem:       { label: "Contém",              desc: "A resposta deve conter o texto abaixo (sem diferenciar maiúsculas).", group: "Texto",   icon: "🔎", value: "text",   placeholder: "ex.: interessado",     exemplo: "sim, estou interessado" },
  "nao-contem": { label: "Não contém",          desc: "A resposta NÃO pode conter o texto abaixo.",                          group: "Texto",   icon: "🚫", value: "text",   placeholder: "ex.: cancelar",        exemplo: "quero comprar" },
  desigual:     { label: "É diferente de",      desc: "A resposta precisa ser diferente do texto exato abaixo.",             group: "Texto",   icon: "≠",  value: "text",   placeholder: "ex.: não",             exemplo: "sim" },
@@ -3655,6 +3660,10 @@ function ValidacaoEditor({
           >
            <option value="">Regra...</option>
            <optgroup label="Texto">
+            <option value="igual">É igual a</option>
+            <option value="igual-lista">É um destes valores</option>
+            <option value="contem-lista">Contém alguma destas frases</option>
+            <option value="resposta-igual">Resposta é</option>
             <option value="contem">Contém</option>
             <option value="nao-contem">Não contém</option>
             <option value="desigual">É diferente de</option>
@@ -3673,6 +3682,16 @@ function ValidacaoEditor({
            </optgroup>
           </select>
 
+          {meta?.value === "list" && (
+           <textarea
+            aria-label={meta.placeholder}
+            value={valor}
+            onChange={(e) => updateRule(r.id, { valor: e.target.value })}
+            placeholder={meta.placeholder}
+            rows={4}
+            className="flex-1 min-w-0 max-h-40 overflow-y-auto resize-y bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] leading-5"
+           />
+          )}
           {meta?.value === "text" && campoOpcoes.length > 0 && (
            <select
             value={valor}

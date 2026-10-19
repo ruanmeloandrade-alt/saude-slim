@@ -18,4 +18,16 @@ Estado inicial: catálogo confirmado no banco e navegador após atualizar a pág
 - Produção autenticada: catálogo de 19 bots visível; conteúdo e formulário de edição da fonte abertos, cancelamento conferido, edição dos 26 termos disponível. Nenhuma fonte/termo foi alterada para QA.
 - Bloqueio operacional confirmado: nenhuma integração openai/gemini cadastrada no workspace. Prompts e ações podem ser configurados, mas respostas reais e homologação IA dependem da chave da empresa. Materiais oficiais, preços, links e arquivos ausentes continuam dependentes do operador.
 
-Publicação e aplicação SQL: pendentes neste checkpoint; registrar resultado independente após execução. A branch operacional antiga não foi retomada nem o outro chat recebeu mensagens.
+## Conferência final em produção
+
+PR #2 integrada à branch de publicação restauracao/sistema-completo-20261014, merge 80f5a21c60694120713a34adee9b3f5a2cc79893. Railway 82d381ff-6062-45e5-9d74-6a0fbfab43dc SUCCESS em 19/10/2026 às 16:23:32 UTC. Healthcheck aprovado. Raiz, Automações, Públicos e Cérebro responderam HTTP 200; POST anônimo ao chat de teste retornou HTTP 401. GET desse endpoint serve a página de fallback e não foi usado como prova de autenticação.
+
+Operação SQL aplicada após a publicação, em transação com bloqueio e comparação de versões. Consulta independente confirmou 19 bots/603 blocos, nenhum destino next ou ramo pendente, dois agentes desligados com 11 ações e cinco fontes vinculadas cada, 16 públicos com exclusões adicionais, zero bots ativos/gatilhos, execuções, contatos e campanhas. Hash das palavras proibidas preservado: 274e142656d065003ca55557cc94a997. Não houve envio real nem teste de resposta IA, pois a chave da empresa segue ausente.
+
+Configuração publicada; homologação de respostas IA e materiais comerciais reais continuam pendentes. Onboarding sem material oficial permanece explicitamente pendente; datas de recompra e retorno dependem da confirmação do operador, sem inferir duração de tratamento. A branch operacional antiga não foi retomada nem o outro chat recebeu mensagens. Este checkpoint documental fica na branch de entrega para registrar a execução posterior ao merge, sem provocar outra publicação de runtime.
+
+Conferência visual posterior: o editor da Ana Júlia mostra as cinco fontes vinculadas, links para editar no Cérebro e as 11 ações. O seletor de fontes foi aberto sem adicionar registros. A operação complementar slim-agent-capabilities foi testada duas vezes no PostgreSQL isolado e aplicada para alinhar as quatro capacidades visíveis às ações configuradas, preservando enabled=false e o modelo openai/gpt-4o-mini. A primeira conferência ocorreu com o editor já aberto; seu autosave preservou a seleção anterior de capacidades desse formulário. Após fechá-lo, a operação idempotente foi reconciliada e os dois agentes foram consultados novamente. Nenhum editor foi deixado aberto com rascunho antigo. A listagem final mantém os dois agentes e os 19 bots desligados.
+
+## Limite final confirmado pelo usuário
+
+O usuário esclareceu nesta entrega que deseja somente criar/configurar bots, agentes, Cérebro e públicos adequados à operação. Chave de IA, ativação, associação de bots às etapas e demais ajustes ficam com ele. Esses itens não são bloqueios deste escopo de configuração; não serão executados pela equipe. Entrega de configuração concluída e salva, sem disparos nem gatilhos nas etapas. As limitações de execução real acima são evidência de teste, não solicitação de trabalho adicional ao usuário.

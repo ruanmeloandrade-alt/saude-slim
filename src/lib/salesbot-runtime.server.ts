@@ -23,6 +23,7 @@ import {
   resolveSalesbotGroupAdminPhones,
 } from "./salesbot-group-actions.server";
 import { claimSalesbotAiTurn } from "./salesbot-ai-claim.server";
+import { matchPlainSalesbotRule } from "./salesbot-text-rules";
 import {
   findActiveSalesbotRunId,
   findPriorSingleEntrySalesbotRunId,
@@ -298,6 +299,8 @@ export function computePausaCronometroMs(pausa: Record<string, unknown>, nowOver
 }
 
 function evalValidationRule(tipo: string, ref: string, val: string): boolean {
+  const plain = matchPlainSalesbotRule(tipo, ref, val);
+  if (plain !== undefined) return plain;
   const raw = val.trim();
   const wanted = ref.trim();
   switch (tipo) {
