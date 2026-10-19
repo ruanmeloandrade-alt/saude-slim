@@ -29,5 +29,9 @@ const agents=(await db.query('select * from conversation_ai_agents')).rows;
 for(const agent of agents){assert.equal(agent.enabled,false);assert.equal(agent.metadata.settings.actions.length,11);assert.equal(agent.metadata.settings.sources.length,5);assert(agent.metadata.settings.sources.every(s=>s.brainSourceId&&!s.content));assert(agent.system_prompt.length<20000);}
 for(const {filters} of (await db.query('select filters from crm_lead_audiences')).rows){assert(filters.tagsNone.includes('SS_NAO_CONTATAR'));assert(filters.customFields.some(r=>r.value==='Retomar depois'));}
 await assert.rejects(()=>db.exec(sql),/alterad/);await db.exec('rollback');
+if(process.argv[4]) {
+ const capabilities=fs.readFileSync(process.argv[4],'utf8');await db.exec(capabilities);await db.exec(capabilities);
+ for(const a of (await db.query('select * from conversation_ai_agents')).rows){assert.equal(a.enabled,false);assert.equal(a.model,undefined);assert.equal(a.metadata.settings.allowed_actions.length,4);}
+}
 console.log('PASS: actual operation SQL, 603 native blocks in 19 valid graphs, two inactive agents with 11 actions and five live sources, 16 guarded audiences, repeat application rejected. No production calls.');
 await db.close();
