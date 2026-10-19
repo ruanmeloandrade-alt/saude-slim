@@ -91,6 +91,29 @@ assert.equal(
   }),
   undefined,
 );
+let recorded = false;
+await inspect(
+  { ...env, SLIM_INBOUND_INSPECTION_RECORD: "1" },
+  async (url, init) => {
+    if (init.method === "PATCH") {
+      const data = JSON.parse(init.body);
+      assert.equal(data.metadata.preserved, "yes");
+      assert.equal(data.metadata.slim_inbound_inspection.matched, 1);
+      assert(url.includes("updated_at=eq."));
+      assert(!JSON.stringify(data).includes(phone));
+      assert(!JSON.stringify(data).includes("synthetic"));
+      recorded = true;
+      return Response.json([{ id: SESSION }]);
+    }
+    if (url.includes("select=metadata,updated_at"))
+      return Response.json([
+        { metadata: { preserved: "yes" }, updated_at: "2026-10-19T20:00:00Z" },
+      ]);
+    return fetcher(url, init);
+  },
+  () => {},
+);
+assert(recorded);
 console.log(
   "PASS inbound inspection: scope, exact target, LID alternate, inbound only, dedupe, credentials, bounds and disabled mode",
 );

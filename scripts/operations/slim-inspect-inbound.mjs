@@ -46,7 +46,7 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
   let requests = 0;
   const deadline = Date.now() + 110000;
   async function json(url, headers, body) {
-    if (++requests > 12 || Date.now() > deadline) throw new Error("REQUEST_BUDGET");
+    if (++requests > 14 || Date.now() > deadline) throw new Error("REQUEST_BUDGET");
     const r = await fetcher(url, {
       method: body ? "POST" : "GET",
       headers,
@@ -95,25 +95,44 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
   const result = [...matches.values()].sort(
     (a, b) => Number(a.messageTimestamp) - Number(b.messageTimestamp),
   );
-  log(
-    JSON.stringify({
-      operation: "SLIM_INBOUND_INSPECT",
-      session: SESSION,
-      queries: summaries,
-      matched: result.length,
-      messages: result.map((m) => ({
-        id: m.key.id,
-        name: m.pushName,
-        at: m.messageTimestamp,
-        greeting: /^\s*(oi+|ol[aá])\s*[!.?]*\s*$/i.test(
-          String(m.message?.conversation ?? m.message?.extendedTextMessage?.text ?? ""),
-        ),
-        jidLast4: String(m.key.remoteJidAlt ?? m.key.remoteJid)
-          .split("@")[0]
-          .slice(-4),
-      })),
-    }),
-  );
+  const summary = {
+    operation: "SLIM_INBOUND_INSPECT",
+    session: SESSION,
+    queries: summaries,
+    matched: result.length,
+    messages: result.map((m) => ({
+      id: m.key.id,
+      name: m.pushName,
+      at: m.messageTimestamp,
+      greeting: /^\s*(oi+|ol[aá])\s*[!.?]*\s*$/i.test(
+        String(m.message?.conversation ?? m.message?.extendedTextMessage?.text ?? ""),
+      ),
+      jidLast4: String(m.key.remoteJidAlt ?? m.key.remoteJid)
+        .split("@")[0]
+        .slice(-4),
+    })),
+  };
+  log(JSON.stringify(summary));
+  if (env.SLIM_INBOUND_INSPECTION_RECORD === "1") {
+    const url = `${env.SUPABASE_URL}/rest/v1/whatsapp_web_sessions?id=eq.${SESSION}&workspace_id=eq.${WORKSPACE}`;
+    const current = await json(url + "&select=metadata,updated_at", headers);
+    if (current.length !== 1) throw new Error("SESSION_UNAVAILABLE");
+    const saved = await fetcher(
+      url + "&updated_at=eq." + encodeURIComponent(current[0].updated_at),
+      {
+        method: "PATCH",
+        headers: { ...headers, Prefer: "return=representation" },
+        signal: AbortSignal.timeout(10000),
+        body: JSON.stringify({
+          metadata: {
+            ...(current[0].metadata ?? {}),
+            slim_inbound_inspection: { ...summary, inspectedAt: new Date().toISOString() },
+          },
+        }),
+      },
+    );
+    if (!saved.ok || (await saved.json()).length !== 1) throw new Error("INSPECTION_RECORD_FAILED");
+  }
   return result;
 }
 if (process.env.SLIM_INBOUND_RECOVERY === "inspect")
