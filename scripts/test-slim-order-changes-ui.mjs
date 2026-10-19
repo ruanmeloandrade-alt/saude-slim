@@ -31,7 +31,7 @@ const dialogs={Dialog:plain('div'),DialogContent:plain('section'),DialogHeader:p
 class CheckoutRejected extends Error{}
 function loadSource(relative,hooks,mocks,cache=new Map()){
  const file=path.isAbsolute(relative)?relative:path.join(root,relative);if(cache.has(file))return cache.get(file).exports;
- let source=fs.readFileSync(file,'utf8');if(file.endsWith('/SlimErpWorkspace.tsx'))source+='\nexport {Workspace as TestWorkspace};\n';
+ let source=fs.readFileSync(file,'utf8');if(file.split(path.sep).join('/').endsWith('/SlimErpWorkspace.tsx'))source+='\nexport {Workspace as TestWorkspace};\n';
  const module={exports:{}};cache.set(file,module);
  const compiled=ts.transpileModule(source,{reportDiagnostics:true,compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}});
  assert(!compiled.diagnostics?.some(d=>d.category===ts.DiagnosticCategory.Error),'Invalid TSX: '+relative);

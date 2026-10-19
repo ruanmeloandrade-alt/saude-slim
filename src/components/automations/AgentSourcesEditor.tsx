@@ -2,11 +2,12 @@ import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { FileText, Link as LinkIcon, Type, Plus, Trash2, Loader2, Upload } from "lucide-react";
 import { uploadSalesbotMedia } from "@/lib/salesbots.functions";
+import { supabase } from "@/integrations/supabase/client";
 
-export type AgentSource =
+export type AgentSource = (
   | { id: string; type: "text"; label: string; content: string }
   | { id: string; type: "url"; label: string; url: string }
-  | { id: string; type: "document"; label: string; storagePath: string; fileName: string; mime: string };
+  | { id: string; type: "document"; label: string; storagePath: string; fileName: string; mime: string }) & { brainSourceId?: string };
 
 const ACCEPT_DOCS =
   ".pdf,.doc,.docx,.txt,.md,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown";
@@ -26,14 +27,31 @@ async function fileToBase64(file: File): Promise<string> {
 export function AgentSourcesEditor({
   value,
   onChange,
+  workspaceId,
 }: {
   value: AgentSource[];
   onChange: (next: AgentSource[]) => void;
+  workspaceId?: string | null;
 }) {
   const upload = useServerFn(uploadSalesbotMedia);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [brainList, setBrainList] = useState<{ workspaceId: string; rows: Array<{ id: string; title: string; enabled: boolean }> } | null>(null);
+  const [loadingBrain, setLoadingBrain] = useState(false);
+  const currentWorkspace = useRef(workspaceId); currentWorkspace.current = workspaceId;
+  async function loadBrain() {
+    if (!workspaceId || loadingBrain) return;
+    setLoadingBrain(true); setErr(null);
+    try {
+      const { data, error } = await supabase.from('ai_brain_sources').select('id,title,enabled')
+        .eq('workspace_id', workspaceId).order('title').abortSignal(AbortSignal.timeout(20000));
+      if (currentWorkspace.current !== workspaceId) return;
+      if (error) throw new Error('Não foi possível carregar as fontes do Cérebro.');
+      setBrainList({workspaceId, rows: data ?? []});
+    } catch (e) { if (currentWorkspace.current === workspaceId) setErr((e as Error).message); }
+    finally { setLoadingBrain(false); }
+  }
 
   const add = (s: AgentSource) => onChange([...(value ?? []), s]);
   const update = (id: string, patch: Partial<AgentSource>) =>
@@ -122,6 +140,16 @@ export function AgentSourcesEditor({
         }}
       />
 
+      {workspaceId && <button type="button" className="mb-2 rounded border px-2 py-1 text-xs" disabled={loadingBrain} onClick={() => void loadBrain()}>{loadingBrain ? 'Carregando fontes...' : 'Vincular fonte do Cérebro'}</button>}
+      {brainList && brainList.workspaceId === workspaceId && <div role="group" aria-label="Fontes do Cérebro" className="mb-3 space-y-2 rounded border p-3">
+        {brainList.rows.length === 0 && <p className="text-xs">Nenhuma fonte cadastrada no Cérebro desta empresa.</p>}
+        {brainList.rows.map(source => {
+          const selected = value.some(s => s.brainSourceId === source.id);
+          return <div key={source.id} className="flex items-center justify-between gap-2 text-xs"><span>{source.title}{!source.enabled && ' (pausada)'}</span><button type="button" className="rounded border px-2 py-1" disabled={selected || !source.enabled} onClick={() => add({id:source.id,type:'text',label:source.title,content:'',brainSourceId:source.id})}>{selected ? 'Vinculada' : 'Vincular'}</button></div>;
+        })}
+        <button type="button" className="text-xs underline" onClick={() => setBrainList(null)}>Fechar lista</button>
+      </div>}
+
       {err && <div className="text-[11px] text-destructive mb-2">{err}</div>}
 
       {(!value || value.length === 0) ? (
@@ -138,6 +166,7 @@ export function AgentSourcesEditor({
                 {s.type === "document" && <FileText className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
                 <input
                   value={s.label}
+                  readOnly={Boolean(s.brainSourceId)}
                   onChange={(e) => update(s.id, { label: e.target.value } as Partial<AgentSource>)}
                   placeholder={
                     s.type === "url"
@@ -161,7 +190,8 @@ export function AgentSourcesEditor({
                 </button>
               </div>
 
-              {s.type === "text" && (
+              {s.brainSourceId && <p className="text-xs text-muted-foreground">Fonte vinculada ao Cérebro. O agente consulta o conteúdo atual e respeita fontes pausadas. <a href="/crm/agente-ia" target="_blank" rel="noopener noreferrer" className="underline">Ver e editar no Cérebro</a></p>}
+              {s.type === "text" && !s.brainSourceId && (
                 <textarea
                   value={s.content}
                   onChange={(e) => update(s.id, { content: e.target.value } as Partial<AgentSource>)}
@@ -170,7 +200,7 @@ export function AgentSourcesEditor({
                   className="w-full bg-background border border-border rounded px-2 py-1 text-xs"
                 />
               )}
-              {s.type === "url" && (
+              {s.type === "url" && !s.brainSourceId && (
                 <input
                   value={s.url}
                   onChange={(e) => update(s.id, { url: e.target.value } as Partial<AgentSource>)}

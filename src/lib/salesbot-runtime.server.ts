@@ -1862,14 +1862,14 @@ async function runAiAgentTurn(
   // Fontes de conhecimento (texto, documento no storage e URL) resolvidas de verdade.
   let conhecimentoBlock = "";
   try {
-    const { buildAgentKnowledgeBlock } = await import("@/lib/agent-knowledge.server");
+    const { buildWorkspaceAgentKnowledgeBlock } = await import("@/lib/agent-brain-sources.server");
     const todas = [
       ...(Array.isArray(meta.settings?.sources) ? meta.settings!.sources! : []),
       ...(Array.isArray(meta.objective_tree?.sources) ? meta.objective_tree!.sources! : []),
     ] as never;
-    conhecimentoBlock = await buildAgentKnowledgeBlock(todas, supabaseAdmin as never);
+    conhecimentoBlock = await buildWorkspaceAgentKnowledgeBlock(supabaseAdmin as never, workspaceId, todas);
   } catch {
-    conhecimentoBlock = "";
+    return { reply: "", handoff: false, error: "Não foi possível consultar as fontes atuais do Cérebro." };
   }
   // Links cadastrados no agente (vale para prompt e fluxo de objetivos).
   const linksCadastrados = (meta.settings?.links ?? []).filter((l) => (l?.url ?? "").trim());
