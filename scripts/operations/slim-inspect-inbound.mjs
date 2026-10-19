@@ -1,4 +1,5 @@
-// Bounded, read-only inspection. Credentials remain inside the existing server.
+// Bounded inspection and explicitly enabled recovery of real inbound messages.
+// Credentials remain inside the existing server; no message is synthesized.
 export const PROJECT = "vyzvfcgpjjzvcjegzzza";
 export const WORKSPACE = "c49945db-1960-461a-9339-a43b8403bdd9";
 export const SESSION = "ee50c7dd-c400-4dfd-916a-3869f1311d33";
@@ -24,6 +25,31 @@ export function matchingMessages(value, phones) {
       messageTimestamp: m.messageTimestamp,
     }));
 }
+export function recoveryCandidates(messages, since, now = Date.now()) {
+  const start = Date.parse(since);
+  if (!Number.isFinite(start) || start > now || now - start > 48 * 3600000)
+    throw new Error("INVALID_RECOVERY_WINDOW");
+  const bySender = new Map();
+  for (const message of [...messages].sort(
+    (a, b) => Number(a.messageTimestamp) - Number(b.messageTimestamp),
+  )) {
+    const at = Number(message.messageTimestamp) * 1000;
+    const jid = [message.key?.remoteJid, message.key?.remoteJidAlt].find((j) =>
+      /^55\d{10,11}@s\.whatsapp\.net$/.test(j ?? ""),
+    );
+    if (
+      message.key?.fromMe !== false ||
+      !jid ||
+      !Number.isFinite(at) ||
+      at < start ||
+      at > now ||
+      bySender.has(jid)
+    )
+      continue;
+    bySender.set(jid, { message, phone: jid.split("@")[0] });
+  }
+  return [...bySender.values()];
+}
 export async function inspect(env, fetcher = fetch, log = console.log) {
   if (env.SLIM_INBOUND_RECOVERY !== "inspect") return;
   const phones = JSON.parse(env.SLIM_INBOUND_RECOVERY_TARGETS ?? "[]");
@@ -36,7 +62,7 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
     throw new Error("INVALID_TARGETS");
   if (env.SUPABASE_URL?.replace(/\/$/, "") !== `https://${PROJECT}.supabase.co`)
     throw new Error("WRONG_PROJECT");
-  if (!env.SUPABASE_SERVICE_ROLE_KEY || !env.EVOLUTION_GLOBAL_API_KEY || !env.EVOLUTION_BASE_URL)
+  if (!env.SUPABASE_SERVICE_ROLE_KEY || !env.INTEGRATION_ENCRYPTION_KEY || !env.EVOLUTION_BASE_URL)
     throw new Error("ENVIRONMENT_INCOMPLETE");
   const base = new URL(env.EVOLUTION_BASE_URL);
   if (!["https:", "http:"].includes(base.protocol) || base.username || base.password)
@@ -46,7 +72,7 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
   let requests = 0;
   const deadline = Date.now() + 110000;
   async function json(url, headers, body) {
-    if (++requests > 14 || Date.now() > deadline) throw new Error("REQUEST_BUDGET");
+    if (++requests > 24 || Date.now() > deadline) throw new Error("REQUEST_BUDGET");
     const r = await fetcher(url, {
       method: body ? "POST" : "GET",
       headers,
@@ -54,8 +80,21 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
       signal: AbortSignal.timeout(15000),
     });
     if (!r.ok) throw new Error("HTTP_" + r.status);
-    const text = await r.text();
-    if (text.length > 8 * 1024 * 1024) throw new Error("RESPONSE_TOO_LARGE");
+    const reader = r.body.getReader(),
+      decoder = new TextDecoder();
+    let text = "",
+      bytes = 0;
+    for (;;) {
+      const chunk = await reader.read();
+      if (chunk.done) break;
+      bytes += chunk.value.byteLength;
+      if (bytes > 8 * 1024 * 1024) {
+        await reader.cancel();
+        throw new Error("RESPONSE_TOO_LARGE");
+      }
+      text += decoder.decode(chunk.value, { stream: true });
+    }
+    text += decoder.decode();
     return JSON.parse(text);
   }
   const key = env.SUPABASE_SERVICE_ROLE_KEY,
@@ -65,7 +104,7 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
       ...(!key.startsWith("sb_secret_") ? { Authorization: "Bearer " + key } : {}),
     };
   const session = await json(
-    `${env.SUPABASE_URL}/rest/v1/whatsapp_web_sessions?id=eq.${SESSION}&workspace_id=eq.${WORKSPACE}&select=id,workspace_id,provider,instance_id,status`,
+    `${env.SUPABASE_URL}/rest/v1/whatsapp_web_sessions?id=eq.${SESSION}&workspace_id=eq.${WORKSPACE}&select=id,workspace_id,provider,instance_id,status${env.SLIM_INBOUND_RECOVERY_EXECUTE === "1" ? ",webhook_secret,metadata" : ""}`,
     headers,
   );
   if (
@@ -74,6 +113,18 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
     session[0].status !== "conectado"
   )
     throw new Error("SESSION_UNAVAILABLE");
+  const credentials = await json(
+    `${env.SUPABASE_URL}/rest/v1/rpc/get_evolution_credentials_service`,
+    headers,
+    { _session_id: SESSION, _key: env.INTEGRATION_ENCRYPTION_KEY },
+  );
+  if (
+    credentials?.workspace_id !== WORKSPACE ||
+    credentials?.instance_name !== session[0].instance_id ||
+    typeof credentials?.api_key !== "string" ||
+    !credentials.api_key
+  )
+    throw new Error("SESSION_CREDENTIALS_UNAVAILABLE");
   const matches = new Map();
   const summaries = [];
   for (const phone of phones) {
@@ -82,7 +133,7 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
       const jid = phone + "@s.whatsapp.net";
       const response = await json(
         `${base.toString().replace(/\/$/, "")}/chat/findMessages/${encodeURIComponent(session[0].instance_id)}`,
-        { apikey: env.EVOLUTION_GLOBAL_API_KEY, "Content-Type": "application/json" },
+        { apikey: credentials.api_key, "Content-Type": "application/json" },
         { where: { key: { remoteJid: jid, remoteJidAlt: jid } }, offset: 100, page },
       );
       const found = matchingMessages(response, phones);
@@ -102,16 +153,62 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
     matched: result.length,
     messages: result.map((m) => ({
       id: m.key.id,
-      name: m.pushName,
       at: m.messageTimestamp,
       greeting: /^\s*(oi+|ol[aá])\s*[!.?]*\s*$/i.test(
         String(m.message?.conversation ?? m.message?.extendedTextMessage?.text ?? ""),
       ),
-      jidLast4: String(m.key.remoteJidAlt ?? m.key.remoteJid)
+      jidLast4: String(
+        [m.key.remoteJid, m.key.remoteJidAlt].find((j) =>
+          phones.some((p) => j === p + "@s.whatsapp.net"),
+        ) ?? "",
+      )
         .split("@")[0]
         .slice(-4),
     })),
   };
+  if (env.SLIM_INBOUND_RECOVERY_EXECUTE === "1") {
+    if (!/^[0-9a-f-]{36}$/i.test(env.SLIM_INBOUND_RECOVERY_REQUEST_ID ?? ""))
+      throw new Error("INVALID_RECOVERY_REQUEST");
+    summary.requestId = env.SLIM_INBOUND_RECOVERY_REQUEST_ID;
+    if (typeof session[0].webhook_secret !== "string" || session[0].webhook_secret.length < 20)
+      throw new Error("WEBHOOK_UNAVAILABLE");
+    summary.recovery = [];
+    const prior = session[0].metadata?.slim_inbound_inspection;
+    const alreadyRecovered =
+      prior?.requestId === summary.requestId && prior?.recoveryAttempted === true;
+    if (alreadyRecovered) summary.recovery = prior.recovery ?? [];
+    for (const { message, phone } of alreadyRecovered
+      ? []
+      : recoveryCandidates(result, env.SLIM_INBOUND_RECOVERY_SINCE)) {
+      const url = `${env.SUPABASE_URL}/rest/v1/leads?workspace_id=eq.${WORKSPACE}&phone_normalized=eq.${phone}&merged_into_id=is.null&custom_data=cs.${encodeURIComponent(JSON.stringify({ whatsapp_session_id: SESSION }))}&select=id,pipeline_id,stage_id`;
+      const existing = await json(url, headers);
+      if (existing.length) {
+        summary.recovery.push({
+          messageId: message.key.id,
+          leadId: existing[0].id,
+          result: "existing-card-preserved",
+        });
+        continue;
+      }
+      const response = await json(
+        `https://slimesaude.com/api/public/evolution/webhook/${encodeURIComponent(session[0].webhook_secret)}`,
+        { apikey: credentials.api_key, "Content-Type": "application/json" },
+        { event: "messages.upsert", instance: session[0].instance_id, data: message },
+      );
+      if (response?.ok !== true) throw new Error("RECOVERY_NOT_CONFIRMED");
+      const confirmed = await json(url, headers);
+      if (confirmed.length !== 1 || !confirmed[0].pipeline_id || !confirmed[0].stage_id)
+        throw new Error("RECOVERY_CARD_NOT_CONFIRMED");
+      summary.recovery.push({
+        messageId: message.key.id,
+        leadId: confirmed[0].id,
+        pipelineId: confirmed[0].pipeline_id,
+        stageId: confirmed[0].stage_id,
+        result: "recovered-real-inbound",
+      });
+    }
+  }
+  if (env.SLIM_INBOUND_RECOVERY_EXECUTE === "1") summary.recoveryAttempted = true;
   log(JSON.stringify(summary));
   if (env.SLIM_INBOUND_INSPECTION_RECORD === "1") {
     const url = `${env.SUPABASE_URL}/rest/v1/whatsapp_web_sessions?id=eq.${SESSION}&workspace_id=eq.${WORKSPACE}`;
