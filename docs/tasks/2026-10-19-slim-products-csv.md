@@ -8,5 +8,9 @@ Não há produtos atuais nesta empresa; existe Catalogo principal. Organizar cat
 
 Escopo necessário: campos próprios de custo, estoque mínimo, unidade e estoque conhecido; snapshot de origem; leitura e edição no cadastro; projeção de estoque tolerante a déficits e diferenciando valores não informados. Preservar checkout, pedidos, RLS e integrações. Importação transacional e idempotente com IDs determinísticos, sem sobrescrever registros preexistentes.
 
-Status: em execução. A importação só entra depois da atualização dos consumidores de estoque para não deixar o ERP indisponível por saldo negativo.
+Status: concluído em produção em 2026-10-19. PR #4 integrado em c8ba20e04a7d304ee7d22bbacc542725e6346347. Railway b504020e-f6c7-470d-98fc-9c7fdde2bd04 SUCCESS às 17:32:26 UTC. Migração aditiva aplicada; depois do deploy, importação transacional executada com 78 produtos.
+
+Conferência nativa: leitura de todos os 78 registros comparada ao manifesto, sem divergências; 13 colunas brutas e números normalizados preservados por produto. Sete catálogos: principal 44, TG 5, Tirzec 2, Lipoless 2, Retatrutida e Reta 11, Insumos 4, Landerlan 10. Cinco saldos negativos e cinco desconhecidos; total conhecido 451 unidades. Pedidos e movimentações permaneceram em zero. Valores zero explícitos da fonte preservados.
+
+Validação: build completo PASS; 42 testes de estoque/recibo; quatro testes de parser; operação exata dos 78 registros em PGlite com reexecução idempotente e rollback por edição ou conflito de nome. Projeção do bundle compilado confirmou os totais e a leitura dos detalhes. Asset público efetivamente servido pelo domínio slimesaude.com retornou JavaScript HTTP 200 e contém histórico importado, custo e estoque não informado. Sem uso do Chrome nessa conclusão; não se trata de teste visual ou de disparo de automações.
 
