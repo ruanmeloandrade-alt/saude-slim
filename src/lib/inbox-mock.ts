@@ -52,6 +52,8 @@ export interface ChatConversation {
  companyId?: string;
  productIds?: string[];
  sourceProvider?: string;
+  whatsappSessionId?: string | null;
+  whatsappOrigin?: string | null;
   groupJid?: string;
   groupSessionId?: string;
 }

@@ -18,6 +18,7 @@ import {
   type SlimDrawerContext, type SlimDrawerInteraction, type SlimDrawerLead,
 } from '@/lib/slim-funnel-drawer.core';
 import './slim-funnel-drawer.css';
+import { LeadWhatsappOrigin } from '@/components/inbox/LeadWhatsappOrigin';
 
 export type SlimFunnelLeadDrawerHandle = { open: (lead: CrmLead) => boolean };
 const emptyInteraction = (): SlimDrawerInteraction => ({ dirty: false, pending: false });
@@ -191,6 +192,7 @@ export const SlimFunnelLeadDrawer = forwardRef<SlimFunnelLeadDrawerHandle, { onE
       <header className="slim-funnel-drawer-header">
         <SheetTitle className="text-lg">{lead?.name ?? selected?.name ?? 'Ficha do contato'}</SheetTitle>
         <SheetDescription id="slim-funnel-drawer-description" className="mt-1">Ficha do cliente e conversa no Funil.</SheetDescription>
+        {canMount && context && <LeadWhatsappOrigin leadId={context.leadId} workspaceId={context.workspaceId} actorId={context.actorId} />}
         <div className="mt-3 flex flex-wrap gap-2">
           <Button type="button" size="sm" variant="outline" onClick={edit} disabled={!canMount || interaction.pending}><Pencil className="mr-1.5 h-3.5 w-3.5" />Editar dados</Button>
           <Button type="button" size="sm" variant="outline" onClick={openInbox} disabled={!canMount || interaction.pending}><MessageCircle className="mr-1.5 h-3.5 w-3.5" />Abrir Inbox</Button>

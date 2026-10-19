@@ -224,6 +224,7 @@ export function SlimMassBroadcastPanel({active,scope,onPendingChange,onOpenLists
 
                   <div className="grid gap-2">
                     <Label className="text-xs">WhatsApp conectado</Label>
+                    <p className="text-[11px] text-muted-foreground">Cada atendimento usa seu WhatsApp de origem. A seleção abaixo vale para contatos ainda sem origem.</p>
                     <Select value={sessionId} onValueChange={setSessionId}>
                       <SelectTrigger>
                         <SelectValue placeholder={sessions.length ? "Selecione uma sessão" : "Nenhum WhatsApp conectado"} />
