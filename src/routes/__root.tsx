@@ -165,7 +165,7 @@ function CheckoutCompatibilityGuard({ children }: { children: ReactNode }) {
 }
 
 const SAUDE_SLIM_MIGRATED_PATHS = new Set([
-  "/auth", "/saude-slim", "/pedidos", "/crm/estoque", "/crm/produtos", "/crm/leads",
+  "/auth", "/saude-slim", "/pedidos", "/crm/estoque", "/crm/produtos", "/crm/leads", "/tutoriais",
 ]);
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();

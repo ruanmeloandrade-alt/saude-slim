@@ -14,6 +14,18 @@ export type Database = {
   }
   public: {
     Tables: {
+      tutorial_modules: {
+        Row: { id: string; title: string; position: number; created_at: string }
+        Insert: { id?: string; title: string; position?: number; created_at?: string }
+        Update: { title?: string; position?: number }
+        Relationships: []
+      }
+      tutorial_lessons: {
+        Row: { id: string; module_id: string; title: string; video_id: string; position: number; created_at: string }
+        Insert: { id?: string; module_id: string; title: string; video_id: string; position?: number; created_at?: string }
+        Update: { module_id?: string; title?: string; video_id?: string; position?: number }
+        Relationships: [{ foreignKeyName: "tutorial_lessons_module_id_fkey"; columns: ["module_id"]; isOneToOne: false; referencedRelation: "tutorial_modules"; referencedColumns: ["id"] }]
+      }
       account_recovery_codes: {
         Row: {
           code_hash: string

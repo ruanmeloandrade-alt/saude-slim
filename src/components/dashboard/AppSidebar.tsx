@@ -2,7 +2,7 @@ import {
   BarChart3, Bot, ChevronDown, ClipboardList, HeartPulse, History, Inbox,
   LogOut, Mail, Megaphone, Menu, MessageSquareText, Package, PanelLeftClose,
   PanelLeftOpen, Plug, RotateCcw, Settings, Share2, ShoppingCart, Tags,
-  Target, Truck, Users, X, type LucideIcon,
+  Target, Truck, Users, X, PlayCircle, type LucideIcon,
 } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
@@ -35,6 +35,7 @@ const OPERATION_GROUPS: NavGroup[] = [
   { label: "Configurações", icon: Settings, defaultOpen: false, children: [
     { label: "Geral", icon: Settings, to: "/configuracoes" },
     { label: "Integrações", icon: Plug, to: "/integracoes" },
+    { label: "Tutoriais", icon: PlayCircle, to: "/tutoriais" },
   ] },
   { label: "Fase 2", icon: Target, defaultOpen: false, children: [
     { label: "Tracking avançado", icon: Target, disabled: true },
