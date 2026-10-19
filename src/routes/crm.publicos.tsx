@@ -1059,6 +1059,7 @@ function BroadcastDialog({ target, onOpenChange, onDone }: {
           </div>
           <div>
             <Label className="text-xs">Número (Evolution)</Label>
+            <p className="text-[11px] text-muted-foreground">O WhatsApp de origem de cada card é preservado. Esta seleção vale para contatos ainda sem origem.</p>
             <Select value={sessionId} onValueChange={setSessionId} disabled={sessQ.isLoading}>
               <SelectTrigger><SelectValue placeholder={sessQ.isLoading ? "Carregando…" : "Selecione…"} /></SelectTrigger>
               <SelectContent>
@@ -1261,6 +1262,7 @@ function ReactivateDialog({ target, onOpenChange, onDone }: {
               </div>
               <div>
                 <Label className="text-xs">WhatsApp (Evolution)</Label>
+            <p className="text-[11px] text-muted-foreground">O WhatsApp de origem de cada card é preservado. Esta seleção vale para contatos ainda sem origem.</p>
                 <Select value={sessionId} onValueChange={setSessionId}>
                   <SelectTrigger><SelectValue placeholder={sessQ.isLoading ? "Carregando…" : "Selecione…"} /></SelectTrigger>
                   <SelectContent>

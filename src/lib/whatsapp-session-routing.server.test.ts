@@ -101,13 +101,36 @@ describe("WhatsApp real conversation routing", () => {
       workspaceId: "ws",
       leadId: "lead",
       phone: "+5521999995678",
-      preferredSessionId: "session-br",
     });
 
     expect(target.source).toBe("conversation_jid");
     expect(target.remoteJid).toBe("351912345678@s.whatsapp.net");
     expect(target.number).toBe("351912345678");
     expect(target.sessionId).toBe("session-pt");
+  });
+
+  it("keeps the card origin despite a newer message from another number", async () => {
+    const sb = fakeSupabase({
+      lead_activities: [
+        { workspace_id: "ws", lead_id: "lead", type: "message_in", occurred_at: "2026-10-19T12:00:00Z", payload: { whatsapp_remote_jid: "5599999999999@s.whatsapp.net", whatsapp_session_id: "session-b" } },
+        { workspace_id: "ws", lead_id: "lead", type: "message_in", occurred_at: "2026-10-19T11:00:00Z", payload: { whatsapp_remote_jid: "5599999999999@s.whatsapp.net", whatsapp_session_id: "session-a" } },
+      ],
+      whatsapp_web_sessions: [
+        { workspace_id: "ws", id: "session-a", provider: "evolution", status: "conectado", last_connected_at: "2026-10-19T10:00:00Z" },
+        { workspace_id: "ws", id: "session-b", provider: "evolution", status: "conectado", last_connected_at: "2026-10-19T12:00:00Z" },
+      ],
+    });
+    const target = await resolveLeadWhatsappRoutingTarget(sb as never, { workspaceId: "ws", leadId: "lead", phone: "+5599999999999", preferredSessionId: "session-a" });
+    expect(target.sessionId).toBe("session-a");
+    expect(target.conversationKey).toBe("session-a:5599999999999@s.whatsapp.net");
+  });
+
+  it("does not substitute another connected account when the original disconnects", async () => {
+    const sb = fakeSupabase({
+      lead_activities: [],
+      whatsapp_web_sessions: [{ workspace_id: "ws", id: "session-b", provider: "evolution", status: "conectado", last_connected_at: "2026-10-19T12:00:00Z" }],
+    });
+    await expect(resolveLeadWhatsappRoutingTarget(sb as never, { workspaceId: "ws", leadId: "lead", phone: "+5599999999999", preferredSessionId: "session-a" })).rejects.toThrow("sessão correta");
   });
 
   it("routes a legacy LID message through its stored alternate phone JID", async () => {

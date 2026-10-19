@@ -32,3 +32,5 @@ Checkout Windows com CRLF impediu scripts herdados de reconhecer trechos de cód
 
 ## Publicação
 Destino confirmado no Railway: projeto accomplished-wholeness, serviço saude-slim-web, branch `restauracao/sistema-completo-20261014`. Não alterar o serviço Evolution, que usa `main`.
+
+PR #5 integrada em `6f759d1`. Deploy `a7432464-b288-4ba4-8adc-144629279057` SUCCESS. `/tutoriais` HTTP 200; sessão real mostrou modo de edição, menu na posição solicitada e formulário de módulo. Abertura e cancelamento conferidos sem inserir conteúdo. Screenshot entregue no relatório da conversa. Primeiro vídeo real depende do cadastro pelo proprietário; não foi inventado conteúdo para o catálogo.

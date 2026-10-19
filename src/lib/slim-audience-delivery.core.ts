@@ -10,7 +10,7 @@ export type DeliveryDependencies = {
   lead: () => Promise<Record<string,any>|null>;
   campaign: { kind: string; message: string; agent_id?: string|null; salesbot_id?: string|null };
   expectedPhone?: string|null;
-  session: () => Promise<{ workspace_id: string; status: string; instance_name: string; api_key: string }>;
+  session: (lead: Record<string,any>) => Promise<{ id?: string; workspace_id: string; status: string; instance_name: string; api_key: string }>;
   workspaceId: string;
   normalizePhone: (phone: string) => {ok:boolean; digits?:string};
   activateAgent: (lead: Record<string,any>) => Promise<{allowed:boolean; continue:()=>Promise<boolean>; rollback:()=>Promise<void>}>;
@@ -35,7 +35,9 @@ export async function deliverAudienceItem(d:DeliveryDependencies):Promise<Delive
     const phone=d.normalizePhone(String(lead.phone??''));
     if(!phone.ok || !phone.digits) return {state:'skipped',code:'INVALID_PHONE'};
     if(d.expectedPhone && phone.digits!==d.expectedPhone) return {state:'skipped',code:'PHONE_CHANGED'};
-    const session=await d.session();
+    const session=await d.session(lead);
+    const origin=lead.custom_data?.whatsapp_session_id;
+    if(typeof origin==='string'&&origin&&session.id!==origin)return {state:'failed',code:'ORIGIN_MISMATCH'};
     if(session.workspace_id!==d.workspaceId || session.status!=='conectado' || !session.instance_name || !session.api_key) return {state:'failed',code:'SESSION_UNAVAILABLE'};
     const message=audienceMessage(d.campaign.message,lead).trim();
     if(!message || message.length>4096) return {state:'failed',code:'INVALID_MESSAGE'};
