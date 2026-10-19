@@ -1,5 +1,15 @@
 # Tracking por anúncio com Contém
 
+## Complemento: encerramentos e mensagem interna
+
+Ajuste aplicado na revisão 9 do tracking: todos os 14 caminhos passam por Encerrar bot depois de iniciar o Pré-atendimento. O fechamento termina apenas o tracking; não tem ações extras de conversa ou de outro bot.
+
+O caminho genérico registra a mensagem interna: “Contato genérico: nenhum código de rastreamento identificado na mensagem do cliente. Encaminhado ao Pré-atendimento.” Depois inicia Pré-atendimento e encerra tracking. Mensagem interna configurada como nota no contato, sem destinatário de alerta externo.
+
+Validação: 42 mensagens passaram; 14 blocos de encerramento conectados no banco; mensagem interna presente no editor. Nenhuma execução ou mensagem disparada na validação. Regras Contém, tags e destinos dos 13 anúncios preservados.
+
+Arquivos alterados: scripts/fixtures/slim-tracking-contains.json; scripts/test-slim-tracking-contains.mjs; scripts/operations/slim-tracking-endings-20261019.sql; docs/tasks/2026-10-19-slim-tracking-contains.md.
+
 Pedido corrigido: uma regra Contém na mensagem do cliente para cada código original. Cada regra sai para sua própria ação de tags e seu próprio bloco Iniciar SalesBot. Não usar expressão regular nem restringir ao início da mensagem.
 
 Aplicado no bot Rastreamento | Origem do contato, revisão 8, pelo RPC nativo com controle da revisão anterior 7 e base completa. Os 13 códigos existentes foram preservados; os exemplos #123/#856 do pedido foram tratados como exemplos, sem criar campanhas fictícias.
