@@ -59,11 +59,11 @@ function environment(db=fakeDb()){
   const file=path.isAbsolute(relative)?relative:path.join(root,relative);if(cache.has(file))return cache.get(file).exports;
   let source=fs.readFileSync(file,'utf8');
   // Execute only the real release transform's session edit, in memory. No shared source is changed.
-  if(file.endsWith('/slim-checkout-session.core.ts')&&!source.includes('// SLIM_ERP_RELEASE_V1')){
+  if(file.split(path.sep).join('/').endsWith('/slim-checkout-session.core.ts')&&!source.includes('// SLIM_ERP_RELEASE_V1')){
    const script=fs.readFileSync(path.join(root,'scripts/apply-slim-erp-release.mjs'),'utf8'),start=script.indexOf("edit('src/lib/slim-checkout-session.core.ts'"),end=script.indexOf('\nedit(',start+1);assert(start>=0&&end>start);
    Function('edit',script.slice(start,end))((target,run)=>{assert.equal(target,'src/lib/slim-checkout-session.core.ts');run((from,to)=>{assert.equal(source.split(from).length,2);source=source.replace(from,()=>to);});});
   }
-  if(file.endsWith('/SlimErpWorkspace.tsx'))source+='\nexport {Workspace as TestWorkspace};\n';
+  if(file.split(path.sep).join('/').endsWith('/SlimErpWorkspace.tsx'))source+='\nexport {Workspace as TestWorkspace};\n';
   const module={exports:{}};cache.set(file,module);
   const compiled=ts.transpileModule(source,{reportDiagnostics:true,compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.React}});assert(!compiled.diagnostics?.some(item=>item.category===ts.DiagnosticCategory.Error));
   Function('require','module','exports','React',compiled.outputText)(name=>{

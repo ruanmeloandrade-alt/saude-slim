@@ -18,6 +18,7 @@ type ObjectiveNode = {
 };
 
 type AgentSource = {
+  brainSourceId?: string;
   kind?: string;
   type?: string;
   title?: string;
@@ -70,15 +71,16 @@ function renderTree(node: ObjectiveNode, depth = 0): string {
   return lines.join("\n");
 }
 
-async function resolveSources(sources?: AgentSource[] | null): Promise<string> {
+async function resolveSources(workspaceId: string, sources?: AgentSource[] | null): Promise<string> {
   if (!sources?.length) return "";
-  const { buildAgentKnowledgeBlock } = await import("@/lib/agent-knowledge.server");
+  const { buildWorkspaceAgentKnowledgeBlock } = await import("@/lib/agent-brain-sources.server");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  return buildAgentKnowledgeBlock(sources, supabaseAdmin as never);
+  return buildWorkspaceAgentKnowledgeBlock(supabaseAdmin as never, workspaceId, sources);
 }
 
 async function buildSystem(
   config: TestConfig,
+  workspaceId: string,
   chat: { lastUserMessage: string; history: Array<{ role: "user" | "assistant"; content: string }> },
 ): Promise<string> {
   const parts: string[] = [];
@@ -133,7 +135,7 @@ async function buildSystem(
     }
   }
 
-  const knowledge = await resolveSources(config.sources);
+  const knowledge = await resolveSources(workspaceId, [...(config.sources ?? []), ...(config.tree?.sources ?? [])]);
   if (knowledge) parts.push("\n" + knowledge);
 
   parts.push(
@@ -180,7 +182,7 @@ export const Route = createFileRoute("/api/agent-test-chat")({
         const textOf = (message: UIMessage) =>
           (message.parts ?? []).map((part) => ("text" in part ? String(part.text ?? "") : "")).join(" ").trim();
         const lastUserIndex = uiMessages.map((message) => message.role).lastIndexOf("user");
-        const system = await buildSystem(body.config, {
+        const system = await buildSystem(body.config, body.workspaceId, {
           lastUserMessage: lastUserIndex >= 0 ? textOf(uiMessages[lastUserIndex]) : "",
           history: uiMessages.slice(0, Math.max(0, lastUserIndex)).map((message) => ({
             role: message.role === "assistant" ? "assistant" as const : "user" as const,

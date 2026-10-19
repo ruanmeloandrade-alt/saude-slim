@@ -830,7 +830,7 @@ function AgentEditor({
                 subtitle="A IA precisa levar a conversa até algum lugar, defina o que acontece quando ela atinge o objetivo ou o limite de interações."
               />
 
-              <AgentSourcesEditor value={sources} onChange={setSources} />
+              <AgentSourcesEditor value={sources} onChange={setSources} workspaceId={workspaceId} />
 
               <AgentActionsEditor value={actions} onChange={setActions} />
 
