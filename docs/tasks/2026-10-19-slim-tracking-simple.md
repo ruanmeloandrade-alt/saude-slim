@@ -1,5 +1,7 @@
 # Tracking simples da Saúde Slim
 
+SUPERADO: esta entrega foi rejeitada pelo usuário. A configuração atual usa regras Contém e caminhos por anúncio, documentados em 2026-10-19-slim-tracking-contains.md. O registro abaixo é histórico.
+
 Pedido: substituir o tracking grande por reconhecimento do código no início da mensagem, aplicação da tag Meta e encaminhamento ao bot Pré-atendimento. Sem campos UTM adicionais nem encerramento sem encaminhamento. Também encaminhar ao Pré-atendimento quando não houver código Meta.
 
 Alterar somente o grafo do SalesBot existente bde1f325-76fa-efd9-d055-ad093a4b9b0a, workspace c49945db-1960-461a-9339-a43b8403bdd9, Supabase vyzvfcgpjjzvcjegzzza. Snapshot atual: 83 blocos, revisão 6. O usuário ativou o tracking e o Pré-atendimento; preservar os estados e os gatilhos atuais. Não executar atendimento ou enviar mensagens de teste. Cópia anterior em work/tracking-before-simple.json, fora do repositório.
