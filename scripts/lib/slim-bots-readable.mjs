@@ -101,19 +101,33 @@ export function layout(bot,measured={}){
  if(visited!==bot.blocks.length)throw Error('Ciclo no grafo '+bot.name);
  const layers=new Map();
  for(const b of bot.blocks){const r=rank.get(b.id);if(!layers.has(r))layers.set(r,[]);layers.get(r).push(b);}
- const centers=new Map();
+ const portY=(source,destination)=>{
+  const candidates=[];
+  let offset=145;
+  for(const rule of source.config.roleta||[]){
+   const height=['igual-lista','contem-lista'].includes(rule.tipo)?300:190;
+   if(rule.nextBlockId===destination)candidates.push(source.position_y+offset+height/2);
+   offset+=height;
+  }
+  for(const rule of source.config.pausas||[]){
+   if(rule.nextBlockId===destination)candidates.push(source.position_y+offset+90);
+   offset+=200;
+  }
+  if(source.next_block_id===destination)candidates.push(source.position_y+(source.type==='validacao'?estimateHeight(source)-65:52));
+  return candidates.length?candidates.reduce((sum,n)=>sum+n,0)/candidates.length:source.position_y+52;
+ };
  for(const [r,blocks] of [...layers].sort((a,b)=>a[0]-b[0])){
   const preferred=b=>{
    const ps=parents.get(b.id);
    if(!ps.length)return b===start?0:100000;
-   return ps.reduce((n,p)=>n+(centers.get(p)||0),0)/ps.length;
+   return ps.reduce((n,p)=>n+portY(byId.get(p),b.id)-52,0)/ps.length;
   };
   blocks.sort((a,b)=>preferred(a)-preferred(b)||a.id.localeCompare(b.id));
   let y=180;
   for(const b of blocks){
    const h=Math.max(measured[b.id]||0,estimateHeight(b));
-   b.position_x=560+r*580;b.position_y=Math.round(Math.max(y,preferred(b)-h/2));
-   centers.set(b.id,b.position_y+h/2);y=b.position_y+h+180;
+   b.position_x=560+r*580;b.position_y=Math.round(Math.max(y,preferred(b)));
+   y=b.position_y+h+180;
   }
  }
  bot.settings={...bot.settings,startPosition:{x:80,y:start.position_y}};
