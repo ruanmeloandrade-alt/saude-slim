@@ -286,7 +286,10 @@ export async function inspect(env, fetcher = fetch, log = console.log) {
   }
   return result;
 }
-if (process.env.SLIM_INBOUND_RECOVERY === "inspect")
+if (
+  process.env.SLIM_INBOUND_RECOVERY === "inspect" &&
+  /[\\/]slim-inspect-inbound\.mjs$/.test(process.argv[1] ?? "")
+)
   inspect(process.env).catch((error) =>
     console.log(
       JSON.stringify({
