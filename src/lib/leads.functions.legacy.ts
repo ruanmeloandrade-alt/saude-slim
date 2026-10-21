@@ -2086,6 +2086,33 @@ export const listLeadCustomFields = createServerFn({ method: "GET" })
     return { fields };
   });
 
+/** Saves definition changes together; any failure rolls back the entire edit. */
+export const saveLeadCustomFields = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((d: unknown) => {
+    const field = z.object({
+      id: z.string().uuid(),
+      name: z.string().trim().min(1).max(120),
+      fieldType: z.string().trim().min(1).max(40),
+      options: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
+    });
+    return z.object({
+      deletedIds: z.array(z.string().uuid()).max(500),
+      updated: z.array(field).max(500),
+      created: z.array(field).max(500),
+    }).parse(d);
+  })
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase as unknown as AnySb;
+    await loadActiveWorkspace(sb, context.userId);
+    const { data: result, error } = await sb.rpc("slim_save_custom_fields", {
+      p_deleted_ids: data.deletedIds, p_updated: data.updated, p_created: data.created,
+    });
+    if (error) throw new Error(error.message);
+    if (!(result as { ok?: boolean } | null)?.ok) throw new Error("O banco não confirmou os campos personalizados.");
+    return { ok: true };
+  });
+
 /** Cria um campo personalizado na workspace ativa. */
 export const createLeadCustomField = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
