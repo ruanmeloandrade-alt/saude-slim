@@ -16,3 +16,10 @@ Validações específicas: scripts/test-slim-custom-fields.mjs PASS (SQL real PG
 Limitações ambientais corrigidas: primeira tentativa de build encontrou finais CRLF nos fontes gerados; checkout normalizado para LF sem alterar conteúdo versionado. Fixture isolada ajustada para referência public.workspace_members com search_path vazio. Consulta inicial de QA exigia owner de workspaces; usada sessão de membro operador válida, conforme autorização nativa. Não se alterou política nem sessão. Scripts prebuild geram fontes em múltiplas áreas; somente os cinco arquivos deste escopo serão entregues.
 
 Build completo npm run build: PASS, exit 0; bateria prebuild, bundle cliente/SSR e servidor Nitro concluídos. Publicação web em andamento. Não houve E2E em navegador por instrução do usuário; callbacks reais e banco autenticado cobrem o fluxo alterado.
+
+
+## Estado final de 21/10/2026
+
+PR #10 integrado na produção GitHub, merge 58d05934196251ac43246c5dacffcdd06fcde986. Migração ativa e validada; atualização da interface AINDA NÃO PUBLICADA. Railway connect_service_source preservando repositório/branch retornou: Deploys have been paused temporarily. Status oficial https://status.railway.com confirma incidente global Dashboard and API unavailable, builds paused em todas as regiões (última atualização observada 11:33 UTC de 21/10). Último deploy web continua 9d53152, de 19/10; quatro serviços existentes saudáveis e nenhuma alteração pendente. Não reiniciar serviços nem mudar infraestrutura para contornar a indisponibilidade.
+
+Retomada: quando Railway liberar builds, publicar o HEAD da branch restauracao/sistema-completo-20261014 no MESMO serviço saude-slim-web; conferir commit implantado, asset InboxPage com confirmação de campos e pós-publicação. Não usar redeploy que reutilize a imagem antiga como se publicasse o código novo. Não houve navegação Chrome nem uso de mouse nesta correção. Sem teste autenticado de interface em produção; tarefa funcionalmente pendente de deploy e validação pós-publicação.
