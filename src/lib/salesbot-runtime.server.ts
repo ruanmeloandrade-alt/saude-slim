@@ -2844,6 +2844,10 @@ async function runAction(
       const { data: field } = await supabaseAdmin.from("lead_custom_fields")
         .select("id, name").eq("id", fieldRef).eq("workspace_id", run.workspace_id).maybeSingle();
       if (!field) return { ok: false, message: "campo pertence a outro workspace" };
+      const { data: priorValue, error: priorError } = await supabaseAdmin.from("lead_custom_field_values")
+        .select("value").eq("workspace_id", run.workspace_id).eq("lead_id", lead.id).eq("field_id", fieldRef).maybeSingle();
+      if (priorError) return { ok: false, message: "Não foi possível conferir o valor atual do campo." };
+      if (customValueToText(priorValue?.value) === value) return { ok: true, message: "O campo já possui esse valor." };
       const { error } = await supabaseAdmin.from("lead_custom_field_values")
         .upsert({
           workspace_id: run.workspace_id,
@@ -2857,6 +2861,10 @@ async function runAction(
       await enqueueLeadAutomationEvent(supabaseAdmin as never, {
         leadId: lead.id, event: "field-updated", workspaceId: run.workspace_id,
         fieldId: fieldRef, fieldName: (field as { name?: string }).name,
+      });
+      await dispatchCustomFieldChanged(supabaseAdmin, {
+        workspaceId: run.workspace_id, leadId: lead.id, fieldId: fieldRef,
+        fieldName: (field as { name?: string }).name, value,
       });
 
       return { ok: true };
@@ -3068,7 +3076,7 @@ async function runAction(
         .map((id) => rows.find((r) => r.id === id))
         .filter((r): r is { id: string; slug?: string; nome?: string } => Boolean(r?.slug));
       if (!found.length) return { ok: false, message: "formulário não encontrado" };
-      const urls = found.map((f) => `${origin}/f/${encodeURIComponent(String(f.slug))}?lead=${lead.id}`);
+      const urls = found.map((f) => `${origin}/f/${encodeURIComponent(String(f.slug))}?leadId=${lead.id}`);
       const template = String(cfg.formularioMensagem ?? "Olá! Preencha por favor:").trim();
       // Legado: se o usuário ainda usa {{url}}, substitui pelo primeiro link.
       const base = template.replace(/\{\{\s*url\s*\}\}/g, urls[0] ?? "");
@@ -3674,12 +3682,13 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
         case "msg-interna": {
           const texto = interpolate(String(b.config.texto ?? ""), lead, run.variables);
           const corpo = texto || "(mensagem interna)";
-          await supabaseAdmin.from("lead_activities").insert({
+          const { error: noteError } = await supabaseAdmin.from("lead_activities").insert({
             workspace_id: run.workspace_id,
             lead_id: lead.id,
             type: "note",
             payload: { text: corpo, by: null, salesbot_run_id: run.id, internal: true },
           });
+          if (noteError) throw new Error("Não foi possível gravar a mensagem interna no histórico do lead.");
 
           // Alerta do sistema no Chat da equipe, para quem foi escolhido no bloco
           try {
@@ -3696,6 +3705,9 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
             };
 
             if (destinoTipo === "setor" && destinoId) {
+              const { data: sector, error: sectorError } = await supabaseAdmin.from("workflow_sectors")
+                .select("id").eq("id", destinoId).eq("workspace_id", run.workspace_id).maybeSingle();
+              if (sectorError || !sector) throw new Error("Setor não encontrado nesta empresa.");
               rows.push({ ...base, sector_id: destinoId, to_user_id: null });
               const { data: membros } = await supabaseAdmin
                 .from("workflow_sector_members")
@@ -3728,15 +3740,20 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
               }
               for (const id of ids) rows.push({ ...base, sector_id: null, to_user_id: id });
             } else if (destinoId) {
+              const { data: member, error: memberError } = await supabaseAdmin.from("workspace_members")
+                .select("user_id").eq("workspace_id", run.workspace_id).eq("user_id", destinoId).maybeSingle();
+              if (memberError || !member) throw new Error("Destinatário não encontrado nesta empresa.");
               rows.push({ ...base, sector_id: null, to_user_id: destinoId });
             }
 
             if (rows.length > 0) {
-              await supabaseAdmin.from("team_messages").insert(rows);
+              const { error: deliveryError } = await supabaseAdmin.from("team_messages").insert(rows);
+              if (deliveryError) throw new Error("Não foi possível entregar o alerta ao Chat da equipe.");
             }
           } catch (err) {
             const msg = err instanceof Error ? err.message : String(err);
             await log(supabaseAdmin, run, b, "error", `alerta interno não entregue: ${msg}`);
+            break;
           }
 
           await log(supabaseAdmin, run, b, "ok");
@@ -3785,6 +3802,7 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
                 const lastMedia = mediaKind === null
                   ? undefined
                   : findLatestSentMedia(run.variables.salesbot_last_sent_media, mediaKind);
+                if (mediaKind && !lastMedia?.messageId) throw new Error("Envie a mídia neste fluxo antes de aguardar a confirmação do WhatsApp.");
                 waitingEvents.push({
                   type: tipo,
                   nextBlockId: branchNext ?? null,
@@ -3795,7 +3813,7 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
 
               if (tipo === "exceto-expediente" || tipo === "exceto-fora-expediente") {
                 const inHours = isBusinessHoursNow(bhCfg);
-                const mayRunNow = (tipo === "exceto-expediente" && inHours) || (tipo === "exceto-fora-expediente" && !inHours);
+                const mayRunNow = (tipo === "exceto-expediente" && !inHours) || (tipo === "exceto-fora-expediente" && inHours);
                 if (mayRunNow) {
                   nextId = branchNext;
                   resolvedByPausa = true;
@@ -3803,7 +3821,7 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
                   break;
                 }
                 setTimerCandidate(
-                  tipo === "exceto-expediente" ? nextBusinessHoursStart(bhCfg) : nextBusinessHoursEnd(bhCfg),
+                  tipo === "exceto-expediente" ? nextBusinessHoursEnd(bhCfg) : nextBusinessHoursStart(bhCfg),
                   branchNext,
                 );
                 continue;
@@ -3941,12 +3959,12 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
           }
           if (tipo === "exceto-expediente" || tipo === "exceto-fora-expediente") {
             const inHours = isBusinessHoursNow(bhCfg);
-            const mayRunNow = (tipo === "exceto-expediente" && inHours) || (tipo === "exceto-fora-expediente" && !inHours);
+            const mayRunNow = (tipo === "exceto-expediente" && !inHours) || (tipo === "exceto-fora-expediente" && inHours);
             if (mayRunNow) {
               await log(supabaseAdmin, run, b, "ok", `fora da exceção (${tipo})`);
               break;
             }
-            const until = (tipo === "exceto-expediente" ? nextBusinessHoursStart(bhCfg) : nextBusinessHoursEnd(bhCfg)).toISOString();
+            const until = (tipo === "exceto-expediente" ? nextBusinessHoursEnd(bhCfg) : nextBusinessHoursStart(bhCfg)).toISOString();
             await supabaseAdmin.from("salesbot_runs")
               .update({ status: "waiting_timer", waiting_until: until, current_block_id: b.id })
               .eq("id", run.id);
@@ -3995,6 +4013,7 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
           if (tipo === "video-aberto" || tipo === "video-fechado" || tipo === "audio-aberto" || tipo === "audio-fechado") {
             const mediaKind = tipo.startsWith("video") ? "video" : "audio";
             const lastMedia = findLatestSentMedia(run.variables.salesbot_last_sent_media, mediaKind);
+            if (!lastMedia?.messageId) throw new Error("Envie a mídia neste fluxo antes de aguardar a confirmação do WhatsApp.");
             const waitBranch = {
               blockId: b.id,
               waitingEvents: [{
@@ -4248,23 +4267,14 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
           }
           // Contador atômico no banco (tabela própria): não é sobrescrito pelo
           // autosave do editor e não sofre corrida entre leads simultâneos.
-          let pickIdx = 0;
           const { data: rr, error: rrErr } = await supabaseAdmin.rpc("salesbot_rr_next", {
             _block_id: b.id,
             _size: valid.length,
           });
           if (rrErr || rr === null || rr === undefined) {
-            const fallback = Math.max(0, Number((b.config as { rrCounter?: number }).rrCounter ?? 0));
-            pickIdx = fallback % valid.length;
-            await supabaseAdmin.from("salesbot_blocks")
-              .update({
-                config: { ...(b.config as Record<string, unknown>), rrCounter: (fallback + 1) % 1_000_000 },
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", b.id);
-          } else {
-            pickIdx = Number(rr) % valid.length;
+            throw new Error("Não foi possível reservar a próxima saída da distribuição.");
           }
+          const pickIdx = Number(rr) % valid.length;
           const chosen = valid[pickIdx];
           nextId = chosen.nextBlockId ?? null;
           await log(supabaseAdmin, run, b, "ok", `distribuição → ${chosen.label ?? `opção ${pickIdx + 1}`}`, { pickIdx, chosenId: chosen.id });
@@ -4856,7 +4866,7 @@ export async function resumeRunsOnMediaEvent(
       : [];
     const matched = waitingEvents.find((event) =>
       acceptedTypes.has(event.type)
-      && (!event.messageId || event.messageId === params.messageId),
+      && typeof event.messageId === "string" && !!event.messageId && event.messageId === params.messageId,
     );
     if (!matched) continue;
 

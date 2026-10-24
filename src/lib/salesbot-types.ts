@@ -787,13 +787,14 @@ const BLOCK_KINDS_SOCIAL_COMENTARIO: BlockKind[] = [
 ];
 
 export function filterBlockCatalogByScope(scope: SalesbotEscopo): typeof BLOCK_CATALOG {
+ const available = BLOCK_CATALOG.filter((b) => b.kind !== "enviar-dm" && b.kind !== "comentario");
  if (scope === "grupo") {
-  return BLOCK_CATALOG.filter((b) => !BLOCK_KINDS_HIDDEN_FOR_GROUP.includes(b.kind));
+  return available.filter((b) => !BLOCK_KINDS_HIDDEN_FOR_GROUP.includes(b.kind));
  }
  if (scope === "social-comentario") {
-  return BLOCK_CATALOG.filter((b) => BLOCK_KINDS_SOCIAL_COMENTARIO.includes(b.kind));
+  return available.filter((b) => BLOCK_KINDS_SOCIAL_COMENTARIO.includes(b.kind));
  }
- return BLOCK_CATALOG.filter((b) => !BLOCK_KINDS_ONLY_GROUP.includes(b.kind));
+ return available.filter((b) => !BLOCK_KINDS_ONLY_GROUP.includes(b.kind));
 }
 
 export const ACAO_OPCOES: { value: AcaoTipo; label: string }[] = [
@@ -826,11 +827,12 @@ const ACOES_GRUPO: AcaoTipo[] = [
 ];
 
 export function filterAcoesByScope(scope: SalesbotEscopo): typeof ACAO_OPCOES {
+ const available = ACAO_OPCOES.filter((a) => a.value !== "enviar-email");
  if (scope === "grupo") {
-  return ACAO_OPCOES.filter((a) => ACOES_GRUPO.includes(a.value));
+  return available.filter((a) => ACOES_GRUPO.includes(a.value));
  }
  // 1-a-1: esconde ações exclusivas de grupo
- return ACAO_OPCOES.filter((a) => a.value !== "enviar-privado" && a.value !== "notificar-admins");
+ return available.filter((a) => a.value !== "enviar-privado" && a.value !== "notificar-admins");
 }
 
 export const VALIDACAO_OPCOES: { value: ValidacaoTipo; label: string }[] = [

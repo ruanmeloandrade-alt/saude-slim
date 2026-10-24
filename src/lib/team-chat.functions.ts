@@ -50,6 +50,7 @@ export interface TeamConversationDTO {
   lastMessage?: string | null;
   lastAt?: string | null;
   unread: number;
+  system?: boolean;
 }
 
 export const listTeamConversations = createServerFn({ method: "POST" })
@@ -64,7 +65,7 @@ export const listTeamConversations = createServerFn({ method: "POST" })
       await Promise.all([
         supabase
           .from("workflow_sectors")
-          .select("id, name, color, manager_id, position")
+          .select("id, name, color, position")
           .eq("workspace_id", workspaceId)
           .order("position", { ascending: true }),
         supabase
@@ -87,8 +88,7 @@ export const listTeamConversations = createServerFn({ method: "POST" })
       id: string;
       name: string;
       color: string | null;
-      manager_id: string | null;
-    }>).filter((s) => admin || mySectorIds.has(s.id) || s.manager_id === userId);
+    }>).filter((s) => admin || mySectorIds.has(s.id));
 
     const userRows = ((users ?? []) as Array<{ id: string; name: string; email: string }>).filter(
       (u) => u.id !== userId,
@@ -119,7 +119,7 @@ export const listTeamConversations = createServerFn({ method: "POST" })
     }>) {
       const key = m.sector_id
         ? `sector:${m.sector_id}`
-        : `dm:${m.from_user_id === userId ? m.to_user_id : m.from_user_id}`;
+        : `dm:${m.from_user_id === null ? userId : m.from_user_id === userId ? m.to_user_id : m.from_user_id}`;
       const cur = stats.get(key) ?? { last: m.body, lastAt: m.created_at, unread: 0 };
       const lastRead = readMap.get(key);
       const isMine = m.from_user_id === userId;
@@ -159,6 +159,12 @@ export const listTeamConversations = createServerFn({ method: "POST" })
       };
     });
 
+    const systemStats = stats.get(`dm:${userId}`);
+    if (systemStats) dmConversations.unshift({
+      key: `dm:${userId}`, kind: "dm", id: userId, name: "Alertas do sistema",
+      subtitle: "Mensagens internas dos SalesBots", system: true,
+      lastMessage: systemStats.last, lastAt: systemStats.lastAt, unread: systemStats.unread,
+    });
     return {
       workspaceId,
       isAdmin: admin,
@@ -191,11 +197,13 @@ export const listTeamMessages = createServerFn({ method: "POST" })
 
     if (data.kind === "sector") {
       q = q.eq("sector_id", data.targetId);
+    } else if (data.targetId === userId) {
+      q = q.is("sector_id", null).is("from_user_id", null).eq("to_user_id", userId);
     } else {
       q = q
         .is("sector_id", null)
         .or(
-          `and(from_user_id.eq.${userId},to_user_id.eq.${data.targetId}),and(from_user_id.eq.${data.targetId},to_user_id.eq.${userId}),and(from_user_id.is.null,to_user_id.eq.${userId})`,
+          `and(from_user_id.eq.${userId},to_user_id.eq.${data.targetId}),and(from_user_id.eq.${data.targetId},to_user_id.eq.${userId})`,
         );
     }
 
@@ -243,6 +251,7 @@ export const sendTeamMessage = createServerFn({ method: "POST" })
     const { supabase, userId } = context as unknown as Ctx;
     const workspaceId = await resolveWorkspace({ supabase, userId });
 
+    if (data.kind === "dm" && data.targetId === userId) throw new Error("Alertas do sistema são somente para leitura.");
     const { error } = await supabase.from("team_messages").insert({
       workspace_id: workspaceId,
       sector_id: data.kind === "sector" ? data.targetId : null,

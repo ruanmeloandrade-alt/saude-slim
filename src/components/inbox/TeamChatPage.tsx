@@ -75,7 +75,7 @@ export function TeamChatPage({ selectedKey }: { selectedKey?: string }) {
 
   const sendM = useMutation({
     mutationFn: async (body: string) => {
-      if (!active) return;
+      if (!active || active.system) return;
       await sendMsg({ data: { kind: active.kind, targetId: active.id, body } });
     },
     onSuccess: () => {
@@ -284,7 +284,7 @@ export function TeamChatPage({ selectedKey }: { selectedKey?: string }) {
               </div>
             </div>
 
-            <form
+            {active.system ? <p className="p-3 border-t border-border text-center text-xs text-muted-foreground">Alertas internos dos SalesBots. O cliente não recebe estas mensagens.</p> : <form
               className="p-3 border-t border-border bg-card/30"
               onSubmit={(e) => {
                 e.preventDefault();
@@ -315,7 +315,7 @@ export function TeamChatPage({ selectedKey }: { selectedKey?: string }) {
                   <Send className="w-4 h-4" /> <span className="hidden sm:inline">{sendM.isPending ? "Enviando" : "Enviar"}</span>
                 </button>
               </div>
-            </form>
+            </form>}
           </>
         )}
       </section>
