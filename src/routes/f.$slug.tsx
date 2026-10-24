@@ -3,7 +3,8 @@ import { z } from "zod";
 
 const searchSchema = z.object({
   leadId: z.string().uuid().optional(),
-});
+  lead: z.string().uuid().optional(),
+}).transform(({ leadId, lead }) => ({ leadId: leadId ?? lead }));
 
 // Rota legada: /f/<slug>, redireciona pro caminho curto /l/<slug>
 // pra manter links já enviados aos leads funcionando.
