@@ -4019,7 +4019,7 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
             : [];
           const modoOu = String(b.config.condicaoModo ?? "e") === "ou";
           const falseNext = (b.config.falseNextBlockId as string | undefined) ?? null;
-          if (modoOu && conds.length > 1) {
+          if (modoOu) {
             // Cada condição tem seu próprio caminho: a primeira que bater define a saída.
             let matched: Record<string, unknown> | null = null;
             for (const c of conds) {
