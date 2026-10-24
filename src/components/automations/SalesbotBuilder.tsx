@@ -730,6 +730,18 @@ export function SalesbotBuilder({ open, onClose, initialBotId, autoCreate, escop
               return { ...x, falseNextBlockId: undefined };
             }
             if (optionId) {
+              if (x.kind === "condicao" && x.condicaoModo === "ou") {
+                // Materialize inherited paths before removing one branch. Otherwise
+                // its cable immediately reconnects through the shared fallback.
+                return {
+                  ...x,
+                  nextBlockId: undefined,
+                  condicoes: (x.condicoes ?? []).map((c) => ({
+                    ...c,
+                    nextBlockId: c.id === optionId ? undefined : c.nextBlockId ?? x.nextBlockId,
+                  })),
+                };
+              }
               return {
                 ...x,
                 roleta: (x.roleta ?? []).map((o) =>
@@ -1861,7 +1873,7 @@ function computeFlow(blocks: Block[], startBlockId?: string, rowOffsets: Record<
   if (b.kind === "condicao") {
    const conds = b.condicoes ?? [];
    const modoOu = (b.condicaoModo ?? "e") === "ou";
-   if (modoOu && conds.length > 1) {
+   if (modoOu) {
     // Modo OU: cada condição tem seu próprio caminho.
     conds.forEach((c, idx) => {
      const oy = rowY(b, c.id, idx);
@@ -4009,7 +4021,7 @@ function CondicaoEditor({ block, onChange }: { block: Block; onChange: (p: Parti
        />
       )}
      </div>
-     {modo === "ou" && condicoes.length > 1 && (
+     {modo === "ou" && (
       <div className="text-[10px] text-slate-500 leading-snug">
        Esta condição tem o cabo de saída dela. Se bater, o bot segue por este caminho.
       </div>
@@ -4018,7 +4030,7 @@ function CondicaoEditor({ block, onChange }: { block: Block; onChange: (p: Parti
     </RowMeasure>
     );
    })}
-   {!(modo === "ou" && condicoes.length > 1) && (
+   {modo !== "ou" && (
     <RowMeasure blockId={block.id} optionId="__true__">
      <div className="rounded-md border border-emerald-700/50 bg-emerald-900/10 p-2">
       <span className="text-[10px] uppercase tracking-wide text-emerald-400">
