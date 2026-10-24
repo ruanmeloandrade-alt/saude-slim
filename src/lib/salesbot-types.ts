@@ -501,7 +501,6 @@ export const GATILHO_CATALOG: GatilhoCatalogItem[] = [
  { kind: "campo-alterado", label: "Campo personalizado alterado", desc: "Dispara quando um campo personalizado do lead muda.", area: "crm" },
  { kind: "crm-lead-ganho", label: "Lead marcado como ganho", desc: "Dispara quando o lead é marcado como venda concluída.", area: "crm" },
  { kind: "crm-lead-perdido", label: "Lead marcado como perdido", desc: "Dispara quando o lead é encerrado como perdido.", area: "crm" },
- { kind: "formulario-enviado", label: "Formulário do CRM enviado", desc: "Dispara quando um formulário público é submetido.", area: "crm" },
  // Gestor de tráfego (Meta Ads)
  { kind: "trafego-lead-anuncio", label: "Meta Ads: Novo lead de anúncio", desc: "Dispara quando um Lead Ad da Meta (Facebook/Instagram) chega ao workspace.", area: "trafego" },
  { kind: "trafego-campanha-status", label: "Meta Ads: Campanha publicada / pausada", desc: "Dispara quando uma campanha da Meta muda de status.", area: "trafego" },
@@ -524,7 +523,6 @@ export const GATILHO_CATALOG: GatilhoCatalogItem[] = [
  { kind: "tracking-conversao", label: "Conversão capturada", desc: "Dispara quando o pixel/tracking registra uma conversão.", area: "tracking" },
  { kind: "tracking-visita-quente", label: "Visita quente ao site", desc: "Dispara em visitas repetidas ou de alto interesse.", area: "tracking" },
  { kind: "tracking-primeiro-acesso", label: "Primeiro acesso ao site", desc: "Dispara quando um visitante acessa o site pela primeira vez.", area: "tracking" },
- { kind: "tracking-abandono-formulario", label: "Abandono de formulário", desc: "Dispara quando o visitante começa a preencher um formulário e sai antes de enviar.", area: "tracking" },
  // Webhooks
  { kind: "webhook", label: "Webhook recebido", desc: "Dispara quando chega um POST na URL configurada.", area: "webhooks" },
  { kind: "webhook-enviado", label: "Webhook enviado", desc: "Dispara quando o sistema envia um webhook para um serviço externo.", area: "webhooks" },
@@ -805,7 +803,6 @@ export const ACAO_OPCOES: { value: AcaoTipo; label: string }[] = [
  { value: "definir-campo", label: "Definir campo" },
  { value: "enviar-email", label: "Enviar e-mail" },
  { value: "webhook", label: "Enviar webhook" },
- { value: "formulario", label: "Enviar formulário" },
  { value: "tags", label: "Gerenciar tags" },
  { value: "mudar-status-lead", label: "Mudar status do lead" },
  { value: "mudar-responsavel", label: "Mudar usuário responsável" },
@@ -856,7 +853,6 @@ export const VALIDACAO_OPCOES: { value: ValidacaoTipo; label: string }[] = [
 export const PAUSA_OPCOES: { value: PausaTipo; label: string }[] = [
   { value: "cronometro", label: "Cronômetro (esperar tempo)" },
   { value: "msg-recebida", label: "Resposta do cliente" },
-  { value: "formulario-enviado", label: "Envio de formulário" },
   { value: "lote-msgs", label: "Lote de mensagens (grupos)" },
   { value: "ate-expediente", label: "Até início do expediente" },
   { value: "ate-fora-expediente", label: "Até fim do expediente" },

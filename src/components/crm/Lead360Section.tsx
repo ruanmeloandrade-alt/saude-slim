@@ -282,55 +282,6 @@ export function Lead360Section({ leadId }: { leadId: string }) {
         )}
       </Block>
 
-      {/* Formulários */}
-      <Block icon={FileText} title="Formulários" count={d.totals.formularios}>
-        {/* Menu de formulários preenchidos (Visão 360) */}
-        {d.allForms && d.allForms.length > 0 && (
-          <div className="pb-2">
-            <div className="text-[10px] uppercase tracking-wider mb-1 px-1" style={{ color: "var(--chat-meta)" }}>Formulários da conta</div>
-            <div className="flex flex-col gap-1">
-              {d.allForms.map((f: { id: string; nome: string }) => {
-                const submission = d.forms.find(s => s.formId === f.id);
-                return (
-                  <div key={f.id} className="flex flex-col gap-1 p-2 rounded-md border" style={{ borderColor: "var(--chat-divider)", backgroundColor: "var(--chat-panel-hover)" }}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-medium" style={{ color: "var(--chat-text)" }}>{f.nome}</span>
-                      {submission ? (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400">Preenchido</span>
-                      ) : (
-                        <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-slate-500/10 text-slate-500">Pendente</span>
-                      )}
-                    </div>
-                    {submission && (
-                      <div className="text-[10px] space-y-0.5" style={{ color: "var(--chat-meta)" }}>
-                        {Object.entries(submission.values).slice(0, 5).map(([k, v]) => (
-                          <div key={k} className="truncate"><span className="font-medium">{k}:</span> {v}</div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        {d.forms.length === 0 && (!d.allForms || d.allForms.length === 0) && <div className={emptyTxt} style={{ color: "var(--chat-meta)" }}>Nenhum envio.</div>}
-        <div className="text-[10px] uppercase tracking-wider mt-2 mb-1 px-1" style={{ color: "var(--chat-meta)" }}>Últimos envios</div>
-        {d.forms.map((f) => (
-          <div key={f.id} className="rounded-md px-2 py-1.5" style={{ backgroundColor: "var(--chat-bg)" }}>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-xs truncate" style={{ color: "var(--chat-text)" }}>{f.formName}</span>
-              <span className="text-[10px]" style={{ color: "var(--chat-meta)" }}>{fmtDate(f.submittedAt)}</span>
-            </div>
-            <div className="text-[10px] mt-0.5 space-y-0.5" style={{ color: "var(--chat-meta)" }}>
-              {Object.entries(f.values).slice(0, 4).map(([k, v]) => (
-                <div key={k} className="truncate">{k}: {v}</div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </Block>
-
       {/* Arquivos */}
       <Block icon={Paperclip} title="Arquivos" count={d.totals.arquivos}>
         {d.files.length === 0 && <div className={emptyTxt} style={{ color: "var(--chat-meta)" }}>Nenhum arquivo recebido.</div>}

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, notFound } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { z } from "zod";
 import { useServerFn } from "@tanstack/react-start";
@@ -12,6 +12,9 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/l/$slug")({
+  beforeLoad: () => {
+    throw notFound();
+  },
   head: ({ params }) => ({
     meta: [
       { title: `Formulário · ${params.slug} · MKTOn` },

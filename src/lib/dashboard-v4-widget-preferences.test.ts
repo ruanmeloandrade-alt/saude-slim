@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   clearDashboardV4WidgetMetric,
   dashboardV4PreferencesStorageKey,
-  filterDashboardForms,
   filterDashboardFunnel,
   getDashboardV4KpiOptions,
   getDashboardV4WidgetMetric,
@@ -56,16 +55,14 @@ describe("Dashboard V4 widget preferences", () => {
     expect(filterDashboardFunnel(rows, null)).toEqual(rows);
   });
 
-  it("supports multi-select forms and preserves all-forms as the default", () => {
-    const forms = [{ id: "a" }, { id: "b" }, { id: "c" }];
-    expect(filterDashboardForms(forms, ["a", "c"])).toEqual([{ id: "a" }, { id: "c" }]);
-    expect(filterDashboardForms(forms, null)).toEqual(forms);
-    expect(filterDashboardForms(forms, [])).toEqual([]);
+  it("keeps the retired forms widget hidden regardless of saved preferences", () => {
+    expect(isWidgetHidden(emptyPreferences, "forms")).toBe(true);
+    expect(isWidgetHidden(setWidgetHidden(emptyPreferences, "forms", false), "forms")).toBe(true);
   });
 
-  it("deduplicates hidden widgets and selected forms", () => {
-    expect(normalizeDashboardV4Preferences({ hiddenWidgetIds: ["forms", "forms"], funnelName: null, formIds: ["a", "a", "b"] })).toEqual({
-      hiddenWidgetIds: ["forms"],
+  it("deduplicates hidden widgets and preserves legacy selections", () => {
+    expect(normalizeDashboardV4Preferences({ hiddenWidgetIds: ["seller-ranking", "seller-ranking"], funnelName: null, formIds: ["a", "a", "b"] })).toEqual({
+      hiddenWidgetIds: ["seller-ranking"],
       funnelName: null,
       formIds: ["a", "b"],
       kpiMetricByWidget: {},
