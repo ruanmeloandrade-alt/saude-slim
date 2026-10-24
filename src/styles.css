@@ -13,6 +13,32 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Rolagem discreta somente nas listas de leads das etapas do funil. */
+.slim-funnel-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 35%, transparent) transparent;
+}
+.slim-funnel-scrollbar:hover {
+  scrollbar-color: color-mix(in oklab, var(--muted-foreground) 60%, transparent) transparent;
+}
+.slim-funnel-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.slim-funnel-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.slim-funnel-scrollbar::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted-foreground) 35%, transparent);
+  border-radius: 999px;
+}
+.slim-funnel-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--muted-foreground) 60%, transparent);
+}
+.slim-funnel-scrollbar::-webkit-scrollbar-button {
+  display: none;
+}
+
 /*
  * Design system definition.
  *
