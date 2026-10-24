@@ -3148,7 +3148,7 @@ function StageColumn({
 
 
  {/* Body */}
-  <div className={cn("flex-1 p-2 space-y-2 min-h-0 custom-scrollbar", isAutomatize ? "overflow-visible" : "overflow-y-auto")}>
+  <div className={cn("flex-1 p-2 space-y-2 min-h-0 slim-funnel-scrollbar", isAutomatize ? "overflow-visible" : "overflow-y-auto")}>
  {isAutomatize? (
  <>
  {actions.length === 0? (
