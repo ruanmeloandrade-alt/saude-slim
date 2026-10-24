@@ -131,7 +131,6 @@ export const DASHBOARD_V4_WIDGETS = [
   ["product-catalog", "Catálogo ativo"],
   ["product-sales", "Vendas por produto"],
   ["companies", "Empresas"],
-  ["forms", "Formulários"],
   ["tags", "Tags"],
   ["custom-fields", "Campos personalizados"],
   ["tracking-events", "Eventos Tracking"],
@@ -247,7 +246,7 @@ export function setWidgetHidden(preferences: DashboardV4WidgetPreferences, widge
 }
 
 export function isWidgetHidden(preferences: DashboardV4WidgetPreferences, widgetId: string) {
-  return preferences.hiddenWidgetIds.includes(widgetId);
+  return widgetId === "forms" || preferences.hiddenWidgetIds.includes(widgetId);
 }
 
 export function filterDashboardFunnel<T extends { funnelName: string }>(rows: T[], funnelName: string | null): T[] {

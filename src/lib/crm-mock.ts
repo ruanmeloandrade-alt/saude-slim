@@ -254,7 +254,6 @@ export const TRIGGER_CATALOG: TriggerCatalogItem[] = [
  { id: "alterar-user", title: "Alterar usuário do lead", channel: "user", group: "CRM", description: "Reatribui o lead a outro vendedor." },
  { id: "alterar-campo", title: "Alterar campo", channel: "campo", group: "CRM", description: "Atualiza um campo padrão ou personalizado." },
  { id: "excluir-lead", title: "Excluir lead", channel: "lead", group: "CRM", description: "Remove o lead permanentemente ao entrar na etapa." },
- { id: "gerar-form", title: "Gerar formulário", channel: "form", group: "Dados", description: "Envia um formulário da Central de Formulários pro lead preencher." },
   { id: "deletar-arquivos", title: "Deletar arquivos", channel: "arquivo", group: "Dados", description: "Limpa arquivos do lead segundo classificação (Central de Arquivos)." },
   { id: "vincular-produto", title: "Vincular produto", channel: "campo", group: "Dados", description: "Associa um produto do catálogo ao lead no CRM (interesse ou compra)." },
   // Webhooks, preset family

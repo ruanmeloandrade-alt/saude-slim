@@ -491,7 +491,6 @@ const RULE_ACTIONS: Array<{ id: string; label: string; needsTarget: boolean; tar
   { id: "trocar-etapa", label: "Trocar etapa do funil", needsTarget: true, targetLabel: "Etapa do funil" },
   { id: "transferir-humano", label: "Transferir para usuário", needsTarget: true, targetLabel: "Usuário/atendente" },
   { id: "iniciar-bot", label: "Iniciar salesbot", needsTarget: true, targetLabel: "Salesbot" },
-  { id: "enviar-formulario", label: "Enviar formulário", needsTarget: true, targetLabel: "Formulário" },
   { id: "enviar-arquivo", label: "Enviar arquivo", needsTarget: true, targetLabel: "Arquivo" },
   { id: "adicionar-tag", label: "Adicionar tag", needsTarget: true, targetLabel: "Tag" },
   { id: "criar-tarefa", label: "Criar tarefa", needsTarget: true, targetLabel: "Descrição" },
