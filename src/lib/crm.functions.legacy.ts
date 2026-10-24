@@ -821,6 +821,7 @@ export const saveStageAutomations = createServerFn({ method: "POST" })
  .inputValidator((d: unknown) => z.object({
   pipelineId: z.string().uuid(),
   automations: z.record(z.string(), z.array(z.unknown())),
+  applyRequestId: z.string().uuid().optional(),
  }).parse(d))
  .handler(async ({ data, context }) => {
   const sb = context.supabase as unknown as AnySb;
@@ -834,9 +835,10 @@ export const saveStageAutomations = createServerFn({ method: "POST" })
   if (pipelineErr) throw new Error(pipelineErr.message);
   if (!pipeline) throw new Error("Funil não encontrado neste workspace.");
 
+  const persistedAutomations = Object.fromEntries(Object.entries(data.automations).map(([stageId,list])=>[stageId,list.map(raw=>{const action=raw as AutomationAction;return {...action,...(action.execution?{execution:{...action.execution,applyToExisting:false}}:{}),applyToExisting:false};})]));
   const { data: count, error } = await sb.rpc("replace_crm_stage_automations", {
    _pipeline_id: data.pipelineId,
-   _automations: data.automations,
+   _automations: persistedAutomations,
   });
   if (error) throw new Error(error.message ?? "Falha ao salvar automações.");
 
@@ -845,12 +847,13 @@ export const saveStageAutomations = createServerFn({ method: "POST" })
   let backfilled = 0;
   try {
    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-   const { backfillAutomationAction } = await import("@/lib/stage-automation-engine.server");
+   const { backfillAutomationAction, scheduleStageTimerActions } = await import("@/lib/stage-automation-engine.server");
+   await scheduleStageTimerActions(supabaseAdmin as never,true,{workspaceId:wsId,pipelineId:data.pipelineId});
    const done = new Set<string>();
    for (const [stageId, list] of Object.entries(data.automations)) {
     for (const raw of (list ?? []) as Array<Record<string, unknown>>) {
-     const action = raw as { id?: string; applyToExisting?: boolean; stageIds?: string[]; enabled?: boolean };
-     if (!action?.id || !action.applyToExisting || action.enabled === false) continue;
+     const action = raw as { id?: string; applyToExisting?: boolean; execution?: {applyToExisting?:boolean}; stageIds?: string[]; enabled?: boolean };
+     if (!action?.id || !(action.execution?.applyToExisting || action.applyToExisting) || action.enabled === false) continue;
      if (done.has(action.id)) continue;
      done.add(action.id);
      const stageIds = action.stageIds && action.stageIds.length > 0 ? action.stageIds : [stageId];
@@ -859,12 +862,13 @@ export const saveStageAutomations = createServerFn({ method: "POST" })
       pipelineId: data.pipelineId,
       action: raw as never,
       stageIds,
+      requestId: data.applyRequestId,
      });
      backfilled += r.queued;
     }
    }
   } catch (e) {
-   console.error("backfill de gatilhos", e);
+   throw new Error(`As configurações foram gravadas, mas a aplicação aos leads falhou: ${e instanceof Error ? e.message : String(e)}`);
   }
 
   return { ok: true, count: Number(count ?? 0), backfilled };
