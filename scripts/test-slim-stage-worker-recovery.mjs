@@ -90,7 +90,7 @@ const db={
   return {data:await rows('SELECT * FROM '+identifier(name)+'($1)',[arg]),error:null};
  },
 };
-const enqueue=new Function('loadLeadCtx','isAutomationConfigured','scheduleDelayMinutes','shouldRunForEvent','runJobById',compile('enqueueLeadAutomationEvent')+';return enqueueLeadAutomationEvent;')(
+const enqueue=new Function('loadLeadCtx','isAutomationConfigured','scheduleDelayMinutes','shouldRunForEvent','runJobById',"const stageDueAt=()=>Date.now(), normalizeTrigger=()=>({kind: \"created-or-moved\"}), STAGE_TIMER_KINDS=[], stageReminderTarget=()=>undefined;"+compile('enqueueLeadAutomationEvent')+';return enqueueLeadAutomationEvent;')(
  async()=>({id:leadId,workspaceId:ws,stageId:stage,pipelineId:pipeline}),isAutomationConfigured,()=>0,matches,async()=>{inline++;return {ok:true};},
 );
 const runClaimedJob=new Function('runJob',compile('runJobById')+';return runJobById;')(async()=>{executions++;return {ok:true};});

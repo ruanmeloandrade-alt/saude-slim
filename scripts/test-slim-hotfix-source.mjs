@@ -39,7 +39,7 @@ const compiled=ts.transpileModule(fn.getText(ast).replace(/^export\s+/,''),{comp
 await test('real enqueue persists an immediate SalesBot job without inline execution',async()=>{
  const calls=[],action={id:'configured-action',title:'SalesBot',enabled:true,config:{kind:'salesbot',botId:'configured-bot'},execution:{delayMinutes:0},stageIds:['stage']};let executed=0;
  const db={from(table){let value;const q={select(){return q;},eq(){return q;},order(){return q;},insert(v){value=v;calls.push(v);return q;},maybeSingle:async()=>({data:{id:'job'},error:null}),then(a,b){return Promise.resolve({data:[{stage_id:'stage',action,enabled:true}],error:null}).then(a,b);}};return q;}};
- const run=new Function('loadLeadCtx','isAutomationConfigured','scheduleDelayMinutes','shouldRunForEvent','runJobById',compiled+';return enqueueLeadAutomationEvent;')(
+ const run=new Function('loadLeadCtx','isAutomationConfigured','scheduleDelayMinutes','shouldRunForEvent','runJobById',"const stageDueAt=()=>Date.now(), normalizeTrigger=()=>({kind: \"created-or-moved\"}), STAGE_TIMER_KINDS=[], stageReminderTarget=()=>undefined;"+compiled+';return enqueueLeadAutomationEvent;')(
   async()=>({id:'lead',workspaceId:'ws',stageId:'stage',pipelineId:'pipeline'}),()=>true,()=>0,()=>true,async()=>{executed++;return {ok:true};});
  const r=await run(db,{leadId:'lead',workspaceId:'ws',event:'moved',eventId:'stable-event',deferExecution:true});assert.equal(executed,0);assert.equal(calls.length,1);assert.equal(calls[0].dedupe_key,'configured-action:stable-event');assert.equal(calls[0].status,'pending');assert.equal(r[0].ok,true);assert(r[0].queuedFor);
 });

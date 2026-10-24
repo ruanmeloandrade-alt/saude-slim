@@ -36,6 +36,7 @@ edit('src/lib/stage-automation-engine.server.ts',({range,once})=>{
  return runJob(admin,job as JobRow);
 }\n\n`);
  range('export async function tickStageAutomationJobs(', 'async function logActivity(',`export async function tickStageAutomationJobs(admin:AnySb,limit=100):Promise<{processed:number;failed:number}>{
+ await scheduleStageTimerActions(admin);
  const {data,error}=await admin.from("crm_automation_jobs").select("id").eq("status","pending").lte("due_at",new Date().toISOString()).order("due_at").limit(limit);
  if(error)throw new Error("Não foi possível ler a fila de automações.");
  let processed=0,failed=0;for(const job of data??[]){const r=await runJobById(admin,job.id);if(!r.skipped)processed++;if(!r.ok)failed++;}
