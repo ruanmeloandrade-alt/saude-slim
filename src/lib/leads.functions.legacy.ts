@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { leadCustomFieldInput, leadCustomFieldRecord } from "@/lib/lead-custom-field-schema";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 import { loadEffectivePermissions } from "@/lib/permissions-core.functions";
@@ -2083,19 +2084,14 @@ export const listLeadCustomFields = createServerFn({ method: "GET" })
       fieldType: r.field_type,
       options: Array.isArray(r.options) ? (r.options as unknown[]).map(String) : [],
     }));
-    return { fields };
+    return { fields, workspaceId: wsId, actorId: context.userId };
   });
 
 /** Saves definition changes together; any failure rolls back the entire edit. */
 export const saveLeadCustomFields = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => {
-    const field = z.object({
-      id: z.string().uuid(),
-      name: z.string().trim().min(1).max(120),
-      fieldType: z.string().trim().min(1).max(40),
-      options: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
-    });
+    const field = leadCustomFieldRecord;
     return z.object({
       deletedIds: z.array(z.string().uuid()).max(500),
       updated: z.array(field).max(500),
@@ -2116,27 +2112,21 @@ export const saveLeadCustomFields = createServerFn({ method: "POST" })
 /** Cria um campo personalizado na workspace ativa. */
 export const createLeadCustomField = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z
-      .object({
-        name: z.string().trim().min(1).max(120),
-        fieldType: z.string().trim().min(1).max(40).default("text"),
-        options: z.array(z.string().trim().min(1).max(120)).max(50).default([]),
-      })
-      .parse(d),
-  )
+  .inputValidator((d: unknown) => leadCustomFieldInput.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as unknown as AnySb;
     const wsId = await loadActiveWorkspace(sb, context.userId);
+    const id = data.id ?? globalThis.crypto.randomUUID();
+    const saved = await sb.rpc("slim_save_custom_fields", {
+      p_deleted_ids: [], p_updated: [], p_created: [{ ...data, id }],
+    });
+    if (saved.error) throw new Error(saved.error.message);
+    if (!(saved.data as { ok?: boolean } | null)?.ok) throw new Error("O banco não confirmou a criação do campo.");
     const { data: row, error } = await sb
       .from("lead_custom_fields")
-      .insert({
-        workspace_id: wsId,
-        name: data.name,
-        field_type: data.fieldType,
-        options: data.options,
-      })
       .select("id, name, field_type, options")
+      .eq("workspace_id", wsId)
+      .eq("id", id)
       .single();
     if (error) {
       if (/duplicate|unique/i.test(error.message)) throw new Error("Já existe um campo com esse nome.");

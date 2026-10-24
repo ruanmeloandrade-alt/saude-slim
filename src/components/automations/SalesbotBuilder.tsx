@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { customFieldDraftKey, readCustomFieldDraft, writeCustomFieldDraft, clearCustomFieldDraft } from "@/lib/custom-field-tab-draft";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
@@ -4712,37 +4713,62 @@ import { Button } from "@/components/ui/button";
 function CreateCustomFieldDialog({ 
   open, 
   onOpenChange, 
-  onCreated 
+  onCreated,
+  draftKey = null,
 }: { 
   open: boolean; 
   onOpenChange: (open: boolean) => void;
-  onCreated: (field: { id: string; name: string }) => void;
+  onCreated: (field: { id: string; name: string; fieldType: string; options: string[] }) => void;
+  draftKey?: string | null;
 }) {
-  const [name, setName] = useState("");
-  const [type, setType] = useState("text");
+  const [restored] = useState(() => readCustomFieldDraft(draftKey, { name: "", type: "text", options: "", id: crypto.randomUUID() }));
+  const [name, setName] = useState(restored.name);
+  const [type, setType] = useState(restored.type);
+  const [options, setOptions] = useState(restored.options);
+  const [requestId, setRequestId] = useState(restored.id);
   const createFn = useServerFn(createLeadCustomField);
   const [loading, setLoading] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const createLock = useRef(false);
+  useEffect(() => {
+    if (open) writeCustomFieldDraft(draftKey, { name, type, options, id: requestId });
+  }, [open, draftKey, name, type, options, requestId]);
+  const closeDialog = () => {
+    if (createLock.current) return;
+    clearCustomFieldDraft(draftKey);
+    onOpenChange(false);
+  };
 
   const handleCreate = async () => {
-    if (!name.trim()) return;
+    if (!name.trim() || createLock.current) return;
+    const choices = [...new Set(options.split("\n").map(value => value.trim()).filter(Boolean))];
+    if (["select", "multiselect"].includes(type) && !choices.length) {
+      setSaveError("Adicione as opções do campo de seleção."); return;
+    }
+    createLock.current = true;
+    setSaveError(null);
     setLoading(true);
     try {
-      const res = await createFn({ data: { name, fieldType: type } });
+      const res = await createFn({ data: { id: requestId, name, fieldType: type, options: choices } });
       onCreated(res.field);
+      clearCustomFieldDraft(draftKey);
       onOpenChange(false);
       setName("");
       setType("text");
+      setOptions("");
+      setRequestId(crypto.randomUUID());
       toast.success("Campo personalizado criado.");
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao criar campo.");
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Erro ao criar campo.");
     } finally {
+      createLock.current = false;
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px] bg-slate-900 border-slate-800 text-slate-100">
+    <Dialog open={open} onOpenChange={value => { if (!value) closeDialog(); }}>
+      <DialogContent onPointerDownOutside={event => event.preventDefault()} className="sm:max-w-[400px] bg-slate-900 border-slate-800 text-slate-100">
         <DialogHeader>
           <DialogTitle>Novo campo personalizado</DialogTitle>
         </DialogHeader>
@@ -4771,11 +4797,21 @@ function CreateCustomFieldDialog({
               <option value="phone">Telefone</option>
               <option value="date">Data</option>
               <option value="url">Link / URL</option>
+              <option value="datetime">Data e hora</option>
+              <option value="birthday">Data de nascimento</option>
+              <option value="cpf">CPF</option>
+              <option value="address">Endereço</option>
+              <option value="file">Arquivo</option>
+              <option value="product">Produto</option>
+              <option value="select">Selecionar (1 opção)</option>
+              <option value="multiselect">Selecionar múltiplos</option>
             </select>
+            {["select", "multiselect"].includes(type) && <label className="mt-2 block text-xs">Opções (uma por linha)<textarea value={options} onChange={event => setOptions(event.target.value)} className="mt-1 w-full rounded border border-slate-800 bg-slate-950 p-2" rows={4} /></label>}
           </div>
         </div>
+        {saveError && <p role="alert" className="text-xs text-red-400">{saveError}</p>}
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} className="hover:bg-slate-800 text-slate-400">Cancelar</Button>
+          <Button variant="ghost" onClick={closeDialog} disabled={loading} className="hover:bg-slate-800 text-slate-400">Cancelar</Button>
           <Button onClick={handleCreate} disabled={loading || !name.trim()} className="bg-emerald-600 hover:bg-emerald-700">
             {loading ? "Criando..." : "Criar campo"}
           </Button>
@@ -4787,6 +4823,7 @@ function CreateCustomFieldDialog({
 
 /* ============ Picker: Definir campo (lead / empresa) ============ */
  function CustomFieldPicker({ block, onChange }: { block: Block; onChange: (p: Partial<Block>) => void }) {
+  const queryClient = useQueryClient();
   const [showCreateField, setShowCreateField] = useState(false);
   const listFields = useServerFn(listLeadCustomFields);
   const q = useQuery({
@@ -4796,6 +4833,11 @@ function CreateCustomFieldDialog({
    refetchOnMount: "always",
   });
   const custom: Array<{ id: string; name: string; fieldType: string; options?: string[] }> = q.data?.fields ?? [];
+  const fieldDraftKey = q.isFetchedAfterMount
+    ? customFieldDraftKey(q.data?.actorId, q.data?.workspaceId, `bot-block:${block.id}`) : null;
+  useEffect(() => {
+    if (fieldDraftKey && readCustomFieldDraft(fieldDraftKey, null)) setShowCreateField(true);
+  }, [fieldDraftKey]);
   const entidade: "lead" | "empresa" = block.campoEntidade ?? "lead";
 
  type Target = { ref: string; label: string; fieldType: string; options: string[] };
@@ -4895,10 +4937,13 @@ function CreateCustomFieldDialog({
        </optgroup>
       </select>
       <CreateCustomFieldDialog 
+        key={fieldDraftKey}
+        draftKey={fieldDraftKey}
         open={showCreateField} 
         onOpenChange={setShowCreateField} 
         onCreated={(f) => {
-          q.refetch();
+          queryClient.setQueryData(["lead-custom-fields"], (previous: typeof q.data) => ({ ...previous, fields: [...(previous?.fields ?? []).filter(field => field.id !== f.id), f] }));
+          void q.refetch();
           onChange({
             campoId: f.id,
             campoNome: f.name,

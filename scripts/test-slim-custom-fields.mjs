@@ -55,7 +55,7 @@ function harness(onSaveMain){
  const useState=initial=>{const i=cursor++;if(!(i in state))state[i]=typeof initial==='function'?initial():initial;return[state[i],v=>{state[i]=typeof v==='function'?v(state[i]):v;}];};
  const useRef=initial=>{const i=refCursor++;return refs[i]??(refs[i]={current:initial});};
  const React={createElement:(tag,props,...children)=>({tag,props:props??{},children})};
- const Dialog=Function('React','useState','useRef','toast','X','Plus','Trash2','Save','FIELD_TYPE_LABELS',js+';return CustomFieldsDialog;')(React,useState,useRef,{success(){}},'X','Plus','Trash2','Save',[]);
+ const Dialog=Function('React','useState','useRef','useEffect','readCustomFieldDraft','writeCustomFieldDraft','clearCustomFieldDraft','toast','X','Plus','Trash2','Save','FIELD_TYPE_LABELS',js+';return CustomFieldsDialog;')(React,useState,useRef,()=>{},(_key,fallback)=>fallback,()=>{},()=>{},{success(){}},'X','Plus','Trash2','Save',[]);
  const render=()=>{cursor=refCursor=0;return Dialog({mainFields:[],funnels:[],initialView:'__main__',onSaveMain,onSaveFunnel:async()=>{},onClose:()=>closed++});};
  const find=(node,predicate)=>{if(!node||typeof node!=='object')return null;if(predicate(node))return node;for(const child of (node.children??[]).flat(Infinity)){const result=find(child,predicate);if(result)return result;}return null;};
  return {render,find,get closed(){return closed;}};
@@ -65,7 +65,7 @@ const h=harness(()=>{calls++;return new Promise(r=>resolve=r);});
 let tree=h.render();const saveButton=h.find(tree,n=>n.tag==='button'&&n.props.onClick?.toString().includes('handleSave'));
 saveButton.props.onClick();saveButton.props.onClick();assert.equal(calls,1);assert.equal(h.closed,0);
 tree=h.render();assert.equal(h.find(tree,n=>n.tag==='fieldset').props.disabled,true);
-tree.props.onClick();assert.equal(h.closed,0);resolve();await new Promise(r=>setImmediate(r));assert.equal(h.closed,1);
+tree.props.onClick?.();assert.equal(h.closed,0);resolve();await new Promise(r=>setImmediate(r));assert.equal(h.closed,1);
 const failed=harness(async()=>{throw new Error('database failure');});
 tree=failed.render();failed.find(tree,n=>n.tag==='button'&&n.props.onClick?.toString().includes('handleSave')).props.onClick();
 await new Promise(r=>setImmediate(r));tree=failed.render();assert.equal(failed.closed,0);assert.equal(failed.find(tree,n=>n.props.role==='alert').children[0],'database failure');
