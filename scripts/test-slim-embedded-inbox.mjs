@@ -94,16 +94,26 @@ await check('shared component exports an optional embedded interface and valid T
 });
 
 const chat = functionNode(uiAst, 'ChatThread');
-const header = find(chat, n => ts.isJsxElement(n) && n.openingElement.attributes.properties.some(a => ts.isJsxAttribute(a) && a.name.getText(uiAst) === 'className' && a.initializer?.getText(uiAst).includes('h-16 px-5 flex items-center')));
+const header = find(chat, n => ts.isJsxElement(n) && n.openingElement.attributes.properties.some(a => ts.isJsxAttribute(a) && a.name.getText(uiAst) === 'data-chat-thread-header'));
 const renderHeader = compile(`function renderHeader(embedded=false){
  const channel='leads',isLead=true,conversation={isGroup:false},leadName='Contato de teste',leadSubtitle='Etapa',whatsappUrl='https://web.whatsapp.com/send?phone=5511900000000';
- const navigate=()=>{},wallpaper='dots',setWallpaper=()=>{},onOpenProfile=()=>{},profileOpen=false;
+ const navigate=()=>{},wallpaper='dots',setWallpaper=()=>{},onOpenProfile=()=>{},profileOpen=false,cacheScope=null;
  return ${header.getText(uiAst)};
 }`, { h, Fragment: 'fragment', ...Object.fromEntries(['Avatar','ArrowLeft','StatusDot','StatusLabel','MessageCircle','CheckCircle2','Phone','Search','ThreadMoreMenu','IconBtn'].map(name => [name,name])) }, 'renderHeader');
 await check('actual header preserves standalone navigation and delegates embedded exits to the drawer', () => {
   const standalone = nodes(renderHeader()), embedded = nodes(renderHeader(true));
   assert(standalone.some(n => n.props['aria-label'] === 'Voltar')); assert(standalone.some(n => n.type === 'a' && n.props.href));
   assert(!embedded.some(n => n.props['aria-label'] === 'Voltar')); assert(!embedded.some(n => n.type === 'a' && n.props.href));
+});
+await check('header grows around WhatsApp origin and wraps actions without shrinking into history', () => {
+  const tree = renderHeader(), classes = tree.props.className.split(/\s+/);
+  assert(classes.includes('min-h-16'));
+  assert(classes.includes('py-3'));
+  assert(classes.includes('shrink-0'));
+  assert(classes.includes('flex-wrap'));
+  assert(!classes.some(value => /^h-/.test(value)));
+  const actions = nodes(tree).find(n => n.props.className?.includes('ml-auto'));
+  assert(actions?.props.className.includes('flex-wrap'));
 });
 const interactionStatements = chat.body.statements.filter(n => /^(const interactionDirty|const interactionPending|useEffect\(\(\) => \{\s*onInteractionStateChange)/.test(n.getText(uiAst))).map(n => n.getText(uiAst)).join('\n');
 assert(interactionStatements.includes('interactionDirty') && interactionStatements.includes('interactionPending'));

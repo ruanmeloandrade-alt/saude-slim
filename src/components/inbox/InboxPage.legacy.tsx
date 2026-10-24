@@ -3324,7 +3324,8 @@ function ChatThread({
     <>
       {/* Header */}
       <div
-        className="h-16 px-5 flex items-center gap-3 shrink-0"
+        data-chat-thread-header
+        className="min-h-16 px-3 py-3 flex flex-wrap items-center gap-3 shrink-0 sm:px-5"
         style={{
           backgroundColor: "var(--chat-panel)",
           borderBottom: "1px solid var(--chat-divider)",
@@ -3370,7 +3371,7 @@ function ChatThread({
         </div>
 
         {/* Ações */}
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex max-w-full flex-wrap items-center gap-1 shrink-0">
           {!embedded && isLead &&
             (whatsappUrl ? (
               <a
