@@ -3,6 +3,7 @@ import { X, Settings2, Plus, Trash2, Save, User, Upload, ChevronDown, ArrowRight
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
+import { customFieldDraftKey, readCustomFieldDraft, writeCustomFieldDraft, clearCustomFieldDraft } from "@/lib/custom-field-tab-draft";
 import { cn } from "@/lib/utils";
 import { FUNNELS } from "@/lib/crm-mock";
 import { getLeadDetail, updateLead, listLeadCustomFields, saveLeadCustomFields, setLeadCustomFieldValue, type LeadDetailResponse } from "@/lib/leads.functions";
@@ -180,7 +181,8 @@ export function LeadProfilePanel({
  const fieldsQ = useQuery({
   queryKey: ["lead-custom-fields"],
   queryFn: () => listFields(),
-  staleTime: 30_000,
+  staleTime: 0,
+  refetchOnMount: "always",
  });
  const customFields: LeadProfileField[] = useMemo(
   () =>
@@ -193,6 +195,11 @@ export function LeadProfilePanel({
    })),
   [fieldsQ.data],
  );
+ const fieldDraftKey = fieldsQ.isFetchedAfterMount
+  ? customFieldDraftKey(fieldsQ.data?.actorId, fieldsQ.data?.workspaceId, `lead:${leadId}`) : null;
+ useEffect(() => {
+  if (fieldDraftKey && readCustomFieldDraft(fieldDraftKey, null)) setSettingsOpen(true);
+ }, [fieldDraftKey]);
 
  const saveFields = useServerFn(saveLeadCustomFields);
  const saveFieldValue = useServerFn(setLeadCustomFieldValue);
@@ -342,8 +349,8 @@ export function LeadProfilePanel({
  }
 
  /** Cria/atualiza/remove campos personalizados direto no banco. */
- async function persistMainFields(next: LeadProfileField[]) {
-  const current = customFields;
+ async function persistMainFields(next: LeadProfileField[], baselineKeys?: string[]) {
+  const current = baselineKeys ? customFields.filter(field => baselineKeys.includes(field.key)) : customFields;
   const nextKeys = new Set(next.map((f) => f.key.replace(/^custom_/, "cf_")));
   const removed = current.filter((old) => !nextKeys.has(old.key));
   // Só entram como "novos" os campos criados no diálogo (`custom_<ts>`).
@@ -410,7 +417,14 @@ export function LeadProfilePanel({
   <Users className="w-3.5 h-3.5" /> Criar grupo
   </button>
   <button
-  onClick={() => setSettingsOpen(true)}
+  onClick={() => {
+   if (!fieldDraftKey) {
+    void fieldsQ.refetch();
+    toast.error("Aguarde a confirmação dos campos desta conta e tente novamente.");
+    return;
+   }
+   setSettingsOpen(true);
+  }}
   className="h-8 px-2 rounded-md text-[11px] flex items-center gap-1 hover:bg-white/5"
   style={{ color: "var(--chat-text-muted)" }}
   >
@@ -531,11 +545,13 @@ export function LeadProfilePanel({
 
  {settingsOpen && (
  <CustomFieldsDialog
+ key={fieldDraftKey}
+ draftKey={fieldDraftKey}
  mainFields={customFields}
  funnels={[]}
  initialView="__main__"
  onClose={() => setSettingsOpen(false)}
- onSaveMain={(next) => persistMainFields(next)}
+ onSaveMain={(next, baselineKeys) => persistMainFields(next, baselineKeys)}
  onSaveFunnel={(id, next) => persistFunnelFields(id, next)}
  />
   )}
@@ -721,6 +737,7 @@ const FIELD_TYPE_LABELS: { value: LeadFieldType; label: string }[] = [
 ];
 
 function CustomFieldsDialog({
+ draftKey = null,
  mainFields,
  funnels,
  initialView,
@@ -728,23 +745,34 @@ function CustomFieldsDialog({
  onSaveMain,
  onSaveFunnel,
 }: {
+ draftKey?: string | null;
  mainFields: LeadProfileField[];
  funnels: FunnelDef[];
  initialView: string;
  onClose: () => void;
- onSaveMain: (fields: LeadProfileField[]) => Promise<void>;
+ onSaveMain: (fields: LeadProfileField[], baselineKeys?: string[]) => Promise<void>;
  onSaveFunnel: (funnelId: string, fields: LeadProfileField[]) => Promise<void>;
 }) {
- const [target, setTarget] = useState<string>(initialView);
- const [mainList, setMainList] = useState<LeadProfileField[]>(mainFields);
+ const [restored] = useState(() => readCustomFieldDraft(draftKey, {
+  target: initialView, mainList: mainFields, baselineKeys: mainFields.map(field => field.key),
+  funnelLists: Object.fromEntries(funnels.map(f => [f.id, f.fields])),
+  label: "", type: "text" as LeadFieldType, optionDraft: "", options: [] as string[],
+ }));
+ const [target, setTarget] = useState<string>(restored.target);
+ const [mainList, setMainList] = useState<LeadProfileField[]>(restored.mainList);
+ const [baselineKeys] = useState(restored.baselineKeys);
  const [funnelLists, setFunnelLists] = useState<Record<string, LeadProfileField[]>>(
- () => Object.fromEntries(funnels.map((f) => [f.id, f.fields]))
+ () => restored.funnelLists
  );
 
- const [label, setLabel] = useState("");
- const [type, setType] = useState<LeadFieldType>("text");
- const [optionDraft, setOptionDraft] = useState("");
- const [options, setOptions] = useState<string[]>([]);
+ const [label, setLabel] = useState(restored.label);
+ const [type, setType] = useState<LeadFieldType>(restored.type);
+ const [optionDraft, setOptionDraft] = useState(restored.optionDraft);
+ const [options, setOptions] = useState<string[]>(restored.options);
+ useEffect(() => {
+  writeCustomFieldDraft(draftKey, { target, mainList, baselineKeys, funnelLists, label, type, optionDraft, options });
+ }, [draftKey, target, mainList, baselineKeys, funnelLists, label, type, optionDraft, options]);
+ function closeDialog() { clearCustomFieldDraft(draftKey); onClose(); }
 
  const isMain = target === "__main__";
  const currentList = isMain? mainList: funnelLists[target]?? [];
@@ -762,22 +790,25 @@ function CustomFieldsDialog({
  }
 
  function addField() {
- if (!label.trim()) return;
+ if (!label.trim()) return null;
  const needsOptions = type === "select" || type === "multiselect";
- if (needsOptions && options.length === 0) return;
+ const finalOptions = [...new Set([...options, optionDraft.trim()].filter(Boolean))];
+ if (needsOptions && finalOptions.length === 0) return null;
  const key = `custom_${crypto.randomUUID()}`;
  const newField: LeadProfileField = {
  key,
  label: label.trim(),
  type,
  group: isMain? "Personalizados": undefined,
-...(needsOptions? { options: [...options] }: {}),
+...(needsOptions? { options: finalOptions }: {}),
  };
- setCurrentList([...currentList, newField]);
+ const nextList = [...currentList, newField];
+ setCurrentList(nextList);
  setLabel("");
  setType("text");
  setOptions([]);
  setOptionDraft("");
+ return nextList;
  }
 
  function removeField(key: string) {
@@ -793,10 +824,12 @@ function CustomFieldsDialog({
   setSavingFields(true);
   setSaveError(null);
   try {
-   await onSaveMain(mainList);
+   const pending = label.trim() ? addField() : currentList;
+   if (!pending) throw new Error("Adicione as opções do campo de seleção.");
+   await onSaveMain(isMain ? pending : mainList, baselineKeys);
    for (const f of funnels) await onSaveFunnel(f.id, funnelLists[f.id] ?? []);
    toast.success("Campos personalizados salvos.");
-   onClose();
+   closeDialog();
   } catch (error) {
    setSaveError(error instanceof Error ? error.message : "Não foi possível salvar os campos.");
   } finally {
@@ -808,7 +841,7 @@ function CustomFieldsDialog({
  const needsOptions = type === "select" || type === "multiselect";
 
  return (
- <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" onClick={() => { if (!saveLock.current) onClose(); }}>
+ <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4">
  <div
  className="w-full max-w-lg rounded-xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto"
  style={{ backgroundColor: "var(--chat-panel)", color: "var(--chat-text)", border: "1px solid var(--chat-divider)" }}
@@ -822,7 +855,7 @@ function CustomFieldsDialog({
  Configure campos do perfil principal ou de cada funil.
  </p>
  </div>
- <button onClick={onClose} disabled={savingFields} className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-white/5">
+ <button onClick={closeDialog} disabled={savingFields} className="w-8 h-8 rounded-md flex items-center justify-center hover:bg-white/5">
  <X className="w-4 h-4" />
  </button>
  </div>
@@ -925,7 +958,7 @@ function CustomFieldsDialog({
 
  <button
  onClick={addField}
- disabled={!label.trim() || (needsOptions && options.length === 0)}
+ disabled={!label.trim() || (needsOptions && options.length === 0 && !optionDraft.trim())}
  className="w-full h-8 px-3 rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-40"
  style={{ backgroundColor: "var(--chat-accent)", color: "oklch(0.12 0.02 162)" }}
  >
@@ -936,7 +969,7 @@ function CustomFieldsDialog({
  </fieldset>
  {saveError && <p role="alert" className="mt-3 text-xs text-destructive">{saveError}</p>}
  <div className="mt-4 flex items-center justify-end gap-2">
- <button onClick={onClose} disabled={savingFields} className="px-3 py-2 text-xs" style={{ color: "var(--chat-text-muted)" }}>
+ <button onClick={closeDialog} disabled={savingFields} className="px-3 py-2 text-xs" style={{ color: "var(--chat-text-muted)" }}>
  Cancelar
  </button>
  <button
