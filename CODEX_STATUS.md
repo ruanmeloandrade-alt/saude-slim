@@ -1,0 +1,3 @@
+
+## 2026-10-29 - SalesBot audio and Lobo Paraguaio quiz
+Restored missing private salesbot-media bucket with workspace-scoped insert/read policies; verified real WAV upload/signed download, public denial and cleanup. No bot data or application auth changes. Added approved standalone public /quiz route, static document/styles/script, eight approved assets including supplied logo with transparent exterior. Full build and local production runtime checks passed; full browser path and group URL verified. Publishing to existing saude-slim-web service; no new dependencies/infrastructure. Scoped details: docs/tasks/2026-10-29-salesbot-media-storage.md and docs/tasks/2026-10-29-lobo-paraguaio-quiz.md.

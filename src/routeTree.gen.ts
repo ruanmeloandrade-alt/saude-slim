@@ -38,6 +38,7 @@ import { Route as PainelRouteImport } from './routes/painel'
 import { Route as PartnersRouteImport } from './routes/partners'
 import { Route as PedidosRouteImport } from './routes/pedidos'
 import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as QuizRouteImport } from './routes/quiz'
 import { Route as RecuperarAcessoRouteImport } from './routes/recuperar-acesso'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as SaudeSlimRouteImport } from './routes/saude-slim'
@@ -299,6 +300,11 @@ const PedidosRoute = PedidosRouteImport.update({
 const PrivacidadeRoute = PrivacidadeRouteImport.update({
   id: '/privacidade',
   path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QuizRoute = QuizRouteImport.update({
+  id: '/quiz',
+  path: '/quiz',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecuperarAcessoRoute = RecuperarAcessoRouteImport.update({
@@ -968,6 +974,7 @@ export interface FileRoutesByFullPath {
   '/partners': typeof PartnersRouteWithChildren
   '/pedidos': typeof PedidosRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/quiz': typeof QuizRoute
   '/recuperar-acesso': typeof RecuperarAcessoRoute
   '/relatorios': typeof RelatoriosRoute
   '/saude-slim': typeof SaudeSlimRoute
@@ -1114,6 +1121,7 @@ export interface FileRoutesByTo {
   '/partners': typeof PartnersRouteWithChildren
   '/pedidos': typeof PedidosRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/quiz': typeof QuizRoute
   '/recuperar-acesso': typeof RecuperarAcessoRoute
   '/relatorios': typeof RelatoriosRoute
   '/saude-slim': typeof SaudeSlimRoute
@@ -1263,6 +1271,7 @@ export interface FileRoutesById {
   '/partners': typeof PartnersRouteWithChildren
   '/pedidos': typeof PedidosRoute
   '/privacidade': typeof PrivacidadeRoute
+  '/quiz': typeof QuizRoute
   '/recuperar-acesso': typeof RecuperarAcessoRoute
   '/relatorios': typeof RelatoriosRoute
   '/saude-slim': typeof SaudeSlimRoute
@@ -1413,6 +1422,7 @@ export interface FileRouteTypes {
     | '/partners'
     | '/pedidos'
     | '/privacidade'
+    | '/quiz'
     | '/recuperar-acesso'
     | '/relatorios'
     | '/saude-slim'
@@ -1559,6 +1569,7 @@ export interface FileRouteTypes {
     | '/partners'
     | '/pedidos'
     | '/privacidade'
+    | '/quiz'
     | '/recuperar-acesso'
     | '/relatorios'
     | '/saude-slim'
@@ -1707,6 +1718,7 @@ export interface FileRouteTypes {
     | '/partners'
     | '/pedidos'
     | '/privacidade'
+    | '/quiz'
     | '/recuperar-acesso'
     | '/relatorios'
     | '/saude-slim'
@@ -1857,6 +1869,7 @@ export interface RootRouteChildren {
   PartnersRoute: typeof PartnersRouteWithChildren
   PedidosRoute: typeof PedidosRoute
   PrivacidadeRoute: typeof PrivacidadeRoute
+  QuizRoute: typeof QuizRoute
   RecuperarAcessoRoute: typeof RecuperarAcessoRoute
   RelatoriosRoute: typeof RelatoriosRoute
   SaudeSlimRoute: typeof SaudeSlimRoute
@@ -2148,6 +2161,13 @@ declare module '@tanstack/react-router' {
       path: '/privacidade'
       fullPath: '/privacidade'
       preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/quiz': {
+      id: '/quiz'
+      path: '/quiz'
+      fullPath: '/quiz'
+      preLoaderRoute: typeof QuizRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recuperar-acesso': {
@@ -3137,6 +3157,7 @@ const rootRouteChildren: RootRouteChildren = {
   PartnersRoute: PartnersRouteWithChildren,
   PedidosRoute: PedidosRoute,
   PrivacidadeRoute: PrivacidadeRoute,
+  QuizRoute: QuizRoute,
   RecuperarAcessoRoute: RecuperarAcessoRoute,
   RelatoriosRoute: RelatoriosRoute,
   SaudeSlimRoute: SaudeSlimRoute,
