@@ -1,5 +1,5 @@
 import {
-  BarChart3, Bot, ChevronDown, ClipboardList, HeartPulse, History, Inbox,
+  BarChart3, Bot, ChevronDown, ClipboardList, History, Inbox,
   LogOut, Mail, Megaphone, Menu, MessageSquareText, Package, PanelLeftClose,
   PanelLeftOpen, Plug, RotateCcw, Settings, Share2, ShoppingCart, Tags,
   Target, Truck, Users, X, PlayCircle, type LucideIcon,
@@ -107,7 +107,7 @@ export function AppSidebar() {
     {mobileOpen && <button type="button" className="slim-mobile-menu-scrim" onClick={() => setMobileOpen(false)} aria-label="Fechar menu" tabIndex={-1} />}
     <aside ref={asideRef} id={navId} data-slim-sidebar data-collapsed={collapsed} data-mobile-open={mobileOpen} aria-label="Navegação principal Saúde Slim" role={mobileOpen ? "dialog" : undefined} aria-modal={mobileOpen ? true : undefined}>
       <div className="slim-sidebar-brand">
-        <span className="slim-sidebar-logo"><HeartPulse size={22} aria-hidden="true" /></span>
+        <span className="slim-sidebar-logo"><img src="/brand/saude-slim-logo.jpg" alt="" width="64" height="64" /></span>
         <div className="slim-sidebar-label"><strong>Saúde Slim</strong><small>Sistema interno</small></div>
         <button type="button" className="slim-mobile-close" onClick={() => setMobileOpen(false)} aria-label="Fechar menu"><X size={18} aria-hidden="true" /></button>
       </div>

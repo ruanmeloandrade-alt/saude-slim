@@ -67,6 +67,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Saúde Slim | Sistema interno" },
       { name: "description", content: "Sistema interno da Saúde Slim para vendas, pedidos, estoque, atendimento e automações." },
       { name: "author", content: "Saúde Slim" },
+      { name: "theme-color", content: "#050814" },
       { property: "og:title", content: "Saúde Slim | Sistema interno" },
       { property: "og:description", content: "Sistema interno da Saúde Slim para vendas, pedidos, estoque, atendimento e automações." },
       { property: "og:type", content: "website" },
@@ -76,7 +77,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", type: "image/svg+xml", href: "/saude-slim-icon.svg?v=20261014" },
+      { rel: "stylesheet", href: "/brand/saude-slim.css?v=20261030" },
+      { rel: "icon", type: "image/jpeg", href: "/brand/saude-slim-logo.jpg?v=20261030" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" },

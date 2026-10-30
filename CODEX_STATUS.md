@@ -1,3 +1,6 @@
 
 ## 2026-10-29 - SalesBot audio and Lobo Paraguaio quiz
 Restored missing private salesbot-media bucket with workspace-scoped insert/read policies; verified real WAV upload/signed download, public denial and cleanup. No bot data or application auth changes. Added approved standalone public /quiz route, static document/styles/script, eight approved assets including supplied logo with transparent exterior. Full build and local production runtime checks passed; full browser path and group URL verified. Publishing to existing saude-slim-web service; no new dependencies/infrastructure. Scoped details: docs/tasks/2026-10-29-salesbot-media-storage.md and docs/tasks/2026-10-29-lobo-paraguaio-quiz.md.
+
+## 2026-10-30 - Saúde Slim visual identity
+Owner supplied logo and offer artwork. Added shared black/cyan/pink tokens and brand stylesheet for all application pages plus quiz. Replaced sidebar/auth/favicon branding, restored Saúde Slim name in quiz, and replaced offer image and displayed options with R299,99 / R899,99 Pix. Three editorial expressions changed to thoughtful seriousness, preserving people and bodies. Existing handlers, membership, data, bots, group destination and ERP prices preserved. Validation and publication in progress; scope docs/tasks/2026-10-30-saude-slim-visual-identity.md.
