@@ -21,7 +21,7 @@ type Catalog = { id: string; name: string };
 type Overview = { counts: { leads: number; sales: number; products: number; whatsappSessions: number } };
 type Data = { leads: Lead[]; products: Product[]; stages: Stage[]; pipelines: Pipeline[]; catalogs: Catalog[] };
 const EMPTY: Data = { leads: [], products: [], stages: [], pipelines: [], catalogs: [] };
-const API = "https://vyzvfcgpjjzvcjegzzza.supabase.co/functions/v1/saude-slim-core/overview";
+const API = "https://yztwbybcznyukrgaiqoc.supabase.co/functions/v1/saude-slim-core/overview";
 
 const brl = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 const date = (v: string) => new Date(v).toLocaleDateString("pt-BR");

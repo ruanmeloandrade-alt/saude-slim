@@ -56,7 +56,7 @@ await check('private object scope cannot cross workspace or lead',()=>{
 });
 await check('expired old signed link can be re-signed only from same tenant',()=>{
  const ws='workspace',lead='lead',path=ws+'/'+lead+'/contract.pdf';
- const url='https://vyzvfcgpjjzvcjegzzza.supabase.co/storage/v1/object/sign/inbox-outgoing/'+path+'?token=expired';
+ const url='https://yztwbybcznyukrgaiqoc.supabase.co/storage/v1/object/sign/inbox-outgoing/'+path+'?token=expired';
  assert.equal(slimInboxStoredMediaPath({media_url:url},ws,lead),path);
  assert.equal(slimInboxStoredMediaPath({media_url:url},ws,'sibling'),null);
  assert.equal(slimInboxStoredMediaPath({media_url:url.replace('supabase.co','bad.site')},ws,lead),null);

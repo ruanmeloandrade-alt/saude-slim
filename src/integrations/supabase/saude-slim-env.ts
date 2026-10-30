@@ -3,7 +3,7 @@ const FORBIDDEN_SUPABASE_PROJECT_REFS = new Set([
   "xmoiyffwmolwmjzeuqjf",
 ]);
 
-export const SAUDE_SLIM_SUPABASE_REF = "vyzvfcgpjjzvcjegzzza" as const;
+export const SAUDE_SLIM_SUPABASE_REF = "yztwbybcznyukrgaiqoc" as const;
 export const SAUDE_SLIM_SUPABASE_URL = `https://${SAUDE_SLIM_SUPABASE_REF}.supabase.co` as const;
 
 type SupabaseEnvSource = "browser" | "server" | "server-admin";

@@ -1,7 +1,7 @@
 import { parseSlimInboxGroupConversationKey } from './slim-inbox-group-key.core.ts';
 
 export const SLIM_GROUP_MEDIA_BUCKET = 'inbox-outgoing';
-export const SLIM_GROUP_MEDIA_ORIGIN = 'https://vyzvfcgpjjzvcjegzzza.supabase.co';
+export const SLIM_GROUP_MEDIA_ORIGIN = 'https://yztwbybcznyukrgaiqoc.supabase.co';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const GROUP_JID = /^[0-9-]{3,160}@g\.us$/;
 

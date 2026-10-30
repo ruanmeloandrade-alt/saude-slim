@@ -116,7 +116,7 @@ await check('Evolution key cannot cross message, group, direction or inject arbi
 });
 await check('legacy private URLs re-sign only same project and same group', () => {
   assert.equal(slimGroupStoredMediaPath({ media_url: signed(legacyPath), raw: {} }, scope), legacyPath);
-  for (const url of [signed(legacyPath).replace('vyzvfcgpjjzvcjegzzza', 'foreignproject'),
+  for (const url of [signed(legacyPath).replace('yztwbybcznyukrgaiqoc', 'foreignproject'),
     signed(legacyPath).replace(ws, other), signed(legacyPath).replace(session, other),
     signed(legacyPath).replace(jid.replace('@', '_'), 'other_g.us'), signed(legacyPath).replace('/179', '/%2E%2E/179'),
     signed(legacyPath).replace('https://', 'http://'), signed(legacyPath) + '#fragment']) {

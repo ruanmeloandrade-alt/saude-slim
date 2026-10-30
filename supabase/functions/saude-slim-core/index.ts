@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.58.0";
 
 // Backend próprio da Saúde Slim. Sem credenciais privilegiadas, Evolution ou serviços legados.
-const PROJECT_ID = "vyzvfcgpjjzvcjegzzza";
+const PROJECT_ID = "yztwbybcznyukrgaiqoc";
 const BASE = `https://${PROJECT_ID}.supabase.co`;
 const ALLOWED_ORIGINS = new Set(["https://slimesaude.com", "https://www.slimesaude.com"]);
 
