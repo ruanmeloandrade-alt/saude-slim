@@ -83,11 +83,12 @@ function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
+    <main className="slim-auth flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
       <section className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <LogIn className="h-5 w-5" />
         </div>
+        <img src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="140" height="140" className="slim-login-logo" />
         <h1 className="text-2xl font-semibold tracking-tight">Entrar na Saúde Slim</h1>
         <p className="mt-1 text-sm text-muted-foreground">Use os dados da sua conta existente para acessar a plataforma.</p>
 

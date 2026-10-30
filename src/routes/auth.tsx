@@ -5,7 +5,6 @@ import {
   ArrowRight,
   AtSign,
   CheckCircle2,
-  HeartPulse,
   Instagram,
   Loader2,
   LockKeyhole,
@@ -373,7 +372,7 @@ function AuthPage() {
 
   if (confirmationPending) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#ecfdf5] px-4 py-10">
+      <main className="slim-auth grid min-h-screen place-items-center bg-[#ecfdf5] px-4 py-10">
         <section className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-7 text-center shadow-[0_30px_90px_rgba(15,23,42,.12)] sm:p-9">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><Mail className="h-6 w-6" /></div>
           <h1 className="mt-6 text-2xl font-semibold tracking-tight text-slate-950">Confirme seu e-mail</h1>
@@ -386,7 +385,7 @@ function AuthPage() {
 
   if (secondStepEmail) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#ecfdf5] px-4 py-10">
+      <main className="slim-auth grid min-h-screen place-items-center bg-[#ecfdf5] px-4 py-10">
         <section className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-7 text-center shadow-[0_30px_90px_rgba(15,23,42,.12)] sm:p-9">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><ShieldCheck className="h-6 w-6" /></div>
           <p className="mt-6 text-[10px] font-bold uppercase tracking-widest text-emerald-700">Verificação de segurança</p>
@@ -402,9 +401,9 @@ function AuthPage() {
 
   if (mode === "recovery") {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#ecfdf5] px-4 py-10 text-slate-950">
+      <main className="slim-auth grid min-h-screen place-items-center bg-[#ecfdf5] px-4 py-10 text-slate-950">
         <section className="w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-7 shadow-[0_30px_90px_rgba(15,23,42,.12)] sm:p-9">
-          <Link to="/auth" className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950 shadow-sm"><HeartPulse className="h-4 w-4 text-emerald-600" />Saúde Slim</Link>
+          <Link to="/auth" className="slim-auth-brand inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950 shadow-sm"><img className="slim-auth-logo" src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="220" height="220" /></Link>
           {passwordUpdated ? (
             <div className="mt-8 text-center">
               <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><CheckCircle2 className="h-6 w-6" /></div>
@@ -435,13 +434,13 @@ function AuthPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#ecfdf5] text-slate-950 lg:grid lg:grid-cols-[minmax(0,.88fr)_minmax(560px,1.12fr)]">
+    <main className="slim-auth min-h-screen bg-[#ecfdf5] text-slate-950 lg:grid lg:grid-cols-[minmax(0,.88fr)_minmax(560px,1.12fr)]">
       <aside className="relative hidden overflow-hidden bg-[#052e2b] px-10 py-12 text-white lg:flex lg:min-h-screen lg:flex-col lg:justify-between xl:px-16 xl:py-16">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/15 via-transparent to-emerald-900/20" />
           <div className="absolute inset-0 opacity-[.08] [background-image:linear-gradient(rgba(255,255,255,.2)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.2)_1px,transparent_1px)] [background-size:48px_48px]" />
         </div>
-        <div className="relative"><Link to="/auth" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-950 shadow-sm"><HeartPulse className="h-4 w-4 text-emerald-600" />Saúde Slim</Link></div>
+        <div className="relative"><Link to="/auth" className="slim-auth-brand inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-950 shadow-sm"><img className="slim-auth-logo" src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="220" height="220" /></Link></div>
         <div className="relative max-w-[560px]">
           <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/20 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-100"><Sparkles className="h-3.5 w-3.5" />Sistema interno Saúde Slim</div>
           <h2 className="mt-6 text-[clamp(2.8rem,4.3vw,5.3rem)] font-semibold leading-[.98] tracking-tight">Sua rotina comercial em forma de cuidado.</h2>
@@ -457,7 +456,7 @@ function AuthPage() {
 
       <section className="flex min-h-screen items-center justify-center px-4 py-20 sm:px-6 lg:px-10 xl:px-16">
         <div className="w-full max-w-[650px]">
-          <div className="mb-8 flex items-center justify-between lg:hidden"><Link to="/auth" className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950 shadow-sm"><HeartPulse className="h-4 w-4 text-emerald-600" />Saúde Slim</Link><span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-emerald-700">Sistema interno</span></div>
+          <div className="mb-8 flex items-center justify-between lg:hidden"><Link to="/auth" className="slim-auth-brand inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950 shadow-sm"><img className="slim-auth-logo" src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="220" height="220" /></Link><span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-emerald-700">Sistema interno</span></div>
 
           <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_32px_100px_rgba(15,23,42,.10)] sm:p-8 md:p-10">
             {mode === "forgot" ? (
