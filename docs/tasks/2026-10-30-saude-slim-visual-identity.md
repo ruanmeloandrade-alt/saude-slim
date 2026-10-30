@@ -16,3 +16,7 @@ Status: implementação em branch isolada feat/saude-slim-visual-identity-202610
 - Percurso completo no navegador com nova marca e oferta: PASS. Arte inteira visível, valores coerentes, resultado e convite exato preservados; não houve ingresso no grupo ou envio de mensagens.
 - Tela de 390px: imagem do rosto reenquadrada e opções legíveis; viewport restaurado.
 - Fontes geradas pelo prebuild removidas do diff; alterações de autenticação limitadas a classes e imagens.
+
+## Login e runtime
+Vite dev apresentou AsyncLocalStorage incompatível no runtime local herdado. A conferência foi realizada pelo servidor Node compilado, com a configuração exclusiva existente carregada somente em memória, sem .env. Novo bundle compilado com os valores públicos reais e runtime /auth: logo e formulário reais conferidos em desktop e 390px, sem overflow horizontal. Tokens globais ativos confirmados no DOM. Nenhuma credencial de usuário foi digitada; não foi realizado login nos módulos privados. Sem alterações para contornar autenticação.
+Fontes geradas novamente retiradas do diff. Publicação autorizada no serviço existente após a validação direta.
