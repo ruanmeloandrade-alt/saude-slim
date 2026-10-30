@@ -9,3 +9,10 @@ Recorte: camada visual compartilhada de tokens, logo, favicon, sidebar e autenti
 Aceite: identidade consistente no login, shell autenticado e quiz; marca antiga removida do quiz; imagem da nova oferta legível e sem corte; preços das opções coerentes com a peça; contraste e responsividade; navegação, autenticação e fluxo do quiz preservados. Build e checagens relevantes; publicação autorizada e validação no domínio público.
 
 Status: implementação em branch isolada feat/saude-slim-visual-identity-20261030. Arquivos e evidências serão registrados após validação.
+
+## Validação direta
+- npm run build: PASS, exit 0; prebuild obrigatório, verificação de rotas, regressões, cliente/SSR/Nitro.
+- Marca visível: 17/17 PASS. Interface/comércio: 20/20 PASS após o prebuild obrigatório (a primeira tentativa isolada, sem aplicar os geradores existentes, falhou por ausência dos marcadores esperados; não era regressão da identidade).
+- Percurso completo no navegador com nova marca e oferta: PASS. Arte inteira visível, valores coerentes, resultado e convite exato preservados; não houve ingresso no grupo ou envio de mensagens.
+- Tela de 390px: imagem do rosto reenquadrada e opções legíveis; viewport restaurado.
+- Fontes geradas pelo prebuild removidas do diff; alterações de autenticação limitadas a classes e imagens.

@@ -34,3 +34,5 @@ main h1:focus{outline:none}
 .product-image img,.result-product img{padding:0;object-fit:contain;height:100%;width:100%}
 dialog{background:#101726;color:var(--ink);border:1px solid var(--line)}.dialog-close{color:var(--muted)}
 .selected-offer strong{color:var(--green)}.selected-offer strong small{color:var(--muted)}
+
+.slim-quiz{min-height:100vh}.question-photo:not(.product-image) img{object-position:center 10%}
