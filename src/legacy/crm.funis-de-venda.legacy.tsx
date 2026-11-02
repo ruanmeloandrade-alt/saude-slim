@@ -83,7 +83,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import {
- STAGE_AUTOMATIONS,
  TRIGGER_CATALOG,
  formatBRL,
  summarizeFunnel,
@@ -127,6 +126,7 @@ import { MessageTemplateEditor } from "@/components/crm/MessageTemplateEditor";
 import { FunnelSourcesPopover } from "@/components/crm/FunnelSourcesPopover";
 import { toast } from "sonner";
 import { stageActionStamp } from "@/lib/stage-execution.core";
+import { scopePipelineAutomations, updatePipelineAutomationState } from "@/lib/pipeline-automation-state";
 import { useIsSuperAdmin } from "@/hooks/use-roles";
 import { AdminOnlyDot } from "@/components/AdminOnlyDot";
 
@@ -227,7 +227,20 @@ function CrmFunisPage() {
  const [funnels, setFunnels] = useState<Funnel[]>([]);
  const queryClient = useQueryClient();
 
- const [funnelId, setFunnelId] = useState<string>("");
+ const [funnelId, setFunnelIdState] = useState<string>("");
+ const activeFunnelRef = useRef("");
+ const [openingAutomations, setOpeningAutomations] = useState(false);
+ function setFunnelId(id: string) {
+  if (activeFunnelRef.current === id) return;
+  activeFunnelRef.current = id;
+  setFunnelIdState(id);
+  setOpeningAutomations(false);
+  setConfiguring(null);
+  setTriggerStage(null);
+  setColorMode(false);
+  setSelectedColorStageId(null);
+  setMode("view");
+ }
  const [bootstrapping, setBootstrapping] = useState(true);
  const [syncMsg] = useState<string | null>(null);
  const [pendingRenameStageId, setPendingRenameStageId] = useState<string | null>(null);
@@ -239,7 +252,8 @@ function CrmFunisPage() {
     const listUsersFn = listSlimUsers;
     const bulkMoveLeadsFn = bulkMoveSlimLeads;
     const bulkMoveRequest = useRef<{key:string;requestId:string}|null>(null);
-    const automationSaveRequest = useRef<string | null>(null);
+    const automationSaveRequest = useRef<Record<string, string>>({});
+    const automationReadEpoch = useRef<Record<string, number>>({});
 
   const listSources = listSlimSources;
   const listFunnelsServer = listSlimFunnels;
@@ -475,8 +489,16 @@ function CrmFunisPage() {
   }
 
  // Estado de automações (com snapshot para Cancelar)
- const [automations, setAutomations] = useState<StageAutomations>(STAGE_AUTOMATIONS);
- const [draft, setDraft] = useState<StageAutomations | null>(null);
+ const [automationsByPipeline, setAutomationsByPipeline] = useState<Record<string, StageAutomations>>({});
+ const [draftsByPipeline, setDraftsByPipeline] = useState<Record<string, StageAutomations | null>>({});
+ const automations = automationsByPipeline[funnelId] ?? {};
+ const draft = draftsByPipeline[funnelId] ?? null;
+ const setAutomations = useCallback((next: StageAutomations | ((previous: StageAutomations) => StageAutomations)) => {
+  setAutomationsByPipeline(previous => updatePipelineAutomationState(previous, funnelId, next, {}));
+ }, [funnelId]);
+ const setDraft = useCallback((next: StageAutomations | null | ((previous: StageAutomations | null) => StageAutomations | null)) => {
+  setDraftsByPipeline(previous => updatePipelineAutomationState(previous, funnelId, next, null));
+ }, [funnelId]);
  const [triggerStage, setTriggerStage] = useState<string | null>(null);
  const [configuring, setConfiguring] = useState<{ stageId: string; actionId: string } | null>(null);
 
@@ -486,13 +508,17 @@ function CrmFunisPage() {
  useEffect(() => {
    if (!funnelId) { setAutomations({}); return; }
    let cancelled = false;
+   const epoch = (automationReadEpoch.current[funnelId] ?? 0) + 1;
+   automationReadEpoch.current[funnelId] = epoch;
    (async () => {
     try {
      const r = await listStageAutomationsServer({ data: { pipelineId: funnelId } });
      const next = (r.automations ?? {}) as StageAutomations;
-     if (!cancelled) setAutomations(next);
+     if (cancelled || automationReadEpoch.current[funnelId] !== epoch) return;
+     setAutomations(next);
      try { localStorage.setItem(stageAutomationStorageKey(funnelId), JSON.stringify(next)); } catch { /* noop */ }
     } catch (e) {
+     if (cancelled || automationReadEpoch.current[funnelId] !== epoch) return;
      console.error("listStageAutomations", e);
      try {
       const raw = localStorage.getItem(stageAutomationStorageKey(funnelId));
@@ -625,15 +651,27 @@ function CrmFunisPage() {
 
 
 
- function enterAutomatize() {
-  let next = JSON.parse(JSON.stringify(automations)) as StageAutomations;
-  if (funnelId) {
+ async function enterAutomatize() {
+  if (!funnelId || !funnel || funnel.id !== funnelId || openingAutomations || savingAutomations) return;
+  const pipelineId = funnelId;
+  const epoch = (automationReadEpoch.current[pipelineId] ?? 0) + 1;
+  automationReadEpoch.current[pipelineId] = epoch;
+  setOpeningAutomations(true);
+  try {
+   // Do not clone an empty or previous pipeline's snapshot while its load is pending.
+   const response = await listStageAutomationsServer({ data: { pipelineId } });
+   if (activeFunnelRef.current !== pipelineId || automationReadEpoch.current[pipelineId] !== epoch) return;
+   const stages = funnel.stages.map(stage => stage.id);
+   const persisted = scopePipelineAutomations<AutomationAction>(response.automations ?? {}, stages);
+   setAutomations(persisted);
+   let next = structuredClone(persisted);
+   let savedDraft: string | null = null;
    try {
-    const savedDraft = localStorage.getItem(stageAutomationDraftStorageKey(funnelId));
+    savedDraft = localStorage.getItem(stageAutomationDraftStorageKey(pipelineId));
     if (savedDraft) {
-     const recovered = JSON.parse(savedDraft) as StageAutomations;
+     const recovered = scopePipelineAutomations<AutomationAction>(JSON.parse(savedDraft), stages);
      const recoveredCount = Object.values(recovered).reduce((total, actions) => total + actions.length, 0);
-     const persistedCount = Object.values(automations).reduce((total, actions) => total + actions.length, 0);
+     const persistedCount = Object.values(persisted).reduce((total, actions) => total + actions.length, 0);
      if (recoveredCount > 0 || persistedCount === 0) {
       next = recovered;
       toast.info(`Rascunho recuperado: ${recoveredCount} gatilho(s).`);
@@ -641,10 +679,22 @@ function CrmFunisPage() {
     }
    } catch (error) {
     console.error("recoverStageAutomationsDraft", error);
+    // Preserve the original bytes before replacing a malformed/foreign old backup.
+    if (savedDraft) {
+     try { localStorage.setItem(stageAutomationDraftStorageKey(pipelineId)+":recovery:"+Date.now(), savedDraft); }
+     catch { throw new Error("Não foi possível preservar o rascunho anterior. Tente novamente sem fechar esta página."); }
+     toast.info("O rascunho anterior foi preservado para recuperação. Exibindo os gatilhos confirmados deste funil.");
+    }
    }
+   setDraft(next);
+   setMode("automatize");
+  } catch (error) {
+   if (activeFunnelRef.current === pipelineId) {
+    toast.error(error instanceof Error ? error.message : "Não foi possível carregar os gatilhos deste funil. Tente novamente.");
+   }
+  } finally {
+   if (activeFunnelRef.current === pipelineId && automationReadEpoch.current[pipelineId] === epoch) setOpeningAutomations(false);
   }
-  setDraft(next);
- setMode("automatize");
  }
  function cancelAutomatize() {
   if (funnelId) {
@@ -673,6 +723,13 @@ function CrmFunisPage() {
     }
     if (stageActionStamp(savedAction.execution ?? {}) !== stageActionStamp(expectedAction.execution ?? {})) {
      throw new Error(`As opções de execução de "${expectedAction.title}" não permaneceram salvas.`);
+    }
+    if (
+     stageActionStamp(savedAction.config ?? {}) !== stageActionStamp(expectedAction.config ?? {}) ||
+     stageActionStamp(savedAction.stageIds ?? []) !== stageActionStamp(expectedAction.stageIds ?? []) ||
+     (savedAction.enabled !== false) !== (expectedAction.enabled !== false)
+    ) {
+     throw new Error(`A configuração do gatilho "${expectedAction.title}" não permaneceu salva.`);
     }
 
     const expectedTrigger = expectedAction.execution?.trigger;
@@ -720,13 +777,23 @@ function CrmFunisPage() {
 
   async function saveAutomatize(nextDraft = draft, keepEditing = false) {
     if (!nextDraft || !funnelId || savingAutomations) throw new Error("Aguarde o salvamento atual.");
+    if (!funnel || funnel.id !== funnelId) throw new Error("Aguarde o carregamento deste funil.");
+    try {
+      nextDraft = scopePipelineAutomations<AutomationAction>(nextDraft, funnel.stages.map(stage => stage.id));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Confira os gatilhos deste funil antes de salvar.");
+      if (keepEditing) throw error;
+      return;
+    }
+    const pipelineId = funnelId;
+    automationReadEpoch.current[pipelineId] = (automationReadEpoch.current[pipelineId] ?? 0) + 1;
     setDraft(nextDraft);
     const requestKey = stageAutomationDraftStorageKey(funnelId)+":apply-request";
     try {
       localStorage.setItem(stageAutomationDraftStorageKey(funnelId),JSON.stringify(nextDraft));
-      automationSaveRequest.current ??= sessionStorage.getItem(requestKey) || crypto.randomUUID();
-      sessionStorage.setItem(requestKey,automationSaveRequest.current);
-    } catch { automationSaveRequest.current ??= crypto.randomUUID(); }
+      automationSaveRequest.current[pipelineId] ??= sessionStorage.getItem(requestKey) || crypto.randomUUID();
+      sessionStorage.setItem(requestKey,automationSaveRequest.current[pipelineId]);
+    } catch { automationSaveRequest.current[pipelineId] ??= crypto.randomUUID(); }
     setSavingAutomations(true);
     try {
       const draftList = Object.entries(nextDraft);
@@ -736,7 +803,7 @@ function CrmFunisPage() {
         data: { 
           pipelineId: funnelId, 
           automations: nextDraft as Record<string, unknown[]>,
-          applyRequestId: automationSaveRequest.current
+          applyRequestId: automationSaveRequest.current[pipelineId]
         } 
       });
 
@@ -750,6 +817,7 @@ function CrmFunisPage() {
       const persisted = (verified.automations ?? {}) as StageAutomations;
       assertAutomationPersistence(Object.fromEntries(Object.entries(nextDraft).map(([id,actions])=>[id,actions.map(action=>({...action,...(action.execution?{execution:{...action.execution,applyToExisting:false}}:{})}))])), persisted);
       
+      automationReadEpoch.current[pipelineId] = (automationReadEpoch.current[pipelineId] ?? 0) + 1;
       setAutomations(persisted);
       
       if (backfilledTotal > 0) {
@@ -763,9 +831,10 @@ function CrmFunisPage() {
         console.warn("Erro ao atualizar cache local:", e);
       }
 
-      automationSaveRequest.current = null;
+      delete automationSaveRequest.current[pipelineId];
       try { sessionStorage.removeItem(requestKey); } catch { /* confirmação já recebida */ }
       setDraft(keepEditing ? persisted : null);
+      if (activeFunnelRef.current !== pipelineId) return;
       setConfiguring(null);
       setColorMode(false);
       setSelectedColorStageId(null);
@@ -1282,9 +1351,10 @@ function CrmFunisPage() {
       <Button
         size="sm"
         onClick={enterAutomatize}
+        disabled={openingAutomations || savingAutomations || !funnelId}
         className="h-8 text-xs gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
       >
-        <Zap className="w-3.5 h-3.5" /> Automatize
+        <Zap className="w-3.5 h-3.5" /> {openingAutomations ? "Carregando gatilhos..." : "Automatize"}
       </Button>
     </div>
   ) : (
