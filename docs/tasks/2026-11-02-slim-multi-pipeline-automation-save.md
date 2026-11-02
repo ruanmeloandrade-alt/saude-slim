@@ -42,4 +42,22 @@ Repositório exclusivo `ruanmeloandrade-alt/saude-slim`. Base atual `migrate/sau
 - As duas baterias foram repetidas sobre as fontes efetivamente geradas pelo build: 11/11 e 12/12 PASS. O bundle público compilado contém a abertura aguardada e a proteção de recuperação.
 - Geradores existentes modificam fontes geradas; alterações não relacionadas retiradas do commit depois da validação, preservando a correção.
 
-Status: implementação, regressões e build aprovados; faltam publicação e conferência pós-publicação.
+## Publicação e conferência operacional
+- PR #20: https://github.com/ruanmeloandrade-alt/saude-slim/pull/20; commit de implementação `11439f6`, merge `f004cd0dd159d4b6be3236587f02f3133196bb76` na branch ativa `migrate/saude-slim-owner-20261030`.
+- Railway deployment `7890e55d-b822-4a97-a737-089fee8acc68`: SUCCESS em 02/11/2026; healthcheck aprovado. Nenhum serviço/configuração de infraestrutura alterado.
+- Navegador interno autenticado recarregado após SUCCESS: troca rápida para Pós-vendas passou por Carregando gatilhos e abriu com os dois SalesBots corretos. Antes da correção, o mesmo caminho abriu vazio.
+- Snapshot privado atualizado imediatamente antes da gravação. Salvar acionado em Pós-vendas sem alterar campos, com zero leads e applyToExisting falso. O editor fechou após confirmação; página recarregada e configuração relida com onboarding e PAUSA PRESCRITA ativos.
+- Troca rápida e abertura do editor também conferidas em Reativação de base (8 ações), Recompra (3) e Vendas (6). Os 15 vínculos SalesBot existentes estão íntegros; Reativação também contém quatro ações de movimentação de etapa.
+- Comparação antes/depois: botsUnchanged, botBlocksUnchanged, otherPipelinesUnchanged, postSalesConfigurationPreserved e countsPreserved todos true. As linhas dos outros funis permaneceram idênticas. IDs técnicos das linhas de Pós-vendas podem mudar pela substituição atômica existente; configuração semântica preservada.
+- Console do navegador sem erros/avisos na conferência. Nenhuma mensagem externa ou aplicação em leads existentes foi disparada; este aceite cobre configuração e persistência, não entrega de mensagens.
+- Evidência visual salva no output local deste chat; snapshots e credenciais não integram o Git. Registro final documental na branch de correção, sem novo deploy por documentação.
+
+## Arquivos alterados
+- `src/legacy/crm.funis-de-venda.legacy.tsx`
+- `src/lib/pipeline-automation-state.ts`
+- `scripts/test-slim-multi-pipeline-save.mjs`
+- `scripts/test-slim-pipeline-qa.mjs`
+- `docs/tasks/2026-11-02-slim-multi-pipeline-automation-save.md`
+- `CODEX_STATUS.md`
+
+Status: concluído, publicado e conferido em produção; pronto para uso do usuário.
