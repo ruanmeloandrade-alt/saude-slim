@@ -9,6 +9,7 @@ const compile=s=>ts.transpileModule(s,{compilerOptions:{target:ts.ScriptTarget.E
 function load(path,deps={},extra=''){const m={exports:{}};Function('require','module','exports','React',compile(read(path)+extra))(name=>{assert(name in deps,'Unexpected import '+name);return deps[name]},m,m.exports,React);return m.exports;}
 const crm=load('src/lib/crm-mock.ts');
 const core=load('src/lib/stage-execution.core.ts',{'date-fns-tz':tz,'./crm-mock':crm});
+const pipelineState=load('src/lib/pipeline-automation-state.ts');
 const engine=load('src/lib/stage-automation-engine.server.ts',{'@/lib/crm-mock':crm,'@/lib/forms.functions':{},'date-fns-tz':tz,'./stage-execution.core':core,'./slim-operation-errors.core':{slimSafeOperationalError:e=>e?.message??String(e)}});
 const pg=new PGlite();
 const ws='c49945db-1960-461a-9339-a43b8403bdd9',pipeline='00000000-0000-4000-8000-000000000001',stage='00000000-0000-4000-8000-000000000002',otherStage='00000000-0000-4000-8000-000000000003',field='00000000-0000-4000-8000-000000000004';
@@ -123,11 +124,11 @@ await test('actual Pronto/save handler waits for confirmed settings and apply qu
  function scan(n){if(ts.isFunctionDeclaration(n)&&n.name?.text==='saveAutomatize')save=n;if(ts.isFunctionDeclaration(n)&&n.name?.text==='assertAutomationPersistence')persistence=n;n.forEachChild(scan)}scan(frontAst);
  const input={[stage]:[{...base,id:'qa-pronto',execution:{trigger:{kind:'created-or-moved'},active:'always',delayMinutes:0,delayUnit:'minutes',applyToExisting:true}}]};
  let current,closed=false;const stored=new Map(),storage={getItem:k=>stored.get(k)??null,setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)};
- const ctx={draft:input,funnelId:pipeline,savingAutomations:false,setDraft:v=>{current=v},setSavingAutomations:()=>{},automationSaveRequest:{current:null},localStorage:storage,sessionStorage:storage,stageAutomationDraftStorageKey:()=> 'qa-draft',stageAutomationStorageKey:()=> 'qa-saved',toast:{success(){},error(){}},setAutomations(){},setConfiguring(){},setColorMode(){},setSelectedColorStageId(){},setMode(){closed=true},stageActionStamp:core.stageActionStamp,
+ const ctx={...pipelineState,draft:input,funnelId:pipeline,funnel:{id:pipeline,stages:[{id:stage},{id:otherStage}]},activeFunnelRef:{current:pipeline},automationReadEpoch:{current:{}},savingAutomations:false,setDraft:v=>{current=v},setSavingAutomations:()=>{},automationSaveRequest:{current:{}},localStorage:storage,sessionStorage:storage,stageAutomationDraftStorageKey:()=> 'qa-draft',stageAutomationStorageKey:()=> 'qa-saved',toast:{success(){},error(){}},setAutomations(){},setConfiguring(){},setColorMode(){},setSelectedColorStageId(){},setMode(){closed=true},stageActionStamp:core.stageActionStamp,
  saveStageAutomationsServer:({data})=>handler({data,context:{supabase:db,userId:id(77)}}),
  listStageAutomationsServer:async()=>({automations:{[stage]:(await pg.query('select action from crm_stage_automations order by position')).rows.map(r=>r.action)}})};
  const saveFn=Function(...Object.keys(ctx),compile(persistence.getText(frontAst)+'\n'+save.getText(frontAst))+';return saveAutomatize')(...Object.values(ctx));
- failJobs=true;await assert.rejects(()=>saveFn(input,true),/aplicação aos leads falhou/);assert.equal(current[stage][0].execution.applyToExisting,true);assert.equal(closed,false);const request=ctx.automationSaveRequest.current;assert(request);
+ failJobs=true;await assert.rejects(()=>saveFn(input,true),/aplicação aos leads falhou/);assert.equal(current[stage][0].execution.applyToExisting,true);assert.equal(closed,false);const request=ctx.automationSaveRequest.current[pipeline];assert(request);
  failJobs=false;await saveFn(input,true);assert.equal(current[stage][0].execution.applyToExisting,false);assert.equal(closed,false);
  assert.equal((await pg.query('select count(*)::int n from crm_automation_jobs')).rows[0].n,3);
  const repeat=await handler({data:{pipelineId:pipeline,automations:input,applyRequestId:request},context:{supabase:db,userId:id(77)}});assert.equal(repeat.backfilled,0);
