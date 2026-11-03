@@ -72,5 +72,6 @@ html:root [data-chat-surface][data-chat-surface]{
 [data-chat-surface] .slim-message-attachment audio{color-scheme:dark}
 [data-chat-surface] .slim-message-attachment img{background:transparent}
 @media(max-width:600px){[data-chat-surface] .slim-message-bubble{max-width:84%;font-size:13px}[data-chat-surface] .slim-inbox-message{gap:3px}}
+@media(max-width:767px){[data-chat-surface] [data-chat-thread-header]>:last-child{flex-basis:100%;justify-content:flex-end}[data-chat-surface][class*="h-[100dvh]"]{height:calc(100dvh - 48px)}[data-chat-surface] div:has(>input[aria-label="Mensagem"]){flex-wrap:wrap;padding:10px 12px;gap:6px}[data-chat-surface] div:has(>input[aria-label="Mensagem"])>*{order:0}[data-chat-surface] div:has(>input[aria-label="Mensagem"])>.order-first{order:-1}[data-chat-surface] input[aria-label="Mensagem"]{order:-2!important;flex-basis:100%;min-width:0;width:100%}}
 @media(min-width:768px){[data-slim-sidebar][data-collapsed="true"] .slim-sidebar-logo{width:48px;height:48px}.slim-auth>aside .slim-auth-logo{width:220px;height:220px}}
 @media(max-width:767px){.slim-auth-logo{width:116px;height:116px}.slim-auth .slim-auth-brand{flex-shrink:0}.slim-sidebar-brand{min-height:88px}}
