@@ -5,7 +5,7 @@
 export const SLIM_LEAD_ACTIVITY_META_SELECT =
   'id,type,occurred_at,preview_text:payload->>text,media_type:payload->>media_type,' +
   'mime_type:payload->>mime_type,file_name:payload->>file_name,duration_seconds:payload->>duration_seconds,' +
-  'whatsapp_message_id:payload->>whatsapp_message_id,reactions:payload->reactions,' +
+  'whatsapp_message_id:payload->>whatsapp_message_id,whatsapp_session_id:payload->>whatsapp_session_id,whatsapp_remote_jid:payload->>whatsapp_remote_jid,reactions:payload->reactions,' +
   'deleted_for_me:payload->>deleted_for_me,deleted_for_all:payload->>deleted_for_all,' +
   'error_text:payload->>error,transcription:payload->>transcription';
 
@@ -19,6 +19,8 @@ export type SlimProjectedActivityRow = {
   file_name: string | null;
   duration_seconds: string | null;
   whatsapp_message_id: string | null;
+  whatsapp_session_id?: string | null;
+  whatsapp_remote_jid?: string | null;
   reactions: unknown;
   deleted_for_me: string | boolean | null;
   deleted_for_all: string | boolean | null;
@@ -30,6 +32,21 @@ function hasText(value: unknown): boolean {
   return typeof value === 'string' && value.trim().length > 0;
 }
 
+/** Provider event names such as conversation/location are not file attachments. */
+export function slimInboxMediaKind(type: unknown, mime?: unknown, fileName?: unknown): 'image'|'audio'|'video'|'sticker'|'document'|null {
+ const raw=String(type??'').toLowerCase().replace(/message$/,'');
+ const content=String(mime??'').toLowerCase();
+ if(raw==='sticker')return 'sticker';
+ if(content.startsWith('image/'))return 'image';
+ if(content.startsWith('audio/'))return 'audio';
+ if(content.startsWith('video/'))return 'video';
+ if(['image','audio','video','document'].includes(raw))return raw as 'image'|'audio'|'video'|'document';
+ if(raw==='ptt')return 'audio';
+ if(raw==='ptv')return 'video';
+ if(content.startsWith('application/')||hasText(fileName))return 'document';
+ return null;
+}
+
 export function slimProjectedActivity(row: SlimProjectedActivityRow) {
   const seconds = row.duration_seconds == null ? NaN : Number(row.duration_seconds);
   return {
@@ -37,12 +54,14 @@ export function slimProjectedActivity(row: SlimProjectedActivityRow) {
     type: row.type,
     text: row.preview_text ?? null,
     mediaUrl: null as string | null,
-    mediaDeferred: hasText(row.media_type) || hasText(row.mime_type) || hasText(row.file_name),
-    mediaType: row.media_type ?? null,
+    mediaDeferred: slimInboxMediaKind(row.media_type,row.mime_type,row.file_name)!==null,
+    mediaType: slimInboxMediaKind(row.media_type,row.mime_type,row.file_name),
     mimeType: row.mime_type ?? null,
     fileName: row.file_name ?? null,
     durationSeconds: Number.isFinite(seconds) && seconds >= 0 ? seconds : null,
     whatsappMessageId: row.whatsapp_message_id ?? null,
+    whatsappSessionId: row.whatsapp_session_id ?? null,
+    whatsappRemoteJid: row.whatsapp_remote_jid ?? null,
     reactions: (Array.isArray(row.reactions) ? row.reactions : []) as Array<
       string | { emoji: string; fromMe?: boolean | null; at?: string | null }
     >,

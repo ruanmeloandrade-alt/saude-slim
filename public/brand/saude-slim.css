@@ -65,5 +65,12 @@ html:root [data-chat-surface][data-chat-surface]{
  --chat-audio-control:color-mix(in oklab,var(--card) 75%,var(--slim-cyan));
  --chat-unread:var(--slim-pink);--chat-unread-fg:var(--foreground);
 }
+/* Conversation content stays compact; attachments are rendered as their real media. */
+[data-chat-surface] .slim-message-bubble{border:1px solid color-mix(in oklab,var(--chat-divider) 45%,transparent);box-shadow:0 2px 8px #00000012;line-height:1.5}
+[data-chat-surface] .slim-inbox-message{align-items:center;padding-block:1px}
+[data-chat-surface] .slim-inbox-message [aria-label="Reagir"],[data-chat-surface] .slim-inbox-message [aria-label="Opções da mensagem"]{background:color-mix(in oklab,var(--chat-panel) 80%,transparent)}
+[data-chat-surface] .slim-message-attachment audio{color-scheme:dark}
+[data-chat-surface] .slim-message-attachment img{background:transparent}
+@media(max-width:600px){[data-chat-surface] .slim-message-bubble{max-width:84%;font-size:13px}[data-chat-surface] .slim-inbox-message{gap:3px}}
 @media(min-width:768px){[data-slim-sidebar][data-collapsed="true"] .slim-sidebar-logo{width:48px;height:48px}.slim-auth>aside .slim-auth-logo{width:220px;height:220px}}
 @media(max-width:767px){.slim-auth-logo{width:116px;height:116px}.slim-auth .slim-auth-brand{flex-shrink:0}.slim-sidebar-brand{min-height:88px}}

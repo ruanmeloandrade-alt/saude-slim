@@ -77,7 +77,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "stylesheet", href: "/brand/saude-slim.css?v=20261103" },
+      { rel: "stylesheet", href: "/brand/saude-slim.css?v=20261103-inbox" },
       { rel: "icon", type: "image/jpeg", href: "/brand/saude-slim-logo.jpg?v=20261030" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },

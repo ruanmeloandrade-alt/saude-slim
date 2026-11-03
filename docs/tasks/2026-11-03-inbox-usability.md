@@ -1,0 +1,28 @@
+# Saúde Slim — operação do Inbox
+
+Branch `fix/slim-inbox-20261103`, base `3db7476`. Dar continuidade sem abandonar a entrega anterior, aplicada ao banco e com publicação em andamento. Escopo incremental solicitado pelo usuário:
+
+1. Mídias: imagens, áudios e arquivos devem mostrar o conteúdo real e abrir corretamente; corrigir tipagem/renderização/recuperação a partir de evidência, sem inventar anexos.
+2. Filtros: preservar Não lidas/Aguardando/Fechadas/Favoritas ao abrir conversa e investigar se vazios são reais ou resultado de paginação/status incorretos.
+3. Listagem: carregamento contínuo automático, sem depender de Carregar mais nem representar o tamanho da primeira página como total completo. Evitar ocultar leads além da primeira página.
+4. Favoritar SalesBots e Agentes IA nos seletores, com favoritos primeiro e sem iniciar automação ao favoritar. Preferência por operador/workspace.
+5. Reação: disponibilizar botão ao lado de mensagens usando o transporte real já existente; não enviar reações em teste sem instrução específica.
+6. Composição: botão de pena ao lado do áudio para melhorar o rascunho com IA real e contexto do Cérebro, revisão pelo operador antes de inserir/enviar; nunca enviar texto automaticamente.
+
+Preservar sessão/RLS, isolamento, vínculos de mensagens, origem WhatsApp, proteção contra envio duplicado, funis, bots e demais áreas. Não adicionar dependência de produção. Mapear contratos e verificar com dados atuais antes de alterar. Mídias privadas não devem ser expostas publicamente. Testes isolados e leitura autenticada não devem criar mensagens para clientes.
+
+Estado inicial: diagnóstico em andamento. Registrar arquivos alterados, evidências, limites e publicação aqui e em CODEX_STATUS.md.
+
+Implementação: deduplicação exclusivamente por ID de mensagem/direção/sessão; normalização de tipos reais de anexo; prévias visíveis com recuperação privada e até três leituras simultâneas; preferências isoladas por operador/empresa; carregamento automático de todas as páginas; estado da visão salvo na sessão; estrela nos seletores de bots/agentes e nas conversas; biblioteca de figurinhas e transporte explícito; reação existente visível; pena com IA configurada e fontes habilitadas do Cérebro, aplicada somente ao rascunho. Cards do funil consultam somente a última mensagem recebida. Menu de estado antes desativado substituído por aguardar/fechar/reabrir; leitura preserva espera/fechamento.
+
+Validações: 30 cenários específicos, suites de anexos/grupos/drawer/automação e regressões do prebuild aprovadas. Compilação cliente/SSR/Nitro validada após adequar os hooks universais à proteção de imports do framework. Verificação de tipos dos 15 arquivos autorais sem erro; 7 diagnósticos herdados em dependências fora do escopo permanecem. Migration aditiva aplicada com sessão nativa e RLS: 313 prévias reais de entrada e favorito pessoal conferido com rollback. Três estados atualizados/lidos sob RLS real e revertidos na mesma transação, sem alteração persistente no atendimento.
+
+Navegador local autenticado: 322 conversas carregadas automaticamente, sem clique em carregar; conversa da nova captura contém 24 linhas para 8 IDs WhatsApp e aparece sem documentos fantasmas/cópias extras. Não lidas permanece ao abrir outro cliente. Favorito de bot sobe ao topo sem executar, removido após teste; favorito de conversa aparece na visão Favoritas e foi removido. Sem agentes habilitados para iniciar; seletor e ordenação compartilham o mesmo controle validado. IA real retornou revisão de rascunho fictício e aplicou ao campo; campo limpo sem envio. Reações abertas sem escolher emoji. Biblioteca vazia consultada. Conferência final de anexos/figurinhas e produção pendente nesta etapa.
+
+Conferência de anexos concluída no runtime local real, com os dois workers de filas pausados somente no bootstrap de QA: imagens carregadas com dimensões válidas; figurinha 512×512 exibida e salva na biblioteca, botão de reutilização habilitado sem clique de envio; preferência temporária removida, original preservado. Áudio com controls, readyState 4, sem erro e duração 8,0265s; PDF baixado e assinatura `%PDF-`/9.454 bytes confirmadas. Recuperações privadas preservadas no histórico. Cards mostram entrada do lead mesmo com resposta posterior do operador; drawer da Saúde Slim exibe identidade atual e as ações habilitadas de espera/fechar. Sem pedido, bot, mensagem, reação ou figurinha enviados a clientes durante a validação.
+
+Pedidos incorporados durante execução: duplicatas de mensagens somente no Inbox (WhatsApp normal), figurinhas visíveis/salváveis/reutilizáveis na aba de emojis, última mensagem enviada pelo lead nos cards do funil e tema do drawer da própria Saúde Slim (confirmado pelo usuário, não é outro cliente).
+
+Evidência real: 316 leads ativos no momento da consulta; estados atuais aberta/open/lida, sem aguardando/fechada; nenhuma preferência de favorito existente. Encontrados 3 registros do mesmo ID WhatsApp no trecho sobre entrega em Boa Vista, mesma sessão e direção. 3.026 eventos `conversation` eram tratados como mídia por regra de metadados genérica. Não apagar histórico; deduplicar por identidade e corrigir tipagem. Prévia do funil usa consulta lateral/indexada, somente `message_in`, com RLS e sem transformar resposta do operador em mensagem do lead.
+
+Base de catálogo/estoque concluída: PR #21, commit integrado `3db7476`, deployment `1544c9da-f278-4e38-83c0-e3b9710388c3` SUCCESS. Produção autenticada confirmou catálogo 1/78 e modal central com SKU, sem confirmar pedido. Concorrência real com duas conexões validada com rollback de ambos os pedidos.

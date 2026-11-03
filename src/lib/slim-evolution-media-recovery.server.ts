@@ -49,6 +49,7 @@ function fallbackMimeFromMessageType(messageType:string|null|undefined):string {
 export async function downloadRecoveredEvolutionMedia(args:{
   url:string; apiKey:string; key:Record<string,unknown>;
   declaredMimeType?:string|null; messageType?:string|null;
+  message?:Record<string,unknown>|null;
 }, opts:{fetcher?:typeof fetch;timeoutMs?:number;maxResponseBytes?:number}={}):
   Promise<{bytes:Buffer;mimeType:string;extension:string}> {
   const max=opts.maxResponseBytes??SLIM_EVOLUTION_RESPONSE_MAX_BYTES;
@@ -64,7 +65,7 @@ export async function downloadRecoveredEvolutionMedia(args:{
     const response=await (opts.fetcher??fetch)(args.url,{
       method:'POST',
       headers:{'Content-Type':'application/json',apikey:args.apiKey},
-      body:JSON.stringify({message:{key:args.key},convertToMp4:false}),
+      body:JSON.stringify({message:{key:args.key,...(args.message?{message:args.message}:{})},convertToMp4:false}),
       signal:controller.signal,
     });
     if(!response.ok)throw new Error('O WhatsApp não disponibilizou esse arquivo.');

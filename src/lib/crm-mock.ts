@@ -15,6 +15,8 @@ export interface CrmLead {
  lastMessageFrom: LeadMessageDirection;
  lastMessageAt?: string;
  lastMessagePreview?: string;
+ lastInboundPreview?: string|null;
+ lastInboundAt?: string|null;
  unreadCount?: number;
  owner?: string;
  createdAt: string;

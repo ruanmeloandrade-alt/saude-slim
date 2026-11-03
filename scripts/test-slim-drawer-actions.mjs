@@ -6,6 +6,8 @@ import React from 'react';
 import ts from 'typescript';
 import {z} from 'zod';
 import {slimScrubGroupHistoryMedia} from '../src/lib/slim-inbox-group-history.core.ts';
+import {deduplicateInboxMessages,favoriteFirst} from '../src/lib/slim-inbox-usability.core.ts';
+import {slimInboxMediaKind} from '../src/lib/slim-inbox-lazy-media.core.ts';
 
 const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>fs.readFileSync(root+p,'utf8');
 const id=n=>`aaaaaaaa-aaaa-4aaa-8aaa-${String(n).padStart(12,'0')}`;
@@ -36,6 +38,8 @@ function harness(config={}){
  const noDOM=()=>{throw Error('Inline controls searched the global composer or opened a portal');};
  const mocks={react:hooks,'react-dom':{createPortal:noDOM},'@tanstack/react-query':{useQuery,useMutation,useQueryClient:()=>queryClient},'@tanstack/react-start':{useServerFn:fn=>fn},'lucide-react':new Proxy({},{get:()=>()=>null}),sonner:{toast:{success:message=>toasts.push({type:'success',message}),error:message=>toasts.push({type:'error',message})}},'@/integrations/supabase/client':{supabase:{auth,channel:()=>channel,removeChannel:async()=>{}}},'@/lib/inbox-automation-controls.functions':api,'@/lib/inbox-group-salesbot.functions':{resolveInboxSalesbotTarget:noDOM},'@/lib/inbox-lead-actions.functions':{resolveLeadWhatsappIdentity:noDOM},'./InboxLeadRouteEnhancements.legacy':{InboxLeadRouteEnhancements:noDOM}};
  const module={exports:{}};
+ mocks['@/lib/slim-inbox-favorites.client']={useInboxFavorites:()=>({ids:()=>new Set(),pending:false,toggle:()=>{throw Error('Favorite write outside this automation test');}})};
+ mocks['@/lib/slim-inbox-usability.core']={favoriteFirst};
  Function('require','module','exports','React','document','window','setTimeout','clearTimeout',compile(source,true))(name=>{assert(name in mocks,'Missing explicit IO mock: '+name);return mocks[name];},module,module.exports,React,{querySelector:noDOM},{addEventListener:noDOM},(fn,ms)=>{assert.equal(ms,25000);const timer=++nextTimer;timers.set(timer,fn);return timer;},timer=>timers.delete(timer));
  const Component=module.exports.ClientAutomationControls;
  const render=()=>{cursor=0;changed=false;tree=Component({...props,onPendingChange:value=>pending.push(value)});};
@@ -54,8 +58,8 @@ let count=0;async function check(name,run){await run();count++;console.log('PASS
 await check('real message projection allows only incoming/outgoing messages from snapshot, realtime and older pages',()=>{
  const raw=read('src/components/inbox/InboxPage.legacy.tsx'),ast=ts.createSourceFile('inbox.tsx',raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let callback;
  function walk(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='allMsgs'&&ts.isCallExpression(n.initializer))callback=n.initializer.arguments[0];ts.forEachChild(n,walk);}walk(ast);assert(callback);
- const projectSource=Function('input','slimScrubGroupHistoryMedia',compile(`const {isGroupThread=false,isLead=true,olderGroupMessages=[],effectiveGroupPage,conversation={messages:[]},olderActivities=[],effectiveActivityPage}=input;return (${callback.getText(ast)})();`));
- const project=input=>projectSource(input,slimScrubGroupHistoryMedia);
+ const projectSource=Function('input','slimScrubGroupHistoryMedia','deduplicateInboxMessages','slimInboxMediaKind',compile(`const {isGroupThread=false,isLead=true,olderGroupMessages=[],effectiveGroupPage,conversation={messages:[]},olderActivities=[],effectiveActivityPage}=input;return (${callback.getText(ast)})();`));
+ const project=input=>projectSource(input,slimScrubGroupHistoryMedia,deduplicateInboxMessages,slimInboxMediaKind);
  const incoming={id:'in',type:'message_in',from:'them',text:'Olá',occurredAt:'2026-10-18T10:00:00Z'},outgoing={id:'out',type:'message_out',from:'us',text:null,mediaUrl:'https://example.invalid/file.pdf',mediaType:'document',fileName:'local.pdf',occurredAt:incoming.occurredAt,deletedForMe:true,mediaDeferred:true};
  const older=[incoming,{id:'note',type:'note',text:'Nota interna'},{id:'read-old',type:'conversation_read'}],latest=[incoming,outgoing,{id:'read-new',type:'conversation_read'},{id:'bot',type:'salesbot_started'},{id:'legacy',type:'message',text:'Evento genérico'}],before=JSON.stringify({older,latest});
  for(const activities of [latest,structuredClone(latest)]){const result=project({olderActivities:older,effectiveActivityPage:{activities,nextCursor:'unchanged'}});assert.deepEqual(result.map(row=>row.id),['in','out']);assert.equal(result[0].from,'them');assert.equal(result[1].from,'me');assert.equal(result[1].mediaUrl,outgoing.mediaUrl);assert.equal(result[1].deletedForMe,true);if('mediaDeferred'in result[1])assert.equal(result[1].mediaDeferred,true);}

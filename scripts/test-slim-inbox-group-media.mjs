@@ -141,6 +141,7 @@ const ui = read('src/components/inbox/InboxPage.legacy.tsx');
 await test('Inbox connects group identity and a click-only media request without changing lead recovery', () => {
   assert(ui.includes('groupId={isGroupThread ? conversation.id : undefined}'));
   const media = ui.split('function MediaAttachment({')[1]?.split('function StickerAttachment({')[0];
+  if(media.includes('SlimInboxAttachment')){const preview=read('src/components/inbox/SlimInboxAttachment.tsx');assert(preview.includes('useServerFn(loadSlimGroupMessageMedia)'));assert(preview.includes('groupMedia({data:{groupId,messageId:msg.id}})'));assert(preview.includes('stored({data:{leadId:leadId!,activityId:msg.id}})'));assert(preview.includes('retry:false'));assert(ui.includes('sessionId: conversation.groupSessionId'));return;}
   assert(media.includes('loadGroupMediaFn({ data: { groupId, messageId: msg.id } })'));
   assert(media.includes('loadStoredMediaFn({ data: { leadId, activityId: msg.id } })'));
   assert(media.includes('recoverMediaFn({ data: { leadId, activityId: msg.id } })'));

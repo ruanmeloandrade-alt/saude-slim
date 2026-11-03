@@ -8,6 +8,7 @@ import {
  slimProjectedActivity,
  slimScrubInlineMedia,
  slimAllowStoredMediaUrl,
+ slimInboxStoredMediaPath,
 } from '../src/lib/slim-inbox-lazy-media.core.ts';
 
 const root=new URL('../',import.meta.url);
@@ -74,7 +75,7 @@ await test('history list and lead detail use lightweight metadata',()=>{
   assert(section.includes('.select(SLIM_LEAD_ACTIVITY_META_SELECT)'));
   assert(!section.split('.select(SLIM_LEAD_ACTIVITY_META_SELECT)')[0].includes('.select("id, type, payload, occurred_at")'));
  }
- assert(s.includes('const activities = pageRows.map(slimProjectedActivity)'));
+ assert(s.includes('const activities = pageRows.map(slimProjectedActivity)')||s.includes('const activities = deduplicateInboxMessages(pageRows.map(slimProjectedActivity))'));
 });
 await test('large payload loads through one separately authenticated endpoint',()=>{
  const s=read('src/lib/leads.functions.legacy.ts');
@@ -91,6 +92,7 @@ await test('client does not eagerly fetch attachments on mount or cache base64 i
  const s=read('src/components/inbox/InboxPage.legacy.tsx');
  const block=s.split('function MediaAttachment({')[1]?.split('function StickerAttachment({')[0];
  assert(block);
+ if(s.includes('SLIM_INBOX_USABILITY_20261103')){const preview=read('src/components/inbox/SlimInboxAttachment.tsx');assert(preview.includes('IntersectionObserver'));assert(preview.includes('active<3'));assert(preview.includes('retry:false'));assert(preview.includes('staleTime:45*60_000'));assert(preview.includes('role="alert"'));return;}
  assert(block.includes('useMutation({'));
  assert(block.includes('onClick={() => manualMedia.mutate()}'));
  assert(block.includes('retry: false'));
@@ -156,6 +158,7 @@ function fixture(rows=[]){
 const authorizedHandler=extractedHandler('loadSlimLeadActivityMedia',{
  loadActiveWorkspace:async(_db,user)=>user==='user-ws'?'ws':'other-workspace',
  slimAllowStoredMediaUrl,
+ slimInboxStoredMediaPath,
 });
 await test('real endpoint only returns media URL for authorized workspace, lead and activity',async()=>{
  const media={id:'a',type:'message_in',workspace_id:'ws',lead_id:'l',payload:{media_url:'data:application/pdf;base64,JVBERi0x',text:'private note'}};
@@ -189,3 +192,5 @@ await test('release script applies once; no unrelated changed sources',()=>{
  assert.deepEqual(changed.map(read),before);
 });
 console.log(passed+'/'+passed+' on-demand media checks passed. No live customer media read or WhatsApp sent.');
+
+// SLIM_EVOLUTION_MEDIA_RECOVERY_V1

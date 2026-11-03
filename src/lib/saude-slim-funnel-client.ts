@@ -46,6 +46,8 @@ export async function listSlimFunnels({data}:{data:{crmSourceId:string}}){
       .eq("workspace_id",ws).eq("crm_source_id",data.crmSourceId).eq("status","active").limit(5000),
   ]);
   const pipes=rows(p),stages=rows(st),leads=rows(lr);
+  const latest=leads.length?rows(await sb.rpc('slim_latest_lead_inbound',{_workspace_id:ws,_lead_ids:leads.map((lead:any)=>lead.id)})):[];
+  const inboundByLead=new Map(latest.map((message:any)=>[message.lead_id,message]));
   return {funnels:pipes.map((pipe:any)=>({
     id:pipe.id,name:pipe.name,
     stages:stages.filter((stage:any)=>stage.pipeline_id===pipe.id).map((stage:any)=>({
@@ -55,6 +57,8 @@ export async function listSlimFunnels({data}:{data:{crmSourceId:string}}){
       leads:leads.filter((lead:any)=>lead.stage_id===stage.id).map((lead:any)=>({
         id:lead.id,name:lead.name,value:Number(lead.value??0),
         lastMessageFrom:lead.last_message_from??"none",
+        lastInboundPreview:inboundByLead.get(lead.id)?.preview??null,
+        lastInboundAt:inboundByLead.get(lead.id)?.message_at??null,
         companyId:lead.company_id,createdAt:lead.created_at,
         email:lead.email,phone:lead.phone,
         tags:Array.isArray(lead.tags)?lead.tags:[],

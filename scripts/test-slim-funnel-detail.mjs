@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 import { z } from 'zod';
 import { SLIM_LEAD_ACTIVITY_META_SELECT, slimProjectedActivity } from '../src/lib/slim-inbox-lazy-media.core.ts';
+import {deduplicateInboxMessages} from '../src/lib/slim-inbox-usability.core.ts';
 
 const file = new URL('../src/lib/leads.functions.legacy.ts', import.meta.url);
 const source = fs.readFileSync(file, 'utf8');
@@ -20,7 +21,7 @@ assert.equal(compiled.diagnostics?.length ?? 0, 0);
 const exports = {};
 let middleware;
 vm.runInNewContext(compiled.outputText, {
-  exports, z, Date, Promise, SLIM_LEAD_ACTIVITY_META_SELECT, slimProjectedActivity,
+  exports, z, Date, Promise, SLIM_LEAD_ACTIVITY_META_SELECT, slimProjectedActivity, deduplicateInboxMessages,
   attachSupabaseAuth: 'attach', requireSupabaseAuth: 'required',
   createServerFn: () => ({
     middleware(value) { middleware = value; return this; },
