@@ -48,5 +48,22 @@ body{background-color:var(--background);color:var(--foreground)}
 .slim-mobile-menu-trigger{background:var(--card)!important;color:var(--slim-cyan)!important;border-color:var(--border)!important}
 body[data-app-shell="1"] button[class*="bg-emerald-600"]{background-color:var(--primary)!important;color:var(--primary-foreground)!important}
 body[data-app-shell="1"] button[class*="bg-emerald-600"]:hover{filter:brightness(1.08)}
+/* Inbox has its own theme tokens. Keep them aligned with the current brand. */
+html:root [data-chat-surface][data-chat-surface]{
+ --chat-panel:var(--card);
+ --chat-panel-hover:color-mix(in oklab,var(--card) 88%,var(--slim-cyan));
+ --chat-panel-active:color-mix(in oklab,var(--card) 82%,var(--slim-cyan));
+ --chat-bg:var(--background);
+ --chat-thread-bg:color-mix(in oklab,var(--background) 96%,var(--slim-blue));
+ --chat-pattern:color-mix(in oklab,var(--slim-cyan) 10%,transparent);
+ --chat-bubble-in:var(--muted);
+ --chat-bubble-out:color-mix(in oklab,var(--card) 78%,var(--slim-blue));
+ --chat-text:var(--foreground);--chat-text-muted:var(--muted-foreground);
+ --chat-divider:var(--border);--chat-accent:var(--slim-cyan);
+ --chat-accent-fg:var(--primary-foreground);--chat-meta:var(--muted-foreground);
+ --chat-group-avatar:color-mix(in oklab,var(--card) 80%,var(--slim-pink));
+ --chat-audio-control:color-mix(in oklab,var(--card) 75%,var(--slim-cyan));
+ --chat-unread:var(--slim-pink);--chat-unread-fg:var(--foreground);
+}
 @media(min-width:768px){[data-slim-sidebar][data-collapsed="true"] .slim-sidebar-logo{width:48px;height:48px}.slim-auth>aside .slim-auth-logo{width:220px;height:220px}}
 @media(max-width:767px){.slim-auth-logo{width:116px;height:116px}.slim-auth .slim-auth-brand{flex-shrink:0}.slim-sidebar-brand{min-height:88px}}

@@ -24,7 +24,7 @@ await check('zero quantity rejected',()=>{const d=draft();d.items[0].quantity=0;
 await check('fractional quantity rejected for integer stock',()=>{const d=draft();d.items[0].quantity=1.5;assert.throws(()=>calc(d));});
 await check('negative quantity rejected',()=>{const d=draft();d.items[0].quantity=-1;assert.throws(()=>calc(d));});
 await check('nonfinite price rejected',()=>assert.throws(()=>calc(draft(),[{...product,priceCents:NaN}])));
-await check('oversell blocked in quote, server revalidation still required',()=>{const d=draft();d.items[0].quantity=11;assert.throws(()=>calc(d));});
+await check('sale above registered stock remains reviewable for automatic entry',()=>{const d=draft();d.items[0].quantity=11;assert.equal(calc(d).totalCents,21989);});
 await check('inactive product rejected',()=>assert.throws(()=>calc(draft(),[{...product,active:false}])));
 await check('foreign-workspace product rejected',()=>assert.throws(()=>calc(draft(),[{...product,workspaceId:client}])));
 await check('duplicate product lines rejected',()=>{const d=draft();d.items.push({...d.items[0]});assert.throws(()=>calc(d));});

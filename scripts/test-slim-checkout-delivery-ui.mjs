@@ -17,6 +17,10 @@ function loadSource(relative,reactBindings=React,cache=new Map()){
  assert(!result.diagnostics?.some(d=>d.category===ts.DiagnosticCategory.Error),'Invalid TSX: '+relative);
  new Function('require','module','exports','React',result.outputText)(name=>{
   if(name==='react')return reactBindings;
+  if(name==='@/components/ui/dialog')return {
+   Dialog:({open,children})=>open?React.createElement('section',{role:'dialog'},children):null,
+   ...Object.fromEntries(['DialogContent','DialogHeader','DialogTitle','DialogDescription'].map(name=>[name,({children,...props})=>React.createElement('div',props,children)])),
+  };
   if(!name.startsWith('.')&&!name.startsWith('@/'))return nativeRequire(name);
   const base=name.startsWith('@/')?path.join(root,'src',name.slice(2)):path.resolve(path.dirname(file),name);
   const target=[base,base+'.ts',base+'.tsx'].find(p=>fs.existsSync(p)&&fs.statSync(p).isFile());
@@ -68,6 +72,13 @@ await test('incomplete delivery cannot open a confirmation or send a request',()
 });
 await test('review renders normalized recipient, address, freight and final total',()=>{
  const h=checkout();fillDelivery(h);h.click('Revisar pedido');const html=h.html();assert(html.includes('Destinatário Teste'));assert(html.includes('5511999999999'));assert(html.includes('Avenida Paulista'));assert(html.includes('São Paulo/SP'));assert(html.includes('CEP 01310100'));assert(html.includes('Receber na portaria'));assert(html.includes('R$ 12,34'));assert(html.includes('R$ 32,33'));assert.equal(h.find(e=>e.type==='fieldset').props.disabled,true);assert.equal(h.calls.length,0);
+});
+await test('review opens a centered-dialog flow with customer and items without recording a sale',()=>{
+ const h=checkout();assert(!h.html().includes('role="dialog"'));h.click('Revisar pedido');
+ const html=h.html();assert(html.includes('role="dialog"'));assert(html.includes('Revise e confirme o pedido'));
+ assert(html.includes('Cliente Teste'));assert(html.includes('Produtos do pedido'));assert(html.includes('Produto Teste'));
+ assert(html.includes('Total do pedido'));assert.equal(h.calls.length,0);
+ h.click('Voltar e corrigir');assert(!h.html().includes('role="dialog"'));assert.equal(h.calls.length,0);
 });
 await test('confirmation submits the reviewed delivery snapshot once',async()=>{
  const h=checkout();fillDelivery(h);h.click('Revisar pedido');h.click('Confirmar pedido');await settle(h);assert.equal(h.calls.length,1);assert.deepEqual(h.calls[0].fulfillment,delivery);assert.equal(h.calls[0].shippingCents,1234);assert.equal(h.calls[0].totalCents,3233);assert(h.html().includes('Pedido SL-TESTE confirmado'));
