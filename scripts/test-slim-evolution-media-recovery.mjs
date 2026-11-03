@@ -88,6 +88,7 @@ await check('Storage policies remain scoped to authenticated operator',()=>{
 });
 await check('any missing media kind can be recovered only by click',()=>{
  const part=read('src/components/inbox/InboxPage.legacy.tsx').split('function MediaAttachment({')[1].split('function StickerAttachment({')[0];
+ if(part.includes('SlimInboxAttachment')){const preview=read('src/components/inbox/SlimInboxAttachment.tsx');assert(preview.includes('useServerFn(resolveLeadMessageMedia)'));assert(preview.includes('if(msg.whatsappMessageId)'));assert(preview.includes('retry:false'));assert(preview.includes('media.refetch()'));return;}
  assert(part.includes('const recoverMediaFn = useServerFn(resolveLeadMessageMedia)'));
  assert(part.includes('if (msg.whatsappMessageId) {'));
  assert(!part.includes('if (kind === "sticker" && msg.whatsappMessageId) {'));

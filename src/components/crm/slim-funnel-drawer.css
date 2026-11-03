@@ -19,6 +19,7 @@ body[data-app-shell="1"] .slim-funnel-drawer[data-slim-surface="sheet"] { overfl
 .slim-funnel-drawer-info::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
 .slim-funnel-drawer-info h2, .slim-funnel-drawer-info h3 { font-size: 15px; line-height: 1.5; color: var(--foreground); }
 .slim-funnel-drawer-chat { min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--chat-bg); color: var(--chat-text); }
+.slim-funnel-drawer-chat[data-chat-surface]{--chat-panel:var(--card);--chat-panel-hover:var(--muted);--chat-panel-active:color-mix(in oklab,var(--card) 82%,var(--slim-cyan));--chat-bg:var(--background);--chat-thread-bg:var(--background);--chat-bubble-in:var(--muted);--chat-bubble-out:color-mix(in oklab,var(--card) 78%,var(--slim-blue));--chat-text:var(--foreground);--chat-text-muted:var(--muted-foreground);--chat-divider:var(--border);--chat-accent:var(--slim-cyan);--chat-meta:var(--muted-foreground);--chat-unread:var(--slim-pink);--chat-unread-fg:var(--foreground)}
 /* The embedded thread is a Fragment: only its message area should grow. */
 .slim-funnel-drawer-chat > * { min-width: 0; min-height: 0; }
 .slim-funnel-drawer-field { display: grid; gap: 4px; min-width: 0; }

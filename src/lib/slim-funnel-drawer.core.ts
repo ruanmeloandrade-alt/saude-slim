@@ -43,7 +43,7 @@ export function slimDrawerConversation(lead: SlimDrawerLead): ChatConversation {
     subtitle: [lead.phone, lead.stageName].filter(Boolean).join(' · ') || lead.email || 'Contato',
     lastMessageFrom: lead.lastMessageFrom === 'lead' ? 'them' : 'me', lastMessagePreview: '', lastMessageAt: lead.updatedAt,
     unreadCount: 0, messages: [], labels: lead.tags, sourceProvider: lead.sourceProvider,
-    status: lead.conversationStatus === 'fechada' ? 'resolvido' : lead.conversationStatus === 'aberta' ? 'aberto' : undefined, productIds: [],
+    status: ['fechada','closed'].includes(lead.conversationStatus??'') ? 'resolvido' : ['aguardando','waiting','pending'].includes(lead.conversationStatus??'') ? 'aguardando' : lead.conversationStatus === 'aberta' ? 'aberto' : undefined, productIds: [],
   };
 }
 export function slimDrawerEditLead(selected: CrmLead, lead: SlimDrawerLead): CrmLead & Pick<SlimDrawerLead, 'email' | 'phone' | 'responsibleId' | 'pipelineId' | 'stageId'> {

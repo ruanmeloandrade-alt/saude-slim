@@ -1,10 +1,10 @@
 type Db={from:(table:string)=>any};
-export type AcknowledgedMedia={workspaceId:string;actorId:string;leadId:string;sessionId:string;remoteJid:string;messageId:string;kind:'image'|'video'|'audio'|'document';caption?:string;mediaUrl:string;deliveryStatus:string;occurredAt:string};
+export type AcknowledgedMedia={workspaceId:string;actorId:string;leadId:string;sessionId:string;remoteJid:string;messageId:string;kind:'image'|'video'|'audio'|'document'|'sticker';caption?:string;mediaUrl:string;deliveryStatus:string;occurredAt:string};
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function validateMediaReceipt(value:AcknowledgedMedia):void{
  for(const id of [value.workspaceId,value.actorId,value.leadId,value.sessionId])if(typeof id!=='string'||!UUID.test(id))throw new Error('Referência do envio inválida.');
  if(typeof value.messageId!=='string'||!value.messageId.trim()||value.messageId.length>256||typeof value.remoteJid!=='string'||!/^\d+(?::\d+)?@(s\.whatsapp\.net|lid)$/.test(value.remoteJid))throw new Error('Confirmação da mensagem inválida.');
- if(!['image','video','audio','document'].includes(value.kind)||!['pending','sent','delivered','read','played'].includes(value.deliveryStatus))throw new Error('Estado da mídia inválido.');
+ if(!['image','video','audio','document','sticker'].includes(value.kind)||!['pending','sent','delivered','read','played'].includes(value.deliveryStatus))throw new Error('Estado da mídia inválido.');
  if(value.caption!==undefined&&(typeof value.caption!=='string'||value.caption.length>2000))throw new Error('Legenda inválida.');
  const url=new URL(value.mediaUrl);if(url.protocol!=='https:'||url.username||url.password)throw new Error('Endereço do arquivo inválido.');
  if(!Number.isFinite(Date.parse(value.occurredAt)))throw new Error('Data da mensagem inválida.');

@@ -295,6 +295,8 @@ function CrmFunisPage() {
   value: l.value,
   source: "outro" as CrmLead["source"],
   lastMessageFrom: (l.lastMessageFrom?? "none") as LeadMessageDirection,
+  lastInboundPreview:l.lastInboundPreview,
+  lastInboundAt:l.lastInboundAt,
   createdAt: l.createdAt,
   companyId: l.companyId,
   tags: l.tags,
@@ -3397,7 +3399,7 @@ function LeadCard({
      <SourceIcon className="w-3.5 h-3.5 text-muted-foreground shrink-0 mt-0.5" />
     </div>
 
-    {lead.lastMessagePreview && (
+    {lead.lastInboundPreview && (
      <div
       className={cn(
        "mt-2 text-[11px] line-clamp-2 rounded px-2 py-1.5",
@@ -3405,9 +3407,9 @@ function LeadCard({
       )}
      >
       <span className={cn("font-semibold mr-1", waiting ? "text-success" : "text-foreground/60")}>
-       {waiting ? "Lead:" : "Você:"}
+       Última mensagem do lead:
       </span>
-      {lead.lastMessagePreview}
+      {lead.lastInboundPreview}
      </div>
     )}
 
