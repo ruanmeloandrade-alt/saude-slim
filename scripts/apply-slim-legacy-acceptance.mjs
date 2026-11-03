@@ -7,7 +7,7 @@ edit('src/lib/slim-stock-view.core.ts',[
  ['kind:m.kind,quantity:qty,balanceBefore:before','kind:m.kind,quantity:qty,...(recordedOnly?{recordedOnly:true}:{}),balanceBefore:before'],
 ]);
 edit('src/components/erp/SlimStockWorkspace.tsx',[
- ["{m.kind==='sale'?'Saída por venda':'Estorno de cancelamento'}","{m.recordedOnly?'Registro histórico, sem nova baixa':m.kind==='sale'?'Saída por venda':'Estorno de cancelamento'}"],
+ ["{m.kind==='sale'?'Saída por venda':m.kind==='sale_entry'?'Entrada automática por venda':'Estorno de cancelamento'}","{m.recordedOnly?'Registro histórico, sem nova baixa':m.kind==='sale'?'Saída por venda':m.kind==='sale_entry'?'Entrada automática por venda':'Estorno de cancelamento'}"],
  ["{m.kind==='sale'?'−':'+'}{m.quantity}","{m.recordedOnly?`0 (${m.quantity} unidades já contabilizadas)`: `${m.kind==='sale'?'−':'+'}${m.quantity}`}"],
 ]);
 edit('scripts/test-slim-stock-contract.mjs',[
