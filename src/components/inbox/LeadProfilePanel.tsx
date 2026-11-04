@@ -1035,44 +1035,10 @@ function StagePicker({
  className="absolute left-4 right-4 mt-1 z-50 rounded-md shadow-xl max-h-80 overflow-y-auto"
  style={{ backgroundColor: "var(--chat-panel)", border: "1px solid var(--chat-divider)" }}
  >
- {pipelines.map((f: any) => (
- <div key={f.id} className="py-1">
- <div className="px-3 py-1 text-[10px] tracking-widest" style={{ color: "var(--chat-meta)" }}>
- {f.name.toUpperCase()}
- </div>
-  {f.stages.map((s: any) => {
-  const active = f.id === funnel.id && s.id === stage.id;
-  return (
- <button
- key={s.id}
- type="button"
- onClick={() => {
- onChange(f.id, s.id);
- setOpen(false);
- }}
- className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-white/5"
- style={{ color: active? "var(--chat-accent)": "var(--chat-text)" }}
- >
- <span className="flex items-center gap-2">
- <span
- className="w-1.5 h-1.5 rounded-full"
- style={{
- backgroundColor:
- s.status === "ganha"
-? "rgb(34 197 94)"
-: s.status === "perdida"
-? "rgb(239 68 68)"
-: "var(--chat-accent)",
- }}
- />
- {s.name}
- </span>
- {active && <Check className="w-3.5 h-3.5" />}
- </button>
- );
- })}
- </div>
- ))}
+ <StageOptions pipelines={pipelines} funnelId={funnel.id} stageId={stage.id} onChange={(fid, sid) => {
+   onChange(fid, sid);
+   setOpen(false);
+ }} />
  </div>
  </>
  )}
@@ -1124,4 +1090,53 @@ function KeepFilesToggle({ leadId, initial }: { leadId: string; initial: boolean
       </button>
     </div>
   );
+}
+
+export function StageOptions({ pipelines, funnelId, stageId, onChange, disabled }: {
+  pipelines: Array<{ id: string; name: string; stages: Array<{ id: string; name: string; status?: string }> }>;
+  funnelId: string;
+  stageId: string;
+  onChange: (funnelId: string, stageId: string) => void;
+  disabled?: boolean;
+}) {
+  return <div className="max-h-80 overflow-y-auto">
+ {pipelines.map((f) => (
+ <div key={f.id} className="py-1">
+ <div className="px-3 py-1 text-[10px] tracking-widest" style={{ color: "var(--chat-meta)" }}>
+ {f.name.toUpperCase()}
+ </div>
+  {f.stages.map((s) => {
+  const active = f.id === funnelId && s.id === stageId;
+  return (
+ <button
+ key={s.id}
+ type="button"
+ disabled={disabled}
+ onClick={() => {
+ onChange(f.id, s.id);
+ }}
+ className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-white/5"
+ style={{ color: active? "var(--chat-accent)": "var(--chat-text)" }}
+ >
+ <span className="flex items-center gap-2">
+ <span
+ className="w-1.5 h-1.5 rounded-full"
+ style={{
+ backgroundColor:
+ s.status === "ganha"
+? "rgb(34 197 94)"
+: s.status === "perdida"
+? "rgb(239 68 68)"
+: "var(--chat-accent)",
+ }}
+ />
+ {s.name}
+ </span>
+ {active && <Check className="w-3.5 h-3.5" />}
+ </button>
+ );
+ })}
+ </div>
+ ))}
+  </div>;
 }

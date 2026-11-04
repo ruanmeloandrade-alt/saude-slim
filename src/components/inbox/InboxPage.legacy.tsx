@@ -107,7 +107,10 @@ import {
   getConversation,
   initials,
 } from "@/lib/inbox-mock";
-import { LeadProfilePanel } from "./LeadProfilePanel";
+import { LeadProfilePanel, StageOptions } from "./LeadProfilePanel";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { listAllPipelineStages } from "@/lib/crm.functions";
+import { moveSlimLeadWithAutomations } from "@/lib/slim-stage-move.functions";
 import {
   listForms,
   buildFormShareUrl,
@@ -2208,6 +2211,63 @@ function mergeThreadCacheRows<T extends { id: string; occurredAt: string }>(
 export type SlimInboxInteractionState = { dirty: boolean; pending: boolean };
 export { ChatThread as SlimEmbeddedChatThread };
 
+function InboxStageShortcut({ leadId, pipelineId, stageId, cacheScope }: {
+  leadId: string;
+  pipelineId: string;
+  stageId: string;
+  cacheScope: InboxCacheScope;
+}) {
+  const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const listStages = useServerFn(listAllPipelineStages);
+  const moveLead = useServerFn(moveSlimLeadWithAutomations);
+  const stages = useQuery({
+    queryKey: ["inbox", "stage-options", cacheScope.workspaceId, cacheScope.userId],
+    queryFn: () => listStages(),
+    enabled: open,
+    staleTime: 30_000,
+  });
+  const move = useMutation({
+    mutationFn: (toStageId: string) => moveLead({ data: { leadId, toStageId, requestId: crypto.randomUUID() } }),
+    onSuccess: async () => {
+      setOpen(false);
+      toast.success("Etapa do lead atualizada");
+      await Promise.all([
+        ["inbox", "detail", leadId],
+        ["inbox", "route-selected-lead", leadId],
+        ["inbox", "lead-conversations"],
+        ["lead-profile", leadId],
+      ].map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Erro ao trocar etapa"),
+  });
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button type="button" disabled={move.isPending} className="h-8 px-3 rounded-md border text-xs font-medium hover:opacity-90"
+          style={{ borderColor: "var(--chat-divider)" }}>
+          {move.isPending ? "Movendo..." : "Trocar etapa"}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 max-w-[calc(100vw-1rem)] p-0"
+        style={{ backgroundColor: "var(--chat-panel)", color: "var(--chat-text)" }}>
+        {stages.isPending ? <p className="p-3 text-xs">Carregando etapas...</p>
+          : stages.isError ? <button type="button" className="p-3 text-xs" onClick={() => void stages.refetch()}>Falha ao carregar. Tentar novamente</button>
+          : stages.data?.pipelines.some((pipeline) => pipeline.stages.length) ? (
+            <StageOptions funnelId={pipelineId} stageId={stageId}
+              pipelines={stages.data.pipelines.filter((pipeline) => pipeline.stages.length)}
+              disabled={move.isPending}
+              onChange={(_, destination) => {
+                if (destination !== stageId && !move.isPending) move.mutate(destination);
+              }}
+            />
+          ) : <p className="p-3 text-xs">Nenhuma etapa disponível.</p>}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function ChatThread({
   conversation,
   channel,
@@ -3372,6 +3432,10 @@ function ChatThread({
 
         {/* Ações */}
         <div className="ml-auto flex max-w-full flex-wrap items-center gap-1 shrink-0">
+          {!embedded && isLead && detail?.lead && cacheScope && (
+            <InboxStageShortcut key={conversation.id} leadId={conversation.id} cacheScope={cacheScope}
+              pipelineId={detail.lead.pipelineId ?? ""} stageId={detail.lead.stageId ?? ""} />
+          )}
           {!embedded && isLead &&
             (whatsappUrl ? (
               <a
