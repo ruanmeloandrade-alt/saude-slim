@@ -17,10 +17,11 @@ await test('homonym on another telephone not folded',()=>{const index=buildConta
 await test('another WhatsApp session is not silently folded',()=>{const index=buildContactIdentityIndex([contact(1),contact(2,{custom_data:{whatsapp_session_id:'other'}})],W);assert.equal(index.rows.length,2);});
 await test('real inbound can recover one contact from a disconnected origin without merging active sessions',async()=>{
  const old=contact(1),current='current-test-session';
- const sessions=[{id:current,status:'conectado'},{id:'same-test-session',status:'desconectado'}];
+ const sessions=[{id:current,status:'conectado',phone_number:'5522999999999'},{id:'same-test-session',status:'desconectado',phone_number:'+55 (22) 99999-9999'}];
  const db=memoryDb([old],{sessions});
  assert.equal(await findSlimContact(db,W,old.phone,current),null);
  assert.equal((await findSlimContact(db,W,old.phone,current,{recoverDisconnected:true})).id,old.id);
+ assert.equal(await findSlimContact(memoryDb([old],{sessions:[sessions[0],{...sessions[1],phone_number:'5522999999998'}]}),W,old.phone,current,{recoverDisconnected:true}),null);
  assert.equal(await findSlimContact(memoryDb([old],{sessions:sessions.map(s=>({...s,status:'conectado'}))}),W,old.phone,current,{recoverDisconnected:true}),null);
  assert.equal(await findSlimContact(memoryDb([old,contact(2,{custom_data:{whatsapp_session_id:'third'}})],{sessions}),W,old.phone,current,{recoverDisconnected:true}),null);
 });

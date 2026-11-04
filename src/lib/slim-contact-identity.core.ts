@@ -46,10 +46,12 @@ export async function findSlimContact(db:ContactDb,workspaceId:string,phone:stri
    const candidate=candidates[0];
    const previous=contactWhatsappSession(candidate.custom_data);
    if(previous&&previous!==sessionId&&!['whatsapp_group','instagram','facebook','messenger'].includes(candidate.source??'')){
-    const sessions=await db.from('whatsapp_web_sessions').select('id,status').eq('workspace_id',workspaceId);
+    const sessions=await db.from('whatsapp_web_sessions').select('id,status,phone_number').eq('workspace_id',workspaceId);
     if(sessions.error||!Array.isArray(sessions.data))throw Error('Não foi possível verificar a origem do WhatsApp.');
     const online=sessions.data.filter((entry:{status:string})=>entry.status==='conectado');
-    if(online.length===1&&online[0].id===sessionId&&sessions.data.some((entry:{id:string;status:string})=>entry.id===previous&&entry.status==='desconectado'))row=candidate;
+    const old=sessions.data.find((entry:{id:string})=>entry.id===previous);
+    const onlineNumber=contactPhoneKey(online[0]?.phone_number);
+    if(online.length===1&&online[0].id===sessionId&&old?.status==='desconectado'&&onlineNumber&&contactPhoneKey(old.phone_number)===onlineNumber)row=candidate;
    }
   }
  }
