@@ -26,3 +26,10 @@ export function scheduledSlot(profile: ScanProfile, now: Date): string | null {
   if (!profile.days.includes(day) || time < profile.time) return null;
   return `${part("year")}-${part("month")}-${part("day")}`;
 }
+
+export type ScanSummary = {
+  profileId: string; profileName?: string; startedAt: string; finishedAt?: string;
+  checked: number; moved: number; review: number; failed: number; done: boolean; cancelled?: boolean; details?: ScanDetail[];
+};
+export type ScanDetail = { leadId: string; stageId: string; targetId?: string; outcome: string };
+export type ScanJob = ScanSummary & { cursor: string | null; previous?: ScanSummary[]; error?: string };

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { scanProfileSchema, scheduledSlot } from "@/lib/crm-manager-scans";
+import { scanProfileSchema, scheduledSlot, type ScanJob } from "@/lib/crm-manager-scans";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { allowedPipelines } from "@/lib/permissions-core";
@@ -17,7 +17,7 @@ export const crmManagerScans = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({
     pipelineId: z.string().uuid(),
-    operation: z.enum(["read", "save", "delete", "default", "run"]),
+    operation: z.enum(["read", "save", "delete", "default", "run", "cancel"]),
     profile: scanProfileSchema.optional(),
     profileId: z.string().uuid().optional(),
   }).parse(input))
@@ -44,12 +44,21 @@ export const crmManagerScans = createServerFn({ method: "POST" })
         sourceStages: [], scheduled: false, days: [], time: "09:00",
       }] : []);
     let defaultId: string | null = current.data ? current.data.default_id : profiles[0]?.id ?? null;
-    const job = current.data?.job ?? null;
+    const job = (current.data?.job ?? null) as ScanJob | null;
     const view = () => ({
       profiles: profiles.map(({ actor: _actor, ...profile }) => profile),
-      defaultId, job: job as { profileId: string; checked: number; moved: number; review: number; failed: number; done: boolean } | null,
+      defaultId, job,
     });
     if (data.operation === "read") return view();
+    if (data.operation === "cancel") {
+      if (!job || job.done || !current.data) return view();
+      const cancelled: ScanJob = { ...job, done: true, cancelled: true, finishedAt: new Date().toISOString() };
+      const result = await scanQueue().update({ job: cancelled, lease_until: null, revision: crypto.randomUUID() })
+        .eq("pipeline_id", data.pipelineId).eq("workspace_id", workspaceId).eq("revision", current.data.revision)
+        .select("pipeline_id").maybeSingle();
+      if (result.error || !result.data) throw new Error("A varredura mudou de estado. Atualize e tente cancelar novamente.");
+      return { ...view(), job: cancelled };
+    }
     if (job && !job.done) throw new Error("Já existe uma varredura em andamento neste funil.");
 
     const id = data.profileId ?? defaultId;
@@ -82,7 +91,7 @@ export const crmManagerScans = createServerFn({ method: "POST" })
       } else if (data.operation === "default") {
         defaultId = id;
       } else {
-        nextJob = newScanJob(id);
+        nextJob = newScanJob(profiles[index], job);
         profiles[index] = { ...profiles[index], actor: context.userId };
       }
     }
