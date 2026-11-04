@@ -29,18 +29,12 @@ edit('src/components/inbox/InboxPage.legacy.tsx',[
           </div>
           {isLead && cacheScope && <LeadWhatsappOrigin leadId={conversation.id} workspaceId={cacheScope.workspaceId} actorId={cacheScope.userId} />}`],
 ]);
-edit('src/lib/whatsapp-session-routing.server.ts',[
- ['input: { workspaceId: string; leadId: string; phone?: string | null },','input: { workspaceId: string; leadId: string; phone?: string | null; preferredSessionId?: string | null },'],
- ['    if (identity) {','    if (input.preferredSessionId && sessionId !== input.preferredSessionId) continue;\n    if (identity) {'],
- ['    if (!identity) continue;','    if (!identity) continue;\n    if (input.preferredSessionId && row.session_id !== input.preferredSessionId) continue;'],
- ['    phone: input.phone,','    phone: input.phone,\n    preferredSessionId: input.preferredSessionId,'],
- ['preferredSessionId: conversation.sessionId ?? input.preferredSessionId ?? null,','preferredSessionId: input.preferredSessionId ?? conversation.sessionId ?? null,'],
-]);
+// The routing module already enforces the preferred origin and same-number recovery.
+edit('src/lib/whatsapp-session-routing.server.ts',[]);
 edit('src/lib/salesbot-runtime.server.ts',[
- ['findLatestLeadWhatsappIdentity(supabaseAdmin, { workspaceId, leadId });','findLatestLeadWhatsappIdentity(supabaseAdmin, { workspaceId, leadId, phone: fallbackPhone, preferredSessionId });'],
+ ['findLatestLeadWhatsappIdentity(supabaseAdmin, { workspaceId, leadId, preferredSessionId });','findLatestLeadWhatsappIdentity(supabaseAdmin, { workspaceId, leadId, phone: fallbackPhone, preferredSessionId });'],
  ['preferredSessionId: conversation.sessionId ?? preferredSessionId,','preferredSessionId: preferredSessionId ?? conversation.sessionId,'],
  ['    const { data: lastMessage } = await lastMessageQuery','    if (preferredSessionId) lastMessageQuery = lastMessageQuery.eq("session_id", preferredSessionId);\n    const { data: lastMessage } = await lastMessageQuery'],
- ['preferredSessionId: messageSessionId ?? preferredSessionId,','preferredSessionId: preferredSessionId ?? messageSessionId,'],
 ]);
 edit('src/lib/stage-automation-engine.server.ts',[
  ['sendWhatsappText(admin as never, lead.workspaceId, lead.phone, text);','sendWhatsappText(admin as never, lead.workspaceId, lead.phone, text, lead.whatsappSessionId);'],
