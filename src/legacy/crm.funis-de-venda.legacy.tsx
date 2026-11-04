@@ -125,6 +125,7 @@ import { listForms, DEFAULT_FORM_MESSAGE_TEMPLATE, type FormRecord } from "@/lib
 import { MessageTemplateEditor } from "@/components/crm/MessageTemplateEditor";
 import { FunnelSourcesPopover } from "@/components/crm/FunnelSourcesPopover";
 import { toast } from "sonner";
+import { crmManagerSettings } from "@/lib/crm-manager.functions";
 import { stageActionStamp } from "@/lib/stage-execution.core";
 import { scopePipelineAutomations, updatePipelineAutomationState } from "@/lib/pipeline-automation-state";
 import { useIsSuperAdmin } from "@/hooks/use-roles";
@@ -1358,6 +1359,7 @@ function CrmFunisPage() {
       >
         <Zap className="w-3.5 h-3.5" /> {openingAutomations ? "Carregando gatilhos..." : "Automatize"}
       </Button>
+      {funnel && <CrmManagerSettings key={funnel.id} funnel={funnel} />}
     </div>
   ) : (
   <>
@@ -2176,6 +2178,149 @@ function QuickEditDialog({
 
 
 
+
+function CrmManagerSettings({
+  funnel,
+}: {
+  funnel: { id: string; name: string; stages: Array<{ id: string; name: string; leads: Array<{ id: string; name: string }> }> };
+}) {
+  const [open, setOpen] = useState(false);
+  const [rules, setRules] = useState("");
+  const [reviewStage, setReviewStage] = useState("");
+  const [readFailed, setReadFailed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const settings = useServerFn(crmManagerSettings);
+  const [leadId, setLeadId] = useState("");
+  const [inspecting, setInspecting] = useState(false);
+  const [recommendation, setRecommendation] = useState<{ stage: string | null; reason: string } | null>(null);
+
+  async function inspectLead() {
+    if (!leadId || loading || saving || inspecting) return;
+    setInspecting(true);
+    setRecommendation(null);
+    try {
+      const result = await settings({ data: { pipelineId: funnel.id, inspectLeadId: leadId } });
+      if ("recommendation" in result && result.recommendation) setRecommendation(result.recommendation);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível revisar o lead.");
+    } finally {
+      setInspecting(false);
+    }
+  }
+
+  async function openSettings() {
+    if (loading || saving) return;
+    setReadFailed(false);
+    setLoading(true);
+    setOpen(true);
+    try {
+      const saved = await settings({ data: { pipelineId: funnel.id } });
+      setRules(saved.rules);
+      setReviewStage(funnel.stages.some((stage) => stage.id === saved.reviewStage) ? saved.reviewStage ?? "" : "");
+    } catch {
+      setRules("");
+      setReviewStage("");
+      setReadFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function saveSettings() {
+    if (loading || saving || readFailed) return;
+    setSaving(true);
+    try {
+      await settings({ data: { pipelineId: funnel.id, settings: { rules, reviewStage: reviewStage || null } } });
+      toast.success("Configuração do funil salva.");
+      setOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a configuração.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="h-8 gap-1.5 text-xs"
+        title="Clique com o botão direito para configurar"
+        onClick={openSettings}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          openSettings();
+        }}
+      >
+        <UserCog className="h-3.5 w-3.5" /> Gestor do CRM
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Gestor do CRM</DialogTitle>
+            <DialogDescription>
+              Funil {funnel.name}. Salve as regras e confira a análise de um lead antes de ativar a movimentação automática.
+            </DialogDescription>
+          </DialogHeader>
+          {loading && <p role="status">Carregando configuração…</p>}
+          {readFailed && <p role="alert">Não foi possível carregar a configuração do funil.</p>}
+          <label className="grid gap-1.5 text-sm">
+            Regras de triagem e movimentação
+            <textarea
+              className="min-h-32 rounded-md border border-input bg-background p-2 text-sm"
+              value={rules}
+              onChange={(event) => setRules(event.target.value)}
+              maxLength={12000}
+              placeholder="Descreva os critérios para cada etapa e quais evidências autorizam o movimento."
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm">
+            Etapa para casos duvidosos
+            <select
+              className="rounded-md border border-input bg-background p-2 text-sm"
+              value={reviewStage}
+              onChange={(event) => setReviewStage(event.target.value)}
+            >
+              <option value="">Selecione a etapa de revisão</option>
+              {funnel.stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
+            </select>
+          </label>
+          <label className="grid gap-1.5 text-sm">
+            Conferir análise de um lead
+            <select
+              className="rounded-md border border-input bg-background p-2 text-sm"
+              value={leadId}
+              disabled={inspecting}
+              onChange={(event) => { setLeadId(event.target.value); setRecommendation(null); }}
+            >
+              <option value="">Selecione um lead do funil</option>
+              {funnel.stages.map((stage) => (
+                <optgroup key={stage.id} label={stage.name}>
+                  {stage.leads.map((lead) => <option key={lead.id} value={lead.id}>{lead.name}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <Button type="button" variant="secondary" disabled={!leadId || loading || saving || inspecting || readFailed} onClick={() => void inspectLead()}>
+            {inspecting ? "Analisando…" : "Analisar com as regras salvas"}
+          </Button>
+          {recommendation && (
+            <p role="status" className="text-sm">
+              {recommendation.stage ?? "Revisão humana"} · {recommendation.reason}
+            </p>
+          )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button type="button" disabled={loading || saving || readFailed} onClick={saveSettings}>{saving ? "Salvando…" : "Salvar configuração"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
 function EmptyFunnelState({
  bootstrapping, hasSource, onCreate,
