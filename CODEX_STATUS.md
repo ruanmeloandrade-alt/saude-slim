@@ -35,3 +35,6 @@ Branch isolada `fix/slim-inbox-20261103`, posterior ao catálogo/estoque já pub
 ## 2026-11-03 — Publicação do Inbox e ajuste de janela estreita
 
 PR #22 integrado em `e3018aa`; Railway `3a72b423-343e-47f0-8b5e-01e6cf98552b` SUCCESS, commit conferido. Produção autenticada exibiu a conversa da captura sem cópias extras/documentos falsos e os novos controles. Na largura estreita observou-se cabeçalho comprimido e compositor reduzido; seguimento visual isolado em `fix/slim-inbox-responsive-20261103`, sem mudança de lógica. Detalhes em `docs/tasks/2026-11-03-inbox-responsive.md`.
+
+## 2026-11-04 — Gestor do CRM com perfis e agenda
+Escopo em docs/tasks/2026-11-04-gestor-crm-agenda.md. Perfis, agenda, fila e movimentação auditada por funil. Testes locais da agenda e do PostgreSQL aprovados. Migration aditiva aplicada no banco Saúde Slim. Publicação e smoke autenticado em andamento.

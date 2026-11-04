@@ -125,7 +125,8 @@ import { listForms, DEFAULT_FORM_MESSAGE_TEMPLATE, type FormRecord } from "@/lib
 import { MessageTemplateEditor } from "@/components/crm/MessageTemplateEditor";
 import { FunnelSourcesPopover } from "@/components/crm/FunnelSourcesPopover";
 import { toast } from "sonner";
-import { crmManagerSettings } from "@/lib/crm-manager.functions";
+import { crmManagerScans } from "@/lib/crm-manager.functions";
+import type { ScanProfile } from "@/lib/crm-manager-scans";
 import { stageActionStamp } from "@/lib/stage-execution.core";
 import { scopePipelineAutomations, updatePipelineAutomationState } from "@/lib/pipeline-automation-state";
 import { useIsSuperAdmin } from "@/hooks/use-roles";
@@ -2182,145 +2183,167 @@ function QuickEditDialog({
 function CrmManagerSettings({
   funnel,
 }: {
-  funnel: { id: string; name: string; stages: Array<{ id: string; name: string; leads: Array<{ id: string; name: string }> }> };
+  funnel: { id: string; name: string; stages: Array<{ id: string; name: string }> };
 }) {
+  const scans = useServerFn(crmManagerScans);
   const [open, setOpen] = useState(false);
-  const [rules, setRules] = useState("");
-  const [reviewStage, setReviewStage] = useState("");
-  const [readFailed, setReadFailed] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const settings = useServerFn(crmManagerSettings);
-  const [leadId, setLeadId] = useState("");
-  const [inspecting, setInspecting] = useState(false);
-  const [recommendation, setRecommendation] = useState<{ stage: string | null; reason: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [profiles, setProfiles] = useState<ScanProfile[]>([]);
+  const [defaultId, setDefaultId] = useState<string | null>(null);
+  const [job, setJob] = useState<{ checked: number; moved: number; review: number; failed: number; done: boolean } | null>(null);
+  const [draft, setDraft] = useState<ScanProfile | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  async function inspectLead() {
-    if (!leadId || loading || saving || inspecting) return;
-    setInspecting(true);
-    setRecommendation(null);
+  async function operate(operation: "read" | "save" | "delete" | "default" | "run", profileId?: string) {
+    if (busy) return;
+    setBusy(true);
     try {
-      const result = await settings({ data: { pipelineId: funnel.id, inspectLeadId: leadId } });
-      if ("recommendation" in result && result.recommendation) setRecommendation(result.recommendation);
+      const result = await scans({ data: { pipelineId: funnel.id, operation, profileId, profile: operation === "save" ? draft ?? undefined : undefined } });
+      setProfiles(result.profiles);
+      setDefaultId(result.defaultId);
+      setJob(result.job);
+      setLoaded(true);
+      if (operation === "run") toast.success("Varredura enfileirada. A execução continua no servidor.");
+      if (operation === "save") setDraft(null);
+      if (operation === "delete") setDeleteId(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível revisar o lead.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível acessar as varreduras.");
     } finally {
-      setInspecting(false);
+      setBusy(false);
     }
   }
 
-  async function openSettings() {
-    if (loading || saving) return;
-    setReadFailed(false);
-    setLoading(true);
-    setOpen(true);
-    try {
-      const saved = await settings({ data: { pipelineId: funnel.id } });
-      setRules(saved.rules);
-      setReviewStage(funnel.stages.some((stage) => stage.id === saved.reviewStage) ? saved.reviewStage ?? "" : "");
-    } catch {
-      setRules("");
-      setReviewStage("");
-      setReadFailed(true);
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => {
+    if (!job || job.done) return;
+    const timer = window.setInterval(() => { void operate("read"); }, 15000);
+    return () => window.clearInterval(timer);
+  }, [job, busy, funnel.id]);
 
-  async function saveSettings() {
-    if (loading || saving || readFailed) return;
-    setSaving(true);
-    try {
-      await settings({ data: { pipelineId: funnel.id, settings: { rules, reviewStage: reviewStage || null } } });
-      toast.success("Configuração do funil salva.");
-      setOpen(false);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível salvar a configuração.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
+  const working = Boolean(job && !job.done);
+  const field = "rounded-md border border-input bg-background p-2 text-sm";
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
+      <Button type="button" variant="outline" size="sm" aria-disabled={busy || working}
         className="h-8 gap-1.5 text-xs"
-        title="Clique com o botão direito para configurar"
-        onClick={openSettings}
+        title="Clique para executar a varredura padrão. Clique direito para configurar."
+        onClick={() => { if (!working) void operate("run"); }}
         onContextMenu={(event) => {
           event.preventDefault();
-          openSettings();
+          setOpen(true);
+          void operate("read");
         }}
-      >
-        <UserCog className="h-3.5 w-3.5" /> Gestor do CRM
+        onKeyDown={(event) => {
+          if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+            event.preventDefault();
+            setOpen(true);
+            void operate("read");
+          }
+        }}>
+        <UserCog className="h-3.5 w-3.5" /> {working ? "Varredura em andamento" : "Gestor do CRM"}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Gestor do CRM</DialogTitle>
-            <DialogDescription>
-              Funil {funnel.name}. Salve as regras e confira a análise de um lead antes de ativar a movimentação automática.
-            </DialogDescription>
+            <DialogTitle>Varreduras do Gestor do CRM</DialogTitle>
+            <DialogDescription>{funnel.name}. O clique esquerdo no Gestor executa a varredura padrão deste funil.</DialogDescription>
           </DialogHeader>
-          {loading && <p role="status">Carregando configuração…</p>}
-          {readFailed && <p role="alert">Não foi possível carregar a configuração do funil.</p>}
-          <label className="grid gap-1.5 text-sm">
-            Regras de triagem e movimentação
-            <textarea
-              className="min-h-32 rounded-md border border-input bg-background p-2 text-sm"
-              value={rules}
-              onChange={(event) => setRules(event.target.value)}
-              maxLength={12000}
-              placeholder="Descreva os critérios para cada etapa e quais evidências autorizam o movimento."
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            Etapa para casos duvidosos
-            <select
-              className="rounded-md border border-input bg-background p-2 text-sm"
-              value={reviewStage}
-              onChange={(event) => setReviewStage(event.target.value)}
-            >
-              <option value="">Selecione a etapa de revisão</option>
-              {funnel.stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
-            </select>
-          </label>
-          <label className="grid gap-1.5 text-sm">
-            Conferir análise de um lead
-            <select
-              className="rounded-md border border-input bg-background p-2 text-sm"
-              value={leadId}
-              disabled={inspecting}
-              onChange={(event) => { setLeadId(event.target.value); setRecommendation(null); }}
-            >
-              <option value="">Selecione um lead do funil</option>
-              {funnel.stages.map((stage) => (
-                <optgroup key={stage.id} label={stage.name}>
-                  {stage.leads.map((lead) => <option key={lead.id} value={lead.id}>{lead.name}</option>)}
-                </optgroup>
+          {job && <p role="status" className="text-sm">
+            {job.done ? "Última varredura" : "Varredura em andamento"} · {job.checked} conferidos · {job.moved} movidos · {job.review} para revisão · {job.failed} falhas
+          </p>}
+          {busy && !loaded && <p role="status">Carregando varreduras…</p>}
+          {!busy && !loaded && <Button variant="outline" onClick={() => void operate("read")}>Tentar carregar novamente</Button>}
+          {loaded && !draft && (
+            <>
+              {profiles.length === 0 && <p className="text-sm">Crie a primeira varredura para este funil.</p>}
+              {profiles.map((profile) => (
+                <div key={profile.id} className="grid gap-2 rounded-md border p-3">
+                  <div className="text-sm font-medium">{profile.name}{profile.id === defaultId ? " · Padrão" : ""}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {profile.sourceStages.length ? `${profile.sourceStages.length} etapa(s)` : "Funil inteiro"}
+                    {" · "}{profile.scheduled ? `${profile.days.map((day) => scanDays[day]).join(", ")} às ${profile.time}` : "Somente manual"}
+                  </div>
+                  {deleteId === profile.id ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm">Excluir esta varredura?</span>
+                      <Button size="sm" variant="destructive" disabled={busy || working} onClick={() => void operate("delete", profile.id)}>Excluir varredura</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setDeleteId(null)}>Cancelar</Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="secondary" disabled={busy || working} onClick={() => void operate("run", profile.id)}>Executar agora</Button>
+                      <Button size="sm" variant="outline" disabled={busy || working} onClick={() => setDraft(profile)}>Editar</Button>
+                      {profile.id !== defaultId && <Button size="sm" variant="outline" disabled={busy || working} onClick={() => void operate("default", profile.id)}>Tornar padrão</Button>}
+                      <Button size="sm" variant="ghost" disabled={busy || working} onClick={() => setDeleteId(profile.id)}>Excluir</Button>
+                    </div>
+                  )}
+                </div>
               ))}
-            </select>
-          </label>
-          <Button type="button" variant="secondary" disabled={!leadId || loading || saving || inspecting || readFailed} onClick={() => void inspectLead()}>
-            {inspecting ? "Analisando…" : "Analisar com as regras salvas"}
-          </Button>
-          {recommendation && (
-            <p role="status" className="text-sm">
-              {recommendation.stage ?? "Revisão humana"} · {recommendation.reason}
-            </p>
+              <Button disabled={busy || working} onClick={() => setDraft({
+                id: crypto.randomUUID(), name: "", rules: "", reviewStage: null,
+                sourceStages: [], scheduled: false, days: [], time: "09:00",
+              })}>Nova varredura</Button>
+            </>
           )}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button type="button" disabled={loading || saving || readFailed} onClick={saveSettings}>{saving ? "Salvando…" : "Salvar configuração"}</Button>
-          </DialogFooter>
+          {draft && (
+            <form className="grid gap-3 text-sm" onSubmit={(event) => { event.preventDefault(); void operate("save"); }}>
+              <label className="grid gap-1">Nome
+                <input className={field} required maxLength={80} value={draft.name}
+                  onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
+              </label>
+              <label className="grid gap-1">Regras de triagem e movimentação
+                <textarea className={`${field} min-h-24`} required maxLength={12000} value={draft.rules}
+                  onChange={(event) => setDraft({ ...draft, rules: event.target.value })} />
+              </label>
+              <fieldset className="grid gap-1">
+                <legend>Etapas que serão analisadas</legend>
+                <p className="text-xs text-muted-foreground">Sem seleção, analisa o funil inteiro.</p>
+                {funnel.stages.map((stage) => (
+                  <label key={stage.id} className="flex gap-2">
+                    <input type="checkbox" checked={draft.sourceStages.includes(stage.id)} onChange={(event) =>
+                      setDraft({ ...draft, sourceStages: event.target.checked ? [...draft.sourceStages, stage.id] : draft.sourceStages.filter((id) => id !== stage.id) })} />
+                    {stage.name}
+                  </label>
+                ))}
+              </fieldset>
+              <label className="grid gap-1">Etapa para revisão
+                <select className={field} value={draft.reviewStage ?? ""} onChange={(event) =>
+                  setDraft({ ...draft, reviewStage: event.target.value || null })}>
+                  <option value="">Somente contar casos duvidosos</option>
+                  {funnel.stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
+                </select>
+              </label>
+              <label className="flex gap-2"><input type="checkbox" checked={draft.scheduled} onChange={(event) =>
+                setDraft({ ...draft, scheduled: event.target.checked })} /> Executar automaticamente</label>
+              {draft.scheduled && (
+                <fieldset className="grid gap-2">
+                  <legend>Dias e horário de Brasília</legend>
+                  <div className="flex flex-wrap gap-3">
+                    {scanDays.map((label, day) => (
+                      <label key={label} className="flex gap-1">
+                        <input type="checkbox" checked={draft.days.includes(day)} onChange={(event) =>
+                          setDraft({ ...draft, days: event.target.checked ? [...draft.days, day] : draft.days.filter((value) => value !== day) })} />
+                        {label}
+                      </label>
+                    ))}
+                  </div>
+                  <input type="time" aria-label="Horário da varredura" className={field} required value={draft.time}
+                    onChange={(event) => setDraft({ ...draft, time: event.target.value })} />
+                </fieldset>
+              )}
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDraft(null)}>Cancelar</Button>
+                <Button type="submit" disabled={busy || working || (draft.scheduled && !draft.days.length)}>Salvar varredura</Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </>
   );
 }
+
+const scanDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 function EmptyFunnelState({
  bootstrapping, hasSource, onCreate,
@@ -5990,4 +6013,3 @@ function BulkMoveDialog({
   </Dialog>
  );
 }
-
