@@ -129,6 +129,7 @@ const UpsertSchema = z.object({
   name: z.string().min(1).max(120),
   persona: z.string().max(2000).optional(),
   systemPrompt: z.string().max(20000).optional(),
+  startImmediately: z.boolean().optional(),
   model: z.string().min(1).default("google/gemini-2.5-flash"),
   temperature: z.number().min(0).max(2).default(0.7),
   maxTokens: z.number().int().min(64).max(8192).default(1024),
@@ -184,6 +185,7 @@ export const upsertConversationAgent = createServerFn({ method: "POST" })
     if (data.mode !== undefined) settings.mode = data.mode;
     if (data.language !== undefined) settings.language = data.language;
     if (data.maxInteractions !== undefined) settings.max_interactions = data.maxInteractions;
+    if (data.startImmediately !== undefined) settings.start_immediately = data.startImmediately;
     if (data.allowedActions !== undefined) settings.allowed_actions = data.allowedActions;
     if (data.rules !== undefined) settings.rules = data.rules;
     if (data.sources !== undefined) settings.sources = data.sources;

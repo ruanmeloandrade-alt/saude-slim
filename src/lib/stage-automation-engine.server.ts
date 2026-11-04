@@ -729,7 +729,13 @@ async function executeAction(
         .eq("id", lead.id)
         .eq("workspace_id", lead.workspaceId);
       if (error) throw new Error(error.message);
+      const { handoffToConversationAgent } = await import("@/lib/salesbot-runtime.server");
+      const opening = await handoffToConversationAgent(admin as never, {
+        workspaceId: lead.workspaceId, leadId: lead.id, phone: lead.phone ?? "", agentId: config.agentId, activation: true,
+      });
       await logActivity(admin, lead, "ai_agent_activated", {
+        opening_sent: opening.replied,
+        opening_reason: opening.error ? "Envio inicial não confirmado" : opening.reason,
         agent_id: config.agentId,
         agent_name: (agent as { name?: string }).name ?? null,
         by: "automation",
