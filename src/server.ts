@@ -48,6 +48,8 @@ export default {
  ensureInboxAutomationWorker();
  const {ensureSlimAudienceWorker}=await import("./lib/slim-audience-runtime.server");
  ensureSlimAudienceWorker();
+ const { ensureCrmManagerWorker } = await import("./lib/crm-manager-scans.server");
+ ensureCrmManagerWorker();
  const handler = await getServerEntry();
  const response = await handler.fetch(request, env, ctx);
  return await normalizeCatastrophicSsrResponse(response);
