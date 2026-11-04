@@ -3488,7 +3488,7 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
               ? await sendWhatsappButtons(supabaseAdmin, run.workspace_id, phone, texto, botoes as any, undefined, routeSessionId)
               : await sendWhatsappText(supabaseAdmin, run.workspace_id, phone, texto, routeSessionId);
             if (r.ok) sentMsgIds.push(r.messageId ?? null);
-            else throw new Error(r.error ?? "Envio pelo WhatsApp não confirmado.");
+            else await log(supabaseAdmin, run, b, "error", r.error);
           }
 
           // 2) Anexos em sequência
@@ -3519,7 +3519,7 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
                 sentMedia.push({ messageId: r.messageId, kind: it.kind });
               }
             }
-            else throw new Error(r.error ?? "Envio pelo WhatsApp não confirmado.");
+            else await log(supabaseAdmin, run, b, "error", r.error);
           }
 
           if (sentMsgIds.length > 0) {
