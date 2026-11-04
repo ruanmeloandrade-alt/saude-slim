@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';import ts from 'typescript';import {execFileSync} from 'node:child_process';import {fileURLToPath} from 'node:url';
-import {contactPhoneKey,buildContactIdentityIndex,createSlimCanonicalContact,resolveSlimContactId,prepareSlimInboxContactMap} from '../src/lib/slim-contact-identity.core.ts';
+import {contactPhoneKey,buildContactIdentityIndex,createSlimCanonicalContact,findSlimContact,resolveSlimContactId,prepareSlimInboxContactMap} from '../src/lib/slim-contact-identity.core.ts';
 import {canonicalContactHistory} from '../src/lib/slim-contact-history.core.ts';
 const W='00000000-0000-4000-8000-000000000101',OTHER='00000000-0000-4000-8000-000000000102';const id=n=>`00000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
 const contact=(n,patch={})=>({id:id(n),workspace_id:W,name:'Synthetic same name',phone:'+5522000000001',source:n===1?'whatsapp':'pedido_saude_slim',status:'active',merged_into_id:null,created_at:`2026-10-${n===1?'14':'15'}T00:00:00Z`,custom_data:{whatsapp_session_id:'same-test-session'},...patch});
@@ -7,7 +7,7 @@ let n=0;async function test(name,fn){await fn();n++;console.log('PASS canonical 
 function memoryDb(seed=[],options={}){
  const rows=structuredClone(seed),metrics={inserts:0,reads:0};
  return {rows,metrics,from(table){let operation='read',payload,filters=[],a=0,b=99999;
- const q={select(){return q;},eq(key,value){filters.push(row=>row[key]===value);return q;},is(key,value){filters.push(row=>row[key]===value);return q;},not(key,op,value){const values=value.replace(/[()]/g,'').split(',');filters.push(row=>!values.includes(row[key]));return q;},in(key,values){filters.push(row=>values.includes(row[key]));return q;},order(){return q;},range(start,end){a=start;b=end;return q;},insert(value){operation='insert';payload=value;return q;},single(){return q;},then(resolve,reject){return (async()=>{if(options.fail)throw new Error('offline');if(table==='crm_sources')return {data:[{id:id(999),provider:'manual',is_default:true}],error:null};if(operation==='insert'){await new Promise(done=>setTimeout(done,2));metrics.inserts++;const row={...payload,id:id(100+metrics.inserts),created_at:'2026-10-16T00:00:00Z',merged_into_id:null};rows.push(row);return {data:{id:row.id},error:null};}metrics.reads++;return {data:rows.filter(row=>filters.every(f=>f(row))).slice(a,b+1),error:null};})().then(resolve,reject);}};return q;}};
+ const q={select(){return q;},eq(key,value){filters.push(row=>row[key]===value);return q;},is(key,value){filters.push(row=>row[key]===value);return q;},not(key,op,value){const values=value.replace(/[()]/g,'').split(',');filters.push(row=>!values.includes(row[key]));return q;},in(key,values){filters.push(row=>values.includes(row[key]));return q;},order(){return q;},range(start,end){a=start;b=end;return q;},insert(value){operation='insert';payload=value;return q;},single(){return q;},then(resolve,reject){return (async()=>{if(options.fail)throw new Error('offline');if(table==='whatsapp_web_sessions')return {data:options.sessions??[],error:null};if(table==='crm_sources')return {data:[{id:id(999),provider:'manual',is_default:true}],error:null};if(operation==='insert'){await new Promise(done=>setTimeout(done,2));metrics.inserts++;const row={...payload,id:id(100+metrics.inserts),created_at:'2026-10-16T00:00:00Z',merged_into_id:null};rows.push(row);return {data:{id:row.id},error:null};}metrics.reads++;return {data:rows.filter(row=>filters.every(f=>f(row))).slice(a,b+1),error:null};})().then(resolve,reject);}};return q;}};
 }
 await test('exact full number normalizes display punctuation',()=>assert.equal(contactPhoneKey(' +55 (22) 00000-0001 '),'5522000000001'));
 await test('no name or suffix country guessing',()=>{assert.notEqual(contactPhoneKey('+5522000000001'),contactPhoneKey('+35122000000001'));assert.notEqual(contactPhoneKey('22000000001'),contactPhoneKey('+5522000000001'));});
@@ -15,6 +15,15 @@ await test('group and LID never become contact phones',()=>{assert.equal(contact
 await test('four proven order/contact representations yield one canonical card',()=>{const index=buildContactIdentityIndex([contact(1),contact(2),contact(3),contact(4)],W);assert.equal(index.rows.length,1);for(const v of [1,2,3,4])assert.equal(index.resolve(id(v)),id(1));assert.equal(index.family(id(1)).length,4);});
 await test('homonym on another telephone not folded',()=>{const index=buildContactIdentityIndex([contact(1),contact(2,{phone:'+5522000000002'})],W);assert.equal(index.rows.length,2);});
 await test('another WhatsApp session is not silently folded',()=>{const index=buildContactIdentityIndex([contact(1),contact(2,{custom_data:{whatsapp_session_id:'other'}})],W);assert.equal(index.rows.length,2);});
+await test('real inbound can recover one contact from a disconnected origin without merging active sessions',async()=>{
+ const old=contact(1),current='current-test-session';
+ const sessions=[{id:current,status:'conectado'},{id:'same-test-session',status:'desconectado'}];
+ const db=memoryDb([old],{sessions});
+ assert.equal(await findSlimContact(db,W,old.phone,current),null);
+ assert.equal((await findSlimContact(db,W,old.phone,current,{recoverDisconnected:true})).id,old.id);
+ assert.equal(await findSlimContact(memoryDb([old],{sessions:sessions.map(s=>({...s,status:'conectado'}))}),W,old.phone,current,{recoverDisconnected:true}),null);
+ assert.equal(await findSlimContact(memoryDb([old,contact(2,{custom_data:{whatsapp_session_id:'third'}})],{sessions}),W,old.phone,current,{recoverDisconnected:true}),null);
+});
 await test('missing session evidence leaves independent records visible',()=>assert.equal(buildContactIdentityIndex([contact(1),contact(2,{custom_data:{}})],W).rows.length,2));
 await test('social identity excluded from legacy folding',()=>{const index=buildContactIdentityIndex([contact(1,{source:'instagram'}),contact(2)],W);assert.equal(index.rows.length,2);});
 await test('rows from another company cause explicit error',()=>assert.throws(()=>buildContactIdentityIndex([contact(1,{workspace_id:OTHER})],W)));

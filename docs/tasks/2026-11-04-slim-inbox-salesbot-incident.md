@@ -1,0 +1,2 @@
+# Incidente Saúde Slim — mídia sem legenda e vínculo de sessão
+Corrigir o registro de imagens sem legenda no histórico, impedir que o SalesBot avance após falha de envio e recuperar o contato canônico quando um inbound real chega na única sessão conectada e a origem anterior está desconectada. Preservar funis, histórico, proteção de duplicidade e sessões simultâneas. Não reenviar mensagens antigas nesta correção.

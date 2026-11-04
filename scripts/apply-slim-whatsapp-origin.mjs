@@ -3,7 +3,7 @@ import ts from 'typescript';
 const root=new URL('../',import.meta.url),marker='// SLIM_WHATSAPP_ORIGIN_V1',plans=[];
 function edit(path,changes){let code=fs.readFileSync(new URL(path,root),'utf8');if(code.includes(marker))return;for(const [before,after]of changes){const n=code.split(before).length-1;if(n!==1)throw new Error(`WhatsApp origin ${path}: expected one anchor, got ${n}: ${before.slice(0,80)}`);code=code.replace(before,after);}plans.push([path,code+'\n'+marker+'\n']);}
 edit('src/routes/api/public/evolution/webhook.$secret.ts',[
- ['findSlimContact(supabaseAdmin as never,sess.workspace_id,phone);','findSlimContact(supabaseAdmin as never,sess.workspace_id,phone,sess.session_id);'],
+ ['findSlimContact(supabaseAdmin as never,sess.workspace_id,phone);','findSlimContact(supabaseAdmin as never,sess.workspace_id,phone,sess.session_id,{ recoverDisconnected: !msg.key?.fromMe });'],
 ]);
 edit('src/lib/leads.functions.legacy.ts',[
  ['const rawPhone = identity.digits;','if (!m.session_id) continue;\n      const rawPhone = m.session_id + ":" + identity.digits;'],
