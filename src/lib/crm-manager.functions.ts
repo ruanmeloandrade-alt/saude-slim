@@ -17,7 +17,7 @@ export const crmManagerScans = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({
     pipelineId: z.string().uuid(),
-    operation: z.enum(["read", "save", "delete", "default", "run", "cancel"]),
+    operation: z.enum(["read", "save", "delete", "default", "run", "cancel", "retry"]),
     profile: scanProfileSchema.optional(),
     profileId: z.string().uuid().optional(),
   }).parse(input))
@@ -68,7 +68,7 @@ export const crmManagerScans = createServerFn({ method: "POST" })
     if (data.operation === "save") {
       if (!data.profile) throw new Error("Preencha a configuração da varredura.");
       const profile = data.profile;
-      const targets = [...new Set([...profile.sourceStages, ...(profile.reviewStage ? [profile.reviewStage] : [])])];
+      const targets = [...new Set([...profile.sourceStages, ...(profile.targetStages ?? []), ...(profile.reviewStage ? [profile.reviewStage] : [])])];
       if (targets.length) {
         const stages = await sb.from("pipeline_stages").select("id").eq("workspace_id", workspaceId)
           .eq("pipeline_id", data.pipelineId).in("id", targets);
@@ -92,6 +92,15 @@ export const crmManagerScans = createServerFn({ method: "POST" })
         defaultId = id;
       } else {
         nextJob = newScanJob(profiles[index], job);
+        if (data.operation === "retry") {
+          if (!job || job.profileId !== id || !job.failed) throw new Error("Não há falhas nesta varredura.");
+          if (job.failedIds?.length) {
+            nextJob.retrying = true;
+            nextJob.retryQueue = job.failedIds;
+          } else if (job.details?.length) {
+            throw new Error("Não há contatos individuais para reprocessar. Execute uma nova varredura.");
+          }
+        }
         profiles[index] = { ...profiles[index], actor: context.userId };
       }
     }
