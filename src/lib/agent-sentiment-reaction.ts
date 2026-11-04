@@ -1,38 +1,15 @@
-// Reação por sentimento: o agente IA responde a mensagem do lead com um emoji
-// coerente com o tom que ele percebeu. Serve tanto para o Agente de Prompt
-// quanto para o Fluxo de Objetivos — a configuração é a mesma
-// (`settings.allowed_actions` contém "reagir-sentimento").
-
 export type SentimentoDetectado = "positivo" | "negativo" | "neutro";
 
-/** Emoji padrão por sentimento. Discreto, nada de exagero em atendimento. */
-const EMOJI_PADRAO: Record<SentimentoDetectado, string> = {
-  positivo: "❤️",
-  negativo: "😔",
-  neutro: "👍",
-};
-
-/**
- * Sinais mais fortes que o sentimento genérico: quando o lead agradece,
- * comemora ou reclama de algo específico, um emoji mais preciso comunica
- * melhor do que o padrão do sentimento.
- */
-const SINAIS: Array<{ re: RegExp; emoji: string }> = [
-  { re: /\b(obrigad|valeu|agradeç|gratid)/i, emoji: "🙏" },
-  { re: /\b(kkk+|haha+|rsrs+|😂|🤣)/i, emoji: "😂" },
-  { re: /\b(fechado|fechou|bora|vamos que vamos|top demais|perfeito)\b/i, emoji: "🔥" },
-  { re: /\b(parab[ée]ns|comemor|consegui)\b/i, emoji: "🎉" },
-  { re: /\b(caro|car[íi]ssimo|sem dinheiro|apertad)/i, emoji: "😕" },
-  { re: /\b(urgente|agora mesmo|correndo)\b/i, emoji: "⚡" },
-];
-
-/** Escolhe o emoji de reação para a mensagem recebida. */
-export function pickReactionEmoji(message: string, sentimento: SentimentoDetectado): string {
-  const texto = String(message ?? "");
-  for (const s of SINAIS) if (s.re.test(texto)) return s.emoji;
-  return EMOJI_PADRAO[sentimento] ?? "👍";
+/** Reaja só quando há um motivo claro para reconhecer a mensagem. */
+export function pickReactionEmoji(message: string, sentimento: SentimentoDetectado): string | null {
+  const text = message.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+  if (sentimento === "negativo" ||
+      /\b(nao|cancel\w*|reclam\w*|problema\w*|dor|sintoma\w*|efeito\w*|advers\w*|alerg\w*|medic\w*|urgente|caro|enjoo|mal)\b/.test(text)) return null;
+  if (/\b(obrigad[oa]s?|valeu|agradeco|gratidao|adorei)\b/.test(text)) return "❤️";
+  if (/^(?:ok|combinado|confirmado|perfeito|fechou|entendido)[!.\s👍]*$/.test(text.trim())) return "👍";
+  if (/\b(que bom|fico feliz|boa noticia)\b/.test(text)) return "😊";
+  return null;
 }
-
 /** O agente está autorizado a reagir por sentimento? */
 export function shouldReactToSentiment(allowedActions: unknown): boolean {
   return Array.isArray(allowedActions) && allowedActions.includes("reagir-sentimento");

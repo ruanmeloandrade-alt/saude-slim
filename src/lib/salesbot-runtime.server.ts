@@ -2030,7 +2030,7 @@ async function runAiAgentTurn(
         const alvo = String(mensagemDoTurno || triggerCtx.message || "");
         if (alvo.trim()) {
           const emoji = pickReactionEmoji(alvo, detectSentiment(alvo));
-          await sendWhatsappReaction(supabaseAdmin, workspaceId, routedPhone, emoji);
+          if (emoji) await sendWhatsappReaction(supabaseAdmin, workspaceId, routedPhone, emoji);
         }
       } catch {
         // reação é enfeite: nunca pode impedir a resposta do agente
