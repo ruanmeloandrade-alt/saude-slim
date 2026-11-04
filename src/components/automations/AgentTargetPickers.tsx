@@ -66,7 +66,6 @@ export function StagePicker({ value, onChange }: { value: TargetValue; onChange:
           </optgroup>
         ))}
       </select>
-      <Hint value={value} />
     </div>
   );
 }

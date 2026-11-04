@@ -5604,6 +5604,7 @@ export type Database = {
       }
       pipelines: {
         Row: {
+          crm_manager_settings: Json
           created_at: string
           crm_source_id: string
           external_id: string | null
@@ -5614,6 +5615,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          crm_manager_settings?: Json
           created_at?: string
           crm_source_id: string
           external_id?: string | null
@@ -5624,6 +5626,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          crm_manager_settings?: Json
           created_at?: string
           crm_source_id?: string
           external_id?: string | null
