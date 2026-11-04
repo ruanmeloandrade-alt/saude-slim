@@ -77,8 +77,8 @@ async function runAiAgentTurnUnchecked(
   supabaseAdmin: AnySb,`, 'agent generation fence');
   code = once(code,
 `    const raw = openingMessage || await generateAgentReply();`,
-`    await assertAutomationMayContinue();
-    const raw = openingMessage || await generateAgentReply();`, 'stop after AI response before side effects');
+`    const raw = openingMessage || await generateAgentReply();
+    await assertAutomationMayContinue();`, 'stop after AI response before side effects');
   const deliveryError = `            else await log(supabaseAdmin, run, b, "error", r.error);`;
   const deliveryFailure = `            else { await log(supabaseAdmin, run, b, "error", r.error); throw new Error(r.error ?? "Falha no envio da mensagem."); }`;
   if (!code.includes(deliveryFailure)) {
