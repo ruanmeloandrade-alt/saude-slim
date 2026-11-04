@@ -6,7 +6,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { resolveSlimInboxGroupTarget } from '../src/lib/slim-inbox-group-target.core.ts';
 import { resolveOrCreateGroupTechnicalLead } from '../src/lib/whatsapp-group-context.server.ts';
 import { assertSlimOperator } from '../src/lib/slim-workspace-operator.server.ts';
-import { whatsappIdentityFromJid } from '../src/lib/whatsapp-identity.ts';
+import { normalizeInternationalPhone, whatsappIdentityFromJid } from '../src/lib/whatsapp-identity.ts';
 
 const W = '11111111-1111-4111-8111-111111111111';
 const W2 = '99999999-9999-4999-8999-999999999999';
@@ -189,7 +189,7 @@ await check('manual start supplies exact group context and does not create group
 const sessionSource = read('src/lib/whatsapp-session-routing.server.ts');
 const sessionCode = sessionSource.slice(sessionSource.indexOf('export async function resolveLeadEvolutionSession('), sessionSource.indexOf('export type LeadWhatsappConversationIdentity'))
   .replace('export async function resolveLeadEvolutionSession(', 'globalThis.resolveLeadEvolutionSession=async function(');
-const { resolveLeadEvolutionSession } = evaluate(sessionCode, {});
+const { resolveLeadEvolutionSession } = evaluate(sessionCode, { normalizeInternationalPhone });
 const runtimeSource = read('src/lib/salesbot-runtime.server.ts');
 const routeCode = runtimeSource.slice(runtimeSource.indexOf('async function resolveRuntimeWhatsappTarget('), runtimeSource.indexOf('async function sendLeadWhatsappText('))
   .replace('async function resolveRuntimeWhatsappTarget(', 'globalThis.route=async function(');
