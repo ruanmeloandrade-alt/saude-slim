@@ -650,7 +650,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
 
               let inboundActivityId: string | null = null;
               let inboundActivityPayload: Record<string, unknown> | null = null;
-              if (resolvedLeadId && (body || mediaInfo?.url)) {
+              if (resolvedLeadId && (body || mediaInfo)) {
                 const whatsappMsgId = msg.key?.id ?? null;
                 let alreadyLogged = false;
                 if (whatsappMsgId) {
