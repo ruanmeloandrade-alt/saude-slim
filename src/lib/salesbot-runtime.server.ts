@@ -664,7 +664,7 @@ async function resolveRuntimeWhatsappTarget(
     };
   }
 
-  const conversation = await findLatestLeadWhatsappIdentity(supabaseAdmin, { workspaceId, leadId });
+  const conversation = await findLatestLeadWhatsappIdentity(supabaseAdmin, { workspaceId, leadId, preferredSessionId });
   if (conversation) {
     const sessionId = await resolveLeadEvolutionSession(supabaseAdmin, {
       workspaceId,
@@ -699,7 +699,7 @@ async function resolveRuntimeWhatsappTarget(
       (lastMessage as { session_id?: string | null } | null)?.session_id?.trim() || null;
     const sessionId = await resolveLeadEvolutionSession(supabaseAdmin, {
       workspaceId,
-      preferredSessionId: messageSessionId ?? preferredSessionId,
+      preferredSessionId: preferredSessionId ?? messageSessionId,
     });
     return {
       phone: jidIdentity.kind === "group" ? jidIdentity.remoteJid : jidIdentity.number,

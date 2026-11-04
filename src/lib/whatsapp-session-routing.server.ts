@@ -21,19 +21,27 @@ export async function resolveLeadEvolutionSession(
 ): Promise<string> {
   const { data, error } = await sb
     .from("whatsapp_web_sessions")
-    .select("id")
+    .select("id,phone_number,status")
     .eq("workspace_id", input.workspaceId)
     .eq("provider", "evolution")
-    .eq("status", "conectado")
     .order("last_connected_at", { ascending: false });
   if (error) throw new Error(error.message);
 
-  const ids = ((data ?? []) as Array<{ id?: string }>)
-    .map((row) => row.id)
-    .filter(Boolean) as string[];
+  const sessions = (data ?? []) as Array<{ id: string; phone_number?: string | null; status: string }>;
+  const connected = sessions.filter((row) => row.status === "conectado");
+  const ids = connected.map((row) => row.id);
   const preferred = input.preferredSessionId?.trim() || null;
   if (preferred) {
     if (ids.includes(preferred)) return preferred;
+    const origin = sessions.find((row) => row.id === preferred);
+    const phone = normalizeInternationalPhone(origin?.phone_number, { allowTrustedBare: true });
+    if (phone.ok) {
+      const successors = connected.filter((row) => {
+        const candidate = normalizeInternationalPhone(row.phone_number, { allowTrustedBare: true });
+        return candidate.ok && candidate.digits === phone.digits;
+      });
+      if (successors.length === 1) return successors[0].id;
+    }
     throw new Error(
       "O número de WhatsApp desta conversa não está conectado. Reconecte a sessão correta antes de responder.",
     );
@@ -53,7 +61,7 @@ export type LeadWhatsappConversationIdentity = WhatsappJidIdentity & {
 
 export async function findLatestLeadWhatsappIdentity(
   sb: AnySb,
-  input: { workspaceId: string; leadId: string; phone?: string | null },
+  input: { workspaceId: string; leadId: string; phone?: string | null; preferredSessionId?: string | null },
 ): Promise<LeadWhatsappConversationIdentity | null> {
   const { data: activities, error: activityError } = await sb
     .from("lead_activities")
@@ -81,7 +89,7 @@ export async function findLatestLeadWhatsappIdentity(
         : typeof payload.session_id === "string" && payload.session_id.trim()
           ? payload.session_id.trim()
           : null;
-    if (identity) {
+    if (identity && (!input.preferredSessionId || input.preferredSessionId === sessionId)) {
       return {
         ...identity,
         sessionId,
@@ -127,7 +135,7 @@ export async function findLatestLeadWhatsappIdentity(
   }>) {
     const identity =
       whatsappIdentityFromJid(row.remote_jid) ?? whatsappIdentityFromJid(row.to_jid);
-    if (!identity) continue;
+    if (!identity || (input.preferredSessionId && row.session_id !== input.preferredSessionId)) continue;
     if (identity.kind === "direct") {
       if (historicalPhone.ok === false || historicalPhone.digits !== identity.digits) {
         continue;
@@ -162,6 +170,7 @@ export async function resolveLeadWhatsappRoutingTarget(
     workspaceId: input.workspaceId,
     leadId: input.leadId,
     phone: input.phone,
+    preferredSessionId: input.preferredSessionId,
   });
 
   if (conversation) {

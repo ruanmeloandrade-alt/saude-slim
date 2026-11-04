@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { normalizeInternationalPhone } from "@/lib/whatsapp-identity";
 import { supabase } from "@/integrations/supabase/client";
 
 export function LeadWhatsappOrigin({
@@ -28,12 +29,22 @@ export function LeadWhatsappOrigin({
       if (typeof id !== "string" || !id) return null;
       const session = await supabase
         .from("whatsapp_web_sessions")
-        .select("phone_number,status")
+        .select("phone_number,status,provider")
         .eq("workspace_id", workspaceId)
         .eq("id", id)
         .maybeSingle();
       if (session.error || !session.data) throw new Error("Origem indisponível.");
-      return session.data;
+      if (session.data.status === "conectado" || session.data.provider !== "evolution") return session.data;
+      const phone = normalizeInternationalPhone(session.data.phone_number, { allowTrustedBare: true });
+      if (!phone.ok) return session.data;
+      const active = await supabase.from("whatsapp_web_sessions").select("phone_number")
+        .eq("workspace_id", workspaceId).eq("provider", "evolution").eq("status", "conectado");
+      if (active.error) throw new Error("Origem indisponível.");
+      const matches = active.data.filter((row) => {
+        const candidate = normalizeInternationalPhone(row.phone_number, { allowTrustedBare: true });
+        return candidate.ok && candidate.digits === phone.digits;
+      });
+      return matches.length === 1 ? { ...session.data, status: "conectado" } : session.data;
     },
   });
   if (origin.isPending)

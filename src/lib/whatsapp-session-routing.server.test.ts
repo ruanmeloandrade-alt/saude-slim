@@ -125,6 +125,22 @@ describe("WhatsApp real conversation routing", () => {
     expect(target.conversationKey).toBe("session-a:5599999999999@s.whatsapp.net");
   });
 
+  it("recovers a stale card through the sole active session of the same number", async () => {
+    const target = await resolveLeadWhatsappRoutingTarget(fakeSupabase({
+      lead_activities: [
+        { workspace_id: "ws", lead_id: "lead", type: "message_in", occurred_at: "2026-11-04T14:21:35Z", payload: { whatsapp_remote_jid: "5599999999999@s.whatsapp.net", whatsapp_session_id: "wrong" } },
+        { workspace_id: "ws", lead_id: "lead", type: "message_out", occurred_at: "2026-10-24T11:15:58Z", payload: { whatsapp_remote_jid: "5599999999999@s.whatsapp.net", whatsapp_session_id: "old" } },
+      ],
+      whatsapp_web_sessions: [
+        { workspace_id: "ws", provider: "evolution", id: "old", status: "desconectado", phone_number: "+559286309669" },
+        { workspace_id: "ws", provider: "evolution", id: "new", status: "conectado", phone_number: "559286309669" },
+        { workspace_id: "ws", provider: "evolution", id: "wrong", status: "conectado", phone_number: "559286301866" },
+      ],
+    }), { workspaceId: "ws", leadId: "lead", preferredSessionId: "old" });
+    expect(target.sessionId).toBe("new");
+    expect(target.conversationKey).toBe("new:5599999999999@s.whatsapp.net");
+  });
+
   it("does not substitute another connected account when the original disconnects", async () => {
     const sb = fakeSupabase({
       lead_activities: [],
