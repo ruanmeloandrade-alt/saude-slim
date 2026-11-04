@@ -5,6 +5,8 @@ export const scanProfileSchema = z.object({
   name: z.string().trim().min(1).max(80),
   rules: z.string().trim().min(1).max(12000),
   reviewStage: z.string().uuid().nullable(),
+  allowMoves: z.boolean().optional(),
+  targetStages: z.array(z.string().uuid()).max(100).optional(),
   sourceStages: z.array(z.string().uuid()).max(100),
   days: z.array(z.number().int().min(0).max(6)).max(7),
   time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
@@ -31,5 +33,5 @@ export type ScanSummary = {
   profileId: string; profileName?: string; startedAt: string; finishedAt?: string;
   checked: number; moved: number; review: number; failed: number; done: boolean; cancelled?: boolean; details?: ScanDetail[];
 };
-export type ScanDetail = { leadId: string; stageId: string; targetId?: string; outcome: string };
-export type ScanJob = ScanSummary & { cursor: string | null; previous?: ScanSummary[]; error?: string };
+export type ScanDetail = { leadId: string; stageId: string; targetId?: string; outcome: string; review?: boolean };
+export type ScanJob = ScanSummary & { cursor: string | null; previous?: ScanSummary[]; error?: string; failedIds?: string[]; retryQueue?: string[]; retrying?: boolean };

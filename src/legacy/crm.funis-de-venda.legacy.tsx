@@ -1360,7 +1360,7 @@ function CrmFunisPage() {
       >
         <Zap className="w-3.5 h-3.5" /> {openingAutomations ? "Carregando gatilhos..." : "Automatize"}
       </Button>
-      {funnel && <CrmManagerSettings key={funnel.id} funnel={funnel} />}
+      {funnel && <CrmManagerSettings key={funnel.id} funnel={funnel} onBulkMove={(ids) => { setSelectedLeadIds(new Set(ids)); setBulkMoveDialogOpen(true); }} />}
     </div>
   ) : (
   <>
@@ -2182,8 +2182,10 @@ function QuickEditDialog({
 
 function CrmManagerSettings({
   funnel,
+  onBulkMove,
 }: {
   funnel: { id: string; name: string; stages: Array<{ id: string; name: string }> };
+  onBulkMove: (ids: string[]) => void;
 }) {
   const scans = useServerFn(crmManagerScans);
   const [open, setOpen] = useState(false);
@@ -2195,7 +2197,7 @@ function CrmManagerSettings({
   const [draft, setDraft] = useState<ScanProfile | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  async function operate(operation: "read" | "save" | "delete" | "default" | "run" | "cancel", profileId?: string) {
+  async function operate(operation: "read" | "save" | "delete" | "default" | "run" | "cancel" | "retry", profileId?: string) {
     if (busy) return;
     setBusy(true);
     try {
@@ -2204,7 +2206,7 @@ function CrmManagerSettings({
       setDefaultId(result.defaultId);
       setJob(result.job);
       setLoaded(true);
-      if (operation === "run") { setOpen(true); toast.success("Varredura enfileirada. A execução continua no servidor."); }
+      if (operation === "run" || operation === "retry") { setOpen(true); toast.success("Varredura enfileirada. A execução continua no servidor."); }
       if (operation === "save") setDraft(null);
       if (operation === "delete") setDeleteId(null);
       if (operation === "cancel" && result.job?.cancelled) toast.success("Varredura cancelada.");
@@ -2222,6 +2224,7 @@ function CrmManagerSettings({
   }, [job, busy, funnel.id]);
 
   const working = Boolean(job && !job.done);
+  const reviewIds = job?.details?.filter(item => item.review && item.outcome !== "Enviado à revisão").map(item => item.leadId) ?? [];
   const field = "rounded-md border border-input bg-background p-2 text-sm";
   return (
     <>
@@ -2257,6 +2260,14 @@ function CrmManagerSettings({
             <p role="status">{job.cancelled ? "Cancelada" : job.done ? "Concluída" : "Em andamento"} · {job.profileName ?? profiles.find(p => p.id === job.profileId)?.name ?? "Varredura anterior"}</p>
             <p>{job.checked} conferidos · {job.moved} movidos · {job.review} para revisão · {job.failed} falhas</p>
             {job.error && <p role="alert">{job.error}</p>}
+            {working && job.retrying && <p>Reprocessando falhas técnicas. Restam {job.retryQueue?.length ?? 0} nesta rodada.</p>}
+            {!working && job.failed > 0 && profiles.some(profile => profile.id === job.profileId) && <Button size="sm" variant="outline" disabled={busy} onClick={() => void operate("retry", job.profileId)}>
+              {job.failedIds?.length ? "Reprocessar falhas" : "Refazer varredura"}
+            </Button>}
+            {!working && reviewIds.length > 0 && <Button size="sm" variant="outline" disabled={busy} onClick={() => {
+              setOpen(false);
+              onBulkMove(reviewIds.slice(0, 100));
+            }}>Mover casos para revisão em massa ({Math.min(reviewIds.length, 100)})</Button>}
             {job.details?.length ? <details>
               <summary>Ver decisões da última varredura</summary>
               <ul className="mt-2 max-h-52 overflow-y-auto">
@@ -2341,10 +2352,25 @@ function CrmManagerSettings({
                   </label>
                 ))}
               </fieldset>
+              <label className="flex gap-2">
+                <input type="checkbox" checked={draft.allowMoves !== false} onChange={(event) =>
+                  setDraft({ ...draft, allowMoves: event.target.checked })} /> Permitir movimentações automáticas
+              </label>
+              <fieldset className="grid gap-1">
+                <legend>Destinos permitidos pela análise</legend>
+                <p className="text-xs text-muted-foreground">Sem seleção, permite qualquer etapa deste funil. A etapa de revisão é definida abaixo.</p>
+                {funnel.stages.map((stage) => (
+                  <label key={stage.id} className="flex gap-2">
+                    <input type="checkbox" checked={draft.targetStages?.includes(stage.id) ?? false} onChange={(event) =>
+                      setDraft({ ...draft, targetStages: event.target.checked ? [...(draft.targetStages ?? []), stage.id] : (draft.targetStages ?? []).filter((id) => id !== stage.id) })} />
+                    {stage.name}
+                  </label>
+                ))}
+              </fieldset>
               <label className="grid gap-1">Etapa para revisão
                 <select className={field} value={draft.reviewStage ?? ""} onChange={(event) =>
                   setDraft({ ...draft, reviewStage: event.target.value || null })}>
-                  <option value="">Somente contar casos duvidosos</option>
+                  <option value="">Nenhuma — manter casos duvidosos na etapa atual</option>
                   {funnel.stages.map((stage) => <option key={stage.id} value={stage.id}>{stage.name}</option>)}
                 </select>
               </label>
