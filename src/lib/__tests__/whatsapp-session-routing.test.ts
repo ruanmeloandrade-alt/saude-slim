@@ -5,7 +5,7 @@ function sbWithSessions(ids: string[]) {
   const chain: any = {
     select: vi.fn(() => chain),
     eq: vi.fn(() => chain),
-    order: vi.fn(async () => ({ data: ids.map((id) => ({ id })), error: null })),
+    order: vi.fn(async () => ({ data: ids.map((id) => ({ id, status: "conectado" })), error: null })),
   };
   return { from: vi.fn(() => chain) } as any;
 }
