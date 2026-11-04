@@ -2007,7 +2007,13 @@ async function runAiAgentTurn(
       headers: aiKey.provider === "lovable"
         ? { "Content-Type": "application/json", "Lovable-API-Key": aiKey.apiKey, "X-Lovable-AIG-SDK": "salesbot-runtime" }
         : { "Content-Type": "application/json", Authorization: `Bearer ${aiKey.apiKey}` },
-      body: JSON.stringify({ model, messages: msgs, temperature: 0.7 }),
+      body: JSON.stringify({
+        model,
+        messages: msgs,
+        // Reasoning models reject custom sampling parameters.
+        ...(/^(?:openai\/)?(?:gpt-5(?:[.-]|$)|o[1-9](?:[-.]|$))/i.test(model)
+          ? {} : { temperature: 0.7 }),
+      }),
     });
     if (!resp.ok) {
       const txt = await resp.text().catch(() => "");
