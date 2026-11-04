@@ -422,6 +422,7 @@ type AgentSettings = {
   language?: string;
   max_interactions?: number;
   allowed_actions?: string[];
+  start_immediately?: boolean;
   rules?: AgentRule[];
   sources?: AgentSource[];
   actions?: AgentAction[];
@@ -536,6 +537,7 @@ function AgentEditor({
     cooldownSeconds: initial?.cooldown_seconds ?? 15,
     language: initialSettings.language ?? "pt-BR",
     maxInteractions: initialSettings.max_interactions ?? 0,
+    startImmediately: initialSettings.start_immediately !== false,
   });
   const [allowedActions, setAllowedActions] = useState<string[]>(
     initialSettings.allowed_actions ?? ["trocar-etapa", "transferir-humano", "encerrar-conversa"],
@@ -571,6 +573,7 @@ function AgentEditor({
     name: form.name,
     persona: form.persona,
     systemPrompt: form.systemPrompt,
+    startImmediately: form.startImmediately,
     model: form.model,
     cooldownSeconds: form.cooldownSeconds,
     temperature: initial?.temperature ?? 0.7,
@@ -787,6 +790,15 @@ function AgentEditor({
                   />
                 </div>
               </div>
+
+              <label className="block text-sm">
+                Ao ativar o agente
+                <select className="mt-1 w-full rounded border bg-background p-2" value={form.startImmediately ? "start" : "wait"}
+                  onChange={(event) => setForm({ ...form, startImmediately: event.target.value === "start" })}>
+                  <option value="start">Iniciar atendimento e enviar a primeira mensagem</option>
+                  <option value="wait">Aguardar a próxima mensagem do cliente</option>
+                </select>
+              </label>
 
               <div>
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Persona</label>

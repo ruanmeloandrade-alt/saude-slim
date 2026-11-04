@@ -986,25 +986,40 @@ async function getLastConversationTurn(
  * Handoff para o Agente IA levando o contexto da conversa.
  * Só dispara um turno imediato quando existe mensagem do cliente sem resposta.
  */
-async function handoffToConversationAgent(
+export async function handoffToConversationAgent(
   supabaseAdmin: AnySb,
-  params: { workspaceId: string; leadId: string; phone: string; agentId: string },
+  params: { workspaceId: string; leadId: string; phone: string; agentId: string; activation?: boolean; openingText?: string },
 ): Promise<{ replied: boolean; reason: string; error?: string }> {
+  const agent = await loadConversationAgent(supabaseAdmin, params.workspaceId, params.agentId);
+  if (!agent) return { replied: false, reason: "agente indisponível", error: "Agente IA não encontrado" };
+  const settings = (agent.metadata as { settings?: { start_immediately?: boolean } } | null)?.settings;
+  const starts = settings?.start_immediately !== false;
+  if (params.activation) {
+    const { data: activationRun, error } = await supabaseAdmin.from("conversation_agent_runs").insert({
+      workspace_id: params.workspaceId, lead_id: params.leadId, agent_id: params.agentId,
+      channel: "whatsapp", metadata: { source: "automation", start_mode: starts ? "immediate" : "wait" },
+    }).select("id").maybeSingle();
+    if (error) console.warn("[conversation-agent] activation audit failed", error.code);
+    if (!starts) return { replied: false, reason: "configurado para aguardar a próxima mensagem" };
+    if (params.openingText) {
+      const sent = await sendLeadWhatsappText(supabaseAdmin, params.workspaceId, params.leadId, params.phone, params.openingText);
+      if (sent.ok && activationRun?.id) {
+        await supabaseAdmin.from("conversation_agent_runs").update({ interactions_count: 1, last_message_at: new Date().toISOString() })
+          .eq("workspace_id", params.workspaceId).eq("id", activationRun.id);
+      }
+      return { replied: sent.ok, reason: sent.ok ? "abertura configurada enviada" : "abertura não confirmada", error: sent.error };
+    }
+  }
   const last = await getLastConversationTurn(supabaseAdmin, params.workspaceId, params.leadId);
-  if (last.direction !== "in") {
-    return {
-      replied: false,
-      reason: last.direction === "out"
-        ? "última mensagem foi nossa — agente aguarda o cliente responder"
-        : "sem histórico de mensagens — agente aguarda o cliente iniciar",
-    };
+  if (!params.activation && last.direction !== "in") {
+    return { replied: false, reason: "conversa já iniciada — aguardando nova mensagem" };
   }
   const r = await runAiAgentTurn(
-    supabaseAdmin, params.workspaceId, params.leadId, params.phone, params.agentId, last.text,
+    supabaseAdmin, params.workspaceId, params.leadId, params.phone, params.agentId,
+    last.direction === "in" ? last.text : undefined, undefined, Boolean(params.activation),
   );
-  return { replied: !r.error, reason: "respondeu a última mensagem do cliente", error: r.error };
+  return { replied: Boolean(r.reply) && !r.error, reason: r.reply ? "mensagem do agente processada" : "agente não gerou mensagem", error: r.error };
 }
-
 
 async function loadConversationAgent(
   supabaseAdmin: AnySb,
@@ -1794,6 +1809,8 @@ async function runAiAgentTurn(
   phone: string,
   agentId: string,
   extraUserMessage?: string,
+  _expectedVersion?: number,
+  opening = false,
 ): Promise<{ reply: string; handoff: boolean; error?: string }> {
   const agent = await loadConversationAgent(supabaseAdmin, workspaceId, agentId);
   if (!agent) return { reply: "", handoff: true, error: "Agente IA não encontrado" };
@@ -1913,6 +1930,7 @@ async function runAiAgentTurn(
 
   const sys = [
     agent.system_prompt ?? "",
+    opening ? "O fluxo acabou de transferir este atendimento para você. Envie agora uma abertura curta, apresente-se pelo seu nome e empresa quando houver contexto e conduza a conversa a partir do histórico. Se a pessoa já informou o que quer, avance com essa informação. Não espere outra mensagem para iniciar." : "",
     mencaoBlock,
     persona ? `Persona: ${persona}` : "",
     `Idioma padrão: ${idioma}.`,
@@ -2092,9 +2110,24 @@ async function runAiAgentTurn(
           whatsapp_remote_jid: routeTarget.remoteJid,
           whatsapp_conversation_key: routeTarget.conversationKey,
           source: "ai_agent",
+          agent_id: agentId,
         },
         occurred_at: new Date().toISOString(),
       });
+      const { data: latestRun } = await supabaseAdmin.from("conversation_agent_runs").select("id,interactions_count")
+        .eq("workspace_id", workspaceId).eq("lead_id", leadId).eq("agent_id", agentId)
+        .order("started_at", { ascending: false }).limit(1).maybeSingle();
+      const lastMessageAt = new Date().toISOString();
+      if (latestRun?.id) {
+        await supabaseAdmin.from("conversation_agent_runs").update({
+          interactions_count: (latestRun.interactions_count ?? 0) + 1, last_message_at: lastMessageAt,
+        }).eq("workspace_id", workspaceId).eq("id", latestRun.id);
+      } else {
+        await supabaseAdmin.from("conversation_agent_runs").insert({
+          workspace_id: workspaceId, lead_id: leadId, agent_id: agentId, channel: "whatsapp",
+          interactions_count: 1, last_message_at: lastMessageAt,
+        });
+      }
     }
 
 
@@ -4242,7 +4275,7 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
             // Handoff com contexto: se o cliente falou por último, o agente já responde.
             const h = await handoffToConversationAgent(supabaseAdmin, {
               workspaceId: run.workspace_id, leadId: run.lead_id,
-              phone: lead.phone ?? "", agentId: iaIdOnEnd,
+              phone: lead.phone ?? "", agentId: iaIdOnEnd, activation: Boolean(handoffAgentId),
             });
             await log(supabaseAdmin, run, b, h.error ? "error" : "ok",
               h.error ?? `bot encerrado — Agente IA segue ativo (${h.reason})`);
@@ -4305,24 +4338,12 @@ export async function executeRun(supabaseAdmin: AnySb, runInput: string | RunRow
           const maxTurnos = Math.max(0, Number(b.config.iaMaxTurnos ?? 0));
           const mensagemInicial = String(b.config.iaMensagemInicial ?? "").trim();
           const phone = lead.phone ?? "";
-          if (mensagemInicial) {
-            const t = interpolate(mensagemInicial, lead, run.variables);
-            const s = await sendLeadWhatsappText(
-              supabaseAdmin,
-              run.workspace_id,
-              run.lead_id,
-              phone,
-              t,
-            );
-            if (!s.ok) await log(supabaseAdmin, run, b, "error", s.error);
-          } else {
-            // Assume a conversa com o contexto já existente: responde na hora
-            // apenas se a última fala foi do cliente; senão espera o cliente.
-            const h = await handoffToConversationAgent(supabaseAdmin, {
-              workspaceId: run.workspace_id, leadId: run.lead_id, phone, agentId,
-            });
-            await log(supabaseAdmin, run, b, h.error ? "error" : "ok", h.error ?? h.reason);
-          }
+          await assignConversationAgent(supabaseAdmin, run.workspace_id, run.lead_id, agentId);
+          const h = await handoffToConversationAgent(supabaseAdmin, {
+            workspaceId: run.workspace_id, leadId: run.lead_id, phone, agentId, activation: true,
+            openingText: mensagemInicial ? interpolate(mensagemInicial, lead, run.variables) : undefined,
+          });
+          await log(supabaseAdmin, run, b, h.error ? "error" : "ok", h.error ?? h.reason);
 
           const vars: Record<string, unknown> = {
             ...(run.variables ?? {}),
