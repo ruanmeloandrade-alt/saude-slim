@@ -96,13 +96,15 @@ await check('shared component exports an optional embedded interface and valid T
 const chat = functionNode(uiAst, 'ChatThread');
 const header = find(chat, n => ts.isJsxElement(n) && n.openingElement.attributes.properties.some(a => ts.isJsxAttribute(a) && a.name.getText(uiAst) === 'data-chat-thread-header'));
 const renderHeader = compile(`function renderHeader(embedded=false){
- const channel='leads',isLead=true,conversation={isGroup:false},leadName='Contato de teste',leadSubtitle='Etapa',whatsappUrl='https://web.whatsapp.com/send?phone=5511900000000';
- const navigate=()=>{},wallpaper='dots',setWallpaper=()=>{},onOpenProfile=()=>{},profileOpen=false,cacheScope=null;
+ const channel='leads',isLead=true,conversation={id:'qa-lead',isGroup:false},leadName='Contato de teste',leadSubtitle='Etapa',whatsappUrl='https://web.whatsapp.com/send?phone=5511900000000';
+ const navigate=()=>{},wallpaper='dots',setWallpaper=()=>{},onOpenProfile=()=>{},profileOpen=false,cacheScope={workspaceId:'qa'},detail={lead:{pipelineId:'funnel',stageId:'stage'}};
  return ${header.getText(uiAst)};
-}`, { h, Fragment: 'fragment', ...Object.fromEntries(['Avatar','ArrowLeft','StatusDot','StatusLabel','MessageCircle','CheckCircle2','Phone','Search','ThreadMoreMenu','IconBtn'].map(name => [name,name])) }, 'renderHeader');
+}`, { h, Fragment: 'fragment', ...Object.fromEntries(['Avatar','ArrowLeft','StatusDot','StatusLabel','MessageCircle','CheckCircle2','Phone','Search','ThreadMoreMenu','IconBtn','InboxStageShortcut'].map(name => [name,name])) }, 'renderHeader');
 await check('actual header preserves standalone navigation and delegates embedded exits to the drawer', () => {
   const standalone = nodes(renderHeader()), embedded = nodes(renderHeader(true));
   assert(standalone.some(n => n.props['aria-label'] === 'Voltar')); assert(standalone.some(n => n.type === 'a' && n.props.href));
+  assert(standalone.some(n => n.type === 'InboxStageShortcut' && n.props.leadId === 'qa-lead'));
+  assert(!embedded.some(n => n.type === 'InboxStageShortcut'));
   assert(!embedded.some(n => n.props['aria-label'] === 'Voltar')); assert(!embedded.some(n => n.type === 'a' && n.props.href));
 });
 await check('header grows around WhatsApp origin and wraps actions without shrinking into history', () => {
