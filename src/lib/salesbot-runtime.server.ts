@@ -1824,6 +1824,7 @@ async function runAiAgentTurn(
       links?: Array<{ label?: string; url?: string; when?: string }>;
       rules?: AgentRuleLike[];
     };
+    first_contact_flow?: { opening_message?: string; exclusive_bot_handoff?: boolean };
     objective_tree?: ObjectiveTreeLike & { sources?: unknown[] };
   };
   const idioma = meta.settings?.language ?? "pt-BR";
@@ -1987,21 +1988,16 @@ async function runAiAgentTurn(
   }
 
 
-  let aiKey: WorkspaceAiKey;
-  try {
-    const mod = await import("@/lib/workspace-ai-key.server");
-    aiKey = await mod.resolveWorkspaceAiKey(supabaseAdmin as never, workspaceId);
-  } catch (e) {
-    return { reply: "", handoff: true, error: (e as Error).message };
-  }
+  const openingMessage = opening ? meta.first_contact_flow?.opening_message?.trim() : undefined;
+  async function generateAgentReply() {
+    const { resolveWorkspaceAiKey } = await import("@/lib/workspace-ai-key.server");
+    const aiKey: WorkspaceAiKey = await resolveWorkspaceAiKey(supabaseAdmin as never, workspaceId);
+    const model = aiKey.provider === "lovable"
+      ? (agent.model && agent.model.startsWith("openai/") ? agent.model : aiKey.defaultModel)
+      : aiKey.provider === "gemini"
+        ? (agent.model && agent.model.startsWith("gemini") ? agent.model : aiKey.defaultModel)
+        : (agent.model && !agent.model.startsWith("openai/") ? aiKey.defaultModel : agent.model.replace(/^openai\//, ""));
 
-  const model = aiKey.provider === "lovable"
-    ? (agent.model && agent.model.startsWith("openai/") ? agent.model : aiKey.defaultModel)
-    : aiKey.provider === "gemini"
-      ? (agent.model && agent.model.startsWith("gemini") ? agent.model : aiKey.defaultModel)
-      : (agent.model && !agent.model.startsWith("openai/") ? aiKey.defaultModel : agent.model.replace(/^openai\//, ""));
-
-  try {
     const resp = await fetch(`${aiKey.baseUrl}/chat/completions`, {
       method: "POST",
       headers: aiKey.provider === "lovable"
@@ -2017,10 +2013,14 @@ async function runAiAgentTurn(
     });
     if (!resp.ok) {
       const txt = await resp.text().catch(() => "");
-      return { reply: "", handoff: true, error: `AI HTTP ${resp.status}: ${txt.slice(0, 200)}` };
+      throw new Error(`AI HTTP ${resp.status}: ${txt.slice(0, 200)}`);
     }
     const json = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = json.choices?.[0]?.message?.content ?? "";
+    return json.choices?.[0]?.message?.content ?? "";
+  }
+
+  try {
+    const raw = openingMessage || await generateAgentReply();
     
     // Extração automática de dados via marcador [[EXTRACT_DATA:fieldId=valor]]
     const extractionMatches = Array.from(raw.matchAll(/\[\[EXTRACT_DATA:([^\]=]+)=([^\]]+)\]\]/gi));
@@ -2049,7 +2049,7 @@ async function runAiAgentTurn(
 
     // Reação por sentimento: antes de responder, o agente reage na mensagem do
     // lead com um emoji coerente com o tom percebido (vale para prompt e fluxo).
-    if (shouldReactToSentiment(meta.settings?.allowed_actions)) {
+    if (!openingMessage && shouldReactToSentiment(meta.settings?.allowed_actions)) {
       try {
         const alvo = String(mensagemDoTurno || triggerCtx.message || "");
         if (alvo.trim()) {
@@ -2137,6 +2137,8 @@ async function runAiAgentTurn(
     }
 
 
+    if (openingMessage) return { reply, handoff: false };
+
     // Regras condicionais (Se X → faça Y): avaliadas no servidor com dados reais
     // do lead e da conversa, não dependem do julgamento do modelo.
     try {
@@ -2218,6 +2220,25 @@ async function runAiAgentTurn(
       // Trava de segurança: se o servidor sabe que o gatilho não se aplica agora,
       // não executa nada mesmo que o modelo tenha cuspido o marcador.
       if (acao?.id && verdicts[acao.id]?.status === "inativo") continue;
+
+      if (meta.first_contact_flow?.exclusive_bot_handoff && acao?.do?.action === "iniciar-salesbot" && acao.do.target) {
+        const { data: released, error: releaseError } = await supabaseAdmin.from("leads")
+          .update({ active_conversation_agent_id: null, ai_paused: true })
+          .eq("workspace_id", workspaceId).eq("id", leadId)
+          .eq("active_conversation_agent_id", agentId).eq("ai_paused", false)
+          .select("id").maybeSingle();
+        if (releaseError) throw new Error("Nao foi possivel liberar o atendimento para o SalesBot.");
+        if (!released) return { reply, handoff: false };
+        const runId = await startSalesbotRun(supabaseAdmin, { workspaceId, leadId, salesbotId: acao.do.target });
+        if (!runId) {
+          await supabaseAdmin.from("leads")
+            .update({ active_conversation_agent_id: agentId, ai_paused: false })
+            .eq("workspace_id", workspaceId).eq("id", leadId)
+            .is("active_conversation_agent_id", null).eq("ai_paused", true);
+          return { reply, handoff: false, error: "SalesBot nao iniciou." };
+        }
+        return { reply, handoff: false };
+      }
 
 
 
