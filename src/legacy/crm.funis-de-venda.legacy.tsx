@@ -126,7 +126,7 @@ import { MessageTemplateEditor } from "@/components/crm/MessageTemplateEditor";
 import { FunnelSourcesPopover } from "@/components/crm/FunnelSourcesPopover";
 import { toast } from "sonner";
 import { crmManagerScans } from "@/lib/crm-manager.functions";
-import type { ScanProfile } from "@/lib/crm-manager-scans";
+import type { ScanJob, ScanProfile, ScanSummary } from "@/lib/crm-manager-scans";
 import { stageActionStamp } from "@/lib/stage-execution.core";
 import { scopePipelineAutomations, updatePipelineAutomationState } from "@/lib/pipeline-automation-state";
 import { useIsSuperAdmin } from "@/hooks/use-roles";
@@ -2191,11 +2191,11 @@ function CrmManagerSettings({
   const [loaded, setLoaded] = useState(false);
   const [profiles, setProfiles] = useState<ScanProfile[]>([]);
   const [defaultId, setDefaultId] = useState<string | null>(null);
-  const [job, setJob] = useState<{ checked: number; moved: number; review: number; failed: number; done: boolean } | null>(null);
+  const [job, setJob] = useState<ScanJob | null>(null);
   const [draft, setDraft] = useState<ScanProfile | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  async function operate(operation: "read" | "save" | "delete" | "default" | "run", profileId?: string) {
+  async function operate(operation: "read" | "save" | "delete" | "default" | "run" | "cancel", profileId?: string) {
     if (busy) return;
     setBusy(true);
     try {
@@ -2204,9 +2204,10 @@ function CrmManagerSettings({
       setDefaultId(result.defaultId);
       setJob(result.job);
       setLoaded(true);
-      if (operation === "run") toast.success("Varredura enfileirada. A execução continua no servidor.");
+      if (operation === "run") { setOpen(true); toast.success("Varredura enfileirada. A execução continua no servidor."); }
       if (operation === "save") setDraft(null);
       if (operation === "delete") setDeleteId(null);
+      if (operation === "cancel" && result.job?.cancelled) toast.success("Varredura cancelada.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível acessar as varreduras.");
     } finally {
@@ -2248,9 +2249,43 @@ function CrmManagerSettings({
             <DialogTitle>Varreduras do Gestor do CRM</DialogTitle>
             <DialogDescription>{funnel.name}. O clique esquerdo no Gestor executa a varredura padrão deste funil.</DialogDescription>
           </DialogHeader>
-          {job && <p role="status" className="text-sm">
-            {job.done ? "Última varredura" : "Varredura em andamento"} · {job.checked} conferidos · {job.moved} movidos · {job.review} para revisão · {job.failed} falhas
-          </p>}
+          {job && <section className="grid gap-2 rounded-md border p-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <strong>Histórico de varreduras</strong>
+              {working && <Button size="sm" variant="outline" disabled={busy} onClick={() => void operate("cancel")}>Cancelar varredura em andamento</Button>}
+            </div>
+            <p role="status">{job.cancelled ? "Cancelada" : job.done ? "Concluída" : "Em andamento"} · {job.profileName ?? profiles.find(p => p.id === job.profileId)?.name ?? "Varredura anterior"}</p>
+            <p>{job.checked} conferidos · {job.moved} movidos · {job.review} para revisão · {job.failed} falhas</p>
+            {job.error && <p role="alert">{job.error}</p>}
+            {job.details?.length ? <details>
+              <summary>Ver decisões da última varredura</summary>
+              <ul className="mt-2 max-h-52 overflow-y-auto">
+                {job.details.map((item) => <li key={item.leadId} className="border-b py-1">
+                  <a className="underline" href={`/inbox/leads/${item.leadId}`} target="_blank" rel="noreferrer">Abrir lead</a>
+                  {" · "}{funnel.stages.find(stage => stage.id === item.stageId)?.name ?? "Etapa anterior"}
+                  {item.targetId && ` → ${funnel.stages.find(stage => stage.id === item.targetId)?.name ?? "Etapa de destino"}`}
+                  {" · "}{item.outcome}
+                </li>)}
+              </ul>
+            </details> : <p className="text-muted-foreground">Esta execução ainda não tem decisões individuais registradas.</p>}
+            {!!job.previous?.length && <details>
+              <summary>Execuções anteriores</summary>
+              <ul className="mt-2 space-y-1">
+                {job.previous.map((entry: ScanSummary) => <li key={entry.startedAt}>
+                  {new Date(entry.startedAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })} · {entry.profileName ?? "Varredura anterior"} · {entry.cancelled ? "Cancelada" : "Concluída"} · {entry.checked} conferidos, {entry.moved} movidos, {entry.review} para revisão, {entry.failed} falhas
+                  {!!entry.details?.length && <details>
+                    <summary>Ver decisões registradas</summary>
+                    <ul className="max-h-40 overflow-y-auto">
+                      {entry.details.map(item => <li key={item.leadId}>
+                        <a className="underline" href={`/inbox/leads/${item.leadId}`} target="_blank" rel="noreferrer">Abrir lead</a>
+                        {" · "}{item.outcome}{item.targetId && ` → ${funnel.stages.find(stage => stage.id === item.targetId)?.name ?? "Etapa de destino"}`}
+                      </li>)}
+                    </ul>
+                  </details>}
+                </li>)}
+              </ul>
+            </details>}
+          </section>}
           {busy && !loaded && <p role="status">Carregando varreduras…</p>}
           {!busy && !loaded && <Button variant="outline" onClick={() => void operate("read")}>Tentar carregar novamente</Button>}
           {loaded && !draft && (
