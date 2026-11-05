@@ -6,7 +6,8 @@
 FROM evoapicloud/evolution-api:v2.3.7
 
 # Isolate errors in Baileys' offline queue without changing dependencies,
-# authentication, decryption, receipt policy or persisted sessions.
+# authentication, decryption or persisted sessions. Unsupported @bot nodes
+# receive a protocol NACK; failed lead messages are never ACKed by the patch.
 COPY services/whatsapp-connector/patch-offline-queue.cjs /tmp/patch-offline-queue.cjs
 RUN node /tmp/patch-offline-queue.cjs
 
