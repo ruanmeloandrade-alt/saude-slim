@@ -9,7 +9,7 @@ await db.exec(`create role anon;create role authenticated;create role service_ro
  create function private.is_workspace_member(uuid,uuid) returns boolean language sql as $$select false$$;
  create function private.slim_funnel_contact_phone_key(text) returns text language sql as $$select regexp_replace($1,'[^0-9]','','g')$$;
  create table workspaces(id uuid primary key);
- create table whatsapp_web_sessions(id uuid primary key,workspace_id uuid,provider text,instance_id text,token_encrypted bytea,status text,last_qr text,metadata jsonb,last_disconnected_at timestamptz,last_connected_at timestamptz);
+ create table whatsapp_web_sessions(id uuid primary key,workspace_id uuid,provider text,instance_id text,token_encrypted bytea,status text,last_qr text,metadata jsonb,last_disconnected_at timestamptz,last_connected_at timestamptz,phone_number text);
  create table leads(id uuid primary key,workspace_id uuid,pipeline_id uuid,stage_id uuid,ai_paused boolean,active_conversation_agent_id uuid,custom_data jsonb,phone text,status text,merged_into_id uuid);
  create table lead_activities(id uuid default gen_random_uuid(),workspace_id uuid,lead_id uuid,type text,payload jsonb);
  create table whatsapp_web_messages(workspace_id uuid,session_id uuid,message_id text,sender_phone text,from_me boolean,to_jid text,remote_jid text,delivery_status text);
@@ -21,6 +21,7 @@ await db.exec(`create role anon;create role authenticated;create role service_ro
  insert into crm_automation_jobs(workspace_id,lead_id,status) values('${ws}','${lead}','pending');`);
 await db.exec(readFileSync(new URL('../supabase/migrations/20261105153922_slim_whatsapp_ingress_rebuild.sql',import.meta.url),'utf8'));
 await db.exec(readFileSync(new URL('../supabase/migrations/20261105155404_slim_whatsapp_pairing_cutoff.sql',import.meta.url),'utf8'));
+await db.exec(readFileSync(new URL('../supabase/migrations/20261105161935_slim_whatsapp_transport_metadata_guard.sql',import.meta.url),'utf8'));
 let checks=0;const check=(condition)=>{assert(condition);checks++;};
 async function add(key,conversation='person-a'){
  return(await db.query(`insert into slim_whatsapp_ingress(workspace_id,session_id,event_key,event_type,conversation_key,provider_message_id,payload) values($1,$2,$3,'messages.upsert',$4,$3,'{}') returning *`,[ws,session,key,conversation])).rows[0];
@@ -61,6 +62,13 @@ let paired=(await db.query('select metadata,last_connected_at from whatsapp_web_
 check(paired.metadata.recovery_cutoff_pending===false&&new Date(paired.metadata.recovery_review_before).getFullYear()<2099);
 await db.query("select slim_confirm_commercial_pairing($1,'old')",[session]);
 check((await db.query('select metadata from whatsapp_web_sessions where id=$1',[session])).rows[0].metadata.recovery_review_before===paired.metadata.recovery_review_before);
+await db.query("update whatsapp_web_sessions set phone_number='5511999999669' where id=$1",[session]);
+await db.query("update whatsapp_web_sessions set metadata='{\"last_error\":\"simulated old status writer\"}',phone_number=null,last_connected_at=null where id=$1",[session]);
+const preserved=(await db.query('select metadata,phone_number,last_connected_at from whatsapp_web_sessions where id=$1',[session])).rows[0];
+check(preserved.metadata.recovery_cutoff_pending===false);
+check(preserved.metadata.recovery_review_before===paired.metadata.recovery_review_before);
+check(preserved.phone_number==='5511999999669');
+check(new Date(preserved.last_connected_at).getTime()===new Date(paired.last_connected_at).getTime());
 await db.exec('set role authenticated');
 check((await db.query('select * from slim_whatsapp_ingress')).rows.length===0);
 await assert.rejects(db.query('select * from slim_claim_whatsapp_ingress(1)'),e=>e.code==='42501');checks++;
