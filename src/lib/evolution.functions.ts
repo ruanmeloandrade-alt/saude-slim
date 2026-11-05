@@ -626,7 +626,7 @@ export const repairEvolutionInbound = createServerFn({ method: "POST" })
     const creds = await loadCreds(context.supabase as unknown as SbRpc, data.sessionId);
     const { assertSlimOperator } = await import("@/lib/slim-workspace-operator.server");
     await assertSlimOperator(context.supabase, creds.workspace_id, context.userId);
-    if (!creds.phone_number || !creds.webhook_secret) throw new Error("Sessao sem pareamento confirmado.");
+    if (!creds.webhook_secret) throw new Error("Sessao sem webhook cadastrado.");
     const instance = encodeURIComponent(creds.instance_name);
     const auth = { apiKey: creds.api_key };
     const state = await evoFetch(`/instance/connectionState/${instance}`, auth);
