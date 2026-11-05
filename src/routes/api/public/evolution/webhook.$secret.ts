@@ -301,6 +301,8 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
           let processed = 0;
           let skipped = 0;
           let processingErrors = 0;
+          let savedInbound = 0;
+          let savedOutbound = 0;
 
           for (const item of items) {
             const itemObj = asRecord(item);
@@ -414,7 +416,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
               : new Date().toISOString();
             const messageId = msg.key?.id ?? `wh-${Date.now()}-${processed}`;
 
-            await supabaseAdmin.from("whatsapp_web_messages").upsert(
+            const { error: messageWriteError } = await supabaseAdmin.from("whatsapp_web_messages").upsert(
               {
                 workspace_id: sess.workspace_id,
                 session_id: sess.session_id,
@@ -433,6 +435,18 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
               },
               { onConflict: "workspace_id,message_id" },
             );
+
+            if (messageWriteError) {
+              processingErrors++;
+              console.error("[evolution-webhook] message persistence failed", {
+                event,
+                direction: msg.key?.fromMe ? "outbound" : "inbound",
+                code: messageWriteError.code ?? "unknown",
+              });
+              continue;
+            }
+            if (msg.key?.fromMe) savedOutbound++;
+            else savedInbound++;
 
             // Vincula ao lead correspondente (por telefone) para aparecer no Inbox.
             // Grupos/broadcast não viram leads.
@@ -825,6 +839,9 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
             }
             processed++;
           }
+          console.info("[evolution-webhook] message batch", {
+            event, received: items.length, savedInbound, savedOutbound, skipped, processingErrors,
+          });
           return Response.json(
             { ok: processingErrors === 0, processed, skipped, processingErrors },
             { status: processingErrors > 0 ? 500 : 200 },
