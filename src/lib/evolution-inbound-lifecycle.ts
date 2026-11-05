@@ -4,8 +4,9 @@ export function shouldDispatchEvolutionInbound(input: {
   fromMe: boolean;
   activityExists: boolean;
   dispatchStatus: unknown;
+  recoveryReviewHeld?: boolean;
 }): boolean {
-  if (input.fromMe) return false;
+  if (input.fromMe || input.recoveryReviewHeld || input.dispatchStatus === "suppressed_recovery_review") return false;
   if (!input.activityExists) return true;
   return input.dispatchStatus !== "dispatched";
 }

@@ -42,3 +42,7 @@ Escopo em docs/tasks/2026-11-04-gestor-crm-agenda.md. Perfis, agenda, fila e mov
 ## 2026-11-05 — Abertura contextual da Fernanda
 
 O executor prioriza o histórico do lead na abertura do primeiro atendimento e mantém a apresentação configurada quando o histórico não contém mensagem do lead. Validação focada local aprovada. Ver escopo em docs/tasks/2026-11-05-slim-abertura-contextual.md. Envio real e recebimento pendentes.
+
+## 2026-11-05 — Recuperação em revisão e fila do conector
+
+Escopo: docs/tasks/2026-11-05-recovery-review-hold.md. Recuperados 86 eventos (82 mensagens e 4 reações), 7 contatos novos e 6 existentes, todos em Revisar Lead com IA pausada, zero bot e zero job pendente. Barreira aditiva no banco impede automação enquanto aguardam revisão e classifica o acúmulo da sessão pela janela explícita. Nenhum envio. Migrations aplicadas/registradas, testes com rollback aprovados; lifecycle 7/7; fila 4/4 reproduzindo o bug original; build completo aprovado. Patch do Baileys isola falha de um item para não paralisar a fila seguinte, sem dependências novas. Publicação e recebimento novo end-to-end pendentes. Arquivos e limitações dos contratos textuais herdados constam no escopo.

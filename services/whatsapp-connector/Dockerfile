@@ -5,4 +5,9 @@
 # isolado neste serviço, sem importar código, credenciais ou banco da Harpia.
 FROM evoapicloud/evolution-api:v2.3.7
 
+# Isolate errors in Baileys' offline queue without changing dependencies,
+# authentication, decryption, receipt policy or persisted sessions.
+COPY services/whatsapp-connector/patch-offline-queue.cjs /tmp/patch-offline-queue.cjs
+RUN node /tmp/patch-offline-queue.cjs
+
 EXPOSE 8080
