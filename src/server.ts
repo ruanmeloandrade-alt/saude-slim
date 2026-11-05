@@ -50,6 +50,8 @@ export default {
  ensureSlimAudienceWorker();
  const { ensureCrmManagerWorker } = await import("./lib/crm-manager-scans.server");
  ensureCrmManagerWorker();
+ const {ensureWhatsappIngressWorker}=await import("./lib/whatsapp-ingress.server");
+ ensureWhatsappIngressWorker();
  const handler = await getServerEntry();
  const response = await handler.fetch(request, env, ctx);
  return await normalizeCatastrophicSsrResponse(response);

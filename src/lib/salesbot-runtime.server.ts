@@ -4592,7 +4592,7 @@ export async function startSalesbotRun(
         variables: initialVars,
       })
       .select("id").single();
-    if (error) return null;
+    if (error) throw new Error("Falha ao agendar automacao.");
     return (created as { id: string }).id;
   }
 
@@ -4609,15 +4609,16 @@ export async function startSalesbotRun(
 
   if (error) {
     console.error("[startSalesbotRun] Insert error:", error);
-    return null;
+    throw new Error("Falha ao iniciar automacao.");
   }
   const actualRun = created as RunRow;
   try {
     await executeRun(supabaseAdmin, actualRun as any);
   } catch (e) {
-    await supabaseAdmin.from("salesbot_run_logs")
+    await supabaseAdmin.from("salesbot_runs")
       .update({ status: "error", last_error: (e as Error).message, finished_at: new Date().toISOString() })
       .eq("id", actualRun.id);
+    throw new Error("Execucao da automacao falhou; revisar antes de retomar.");
   }
   return actualRun.id;
 }
@@ -5261,10 +5262,11 @@ async function loadActiveBotsWithGatilhos(
   supabaseAdmin: AnySb,
   workspaceId: string,
 ): Promise<Array<{ id: string; trigger: string | null; gatilhos: GatilhoRow[] }>> {
-  const { data: bots } = await supabaseAdmin.from("salesbots")
+  const { data: bots, error } = await supabaseAdmin.from("salesbots")
     .select("id, trigger, gatilhos")
     .eq("workspace_id", workspaceId)
     .eq("is_active", true);
+  if(error)throw new Error("Falha ao consultar automacoes ativas.");
   return ((bots ?? []) as Array<{ id: string; trigger: string | null; gatilhos: unknown }>).map((b) => ({
     id: b.id,
     trigger: b.trigger,

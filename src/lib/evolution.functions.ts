@@ -98,6 +98,7 @@ async function evoFetch(
     method,
     headers,
     body: init.body ? JSON.stringify(init.body) : undefined,
+    signal: AbortSignal.timeout(30000),
   });
   const text = await resp.text();
   let json: unknown = null;

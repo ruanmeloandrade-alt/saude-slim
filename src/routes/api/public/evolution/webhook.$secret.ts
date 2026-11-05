@@ -12,9 +12,12 @@ import {
 //   /api/public/evolution/webhook/<webhook_secret>
 
 export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
-  server: {
-    handlers: {
-      POST: async ({ request, params }) => {
+ server: {handlers: {POST: async (input) => {
+  const {acceptEvolutionIngress}=await import('@/lib/whatsapp-ingress.server');
+  return acceptEvolutionIngress(input,processEvolutionWebhook);
+ }}}});
+
+export async function processEvolutionWebhook({request,params}:{request:Request;params:{secret:string}}):Promise<Response> {
         const secret = params.secret;
         if (!secret || secret.length < 20) {
           return new Response("bad secret", { status: 400 });
@@ -46,6 +49,8 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
           api_key: string;
         };
 
+        if(payload.instance&&payload.instance!==sess.instance_name)return new Response("obsolete instance",{status:409});
+
         // Valida apikey no header quando presente
         const headerKey = request.headers.get("apikey");
         if (headerKey && headerKey !== sess.api_key) {
@@ -69,10 +74,13 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
               "",
           ).toLowerCase();
           if (state === "open") {
-            await supabaseAdmin
-              .from("whatsapp_web_sessions")
-              .update({ status: "conectado", last_connected_at: new Date().toISOString() })
-              .eq("id", sess.session_id);
+            if(sess.session_id==='af98d195-d129-43cc-b3c8-2afa7e1a105e'){
+              const paired=await supabaseAdmin.rpc('slim_confirm_commercial_pairing' as never,{_session:sess.session_id,_instance:sess.instance_name} as never);
+              if(paired.error||paired.data!==true)return new Response('pairing persistence failed',{status:503});
+            }else{
+              const connected=await supabaseAdmin.from('whatsapp_web_sessions').update({status:'conectado',last_connected_at:new Date().toISOString()}).eq('id',sess.session_id);
+              if(connected.error)return new Response('connection persistence failed',{status:503});
+            }
           } else if (state === "close") {
             const { data: currentSession } = await supabaseAdmin
               .from("whatsapp_web_sessions")
@@ -251,11 +259,10 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
               .eq("message_id", upd.key.id)
               .eq("workspace_id", sess.workspace_id)
               .maybeSingle();
-            await supabaseAdmin
-              .from("whatsapp_web_messages")
-              .update({ delivery_status: normalizedStatus })
-              .eq("message_id", upd.key.id)
-              .eq("workspace_id", sess.workspace_id);
+            const delivery = await supabaseAdmin.rpc("slim_update_whatsapp_delivery" as never, {
+              _workspace:sess.workspace_id,_session:sess.session_id,_message:upd.key.id,_status:normalizedStatus,
+            } as never);
+            if(delivery.error)throw new Error('Falha ao registrar estado de entrega.');
             if (normalizedStatus === "read" || normalizedStatus === "played") {
               const tracked = trackedMessage as {
                 sender_phone?: string | null;
@@ -955,7 +962,5 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
         }
 
         return Response.json({ ok: true, ignored: event });
-      },
-    },
-  },
-});
+
+}
