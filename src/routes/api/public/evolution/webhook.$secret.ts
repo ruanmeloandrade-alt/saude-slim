@@ -452,6 +452,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
             // Grupos/broadcast não viram leads.
             try {
               let resolvedLeadId: string | null = null;
+              let recoveryReviewHeld = false;
               let freshInboundForLead = !msg.key?.fromMe;
               if (!isGroup && !unresolvedLid) {
                 let { data: leadMatch } = await supabaseAdmin
@@ -490,9 +491,11 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
                   stage_id?: string | null;
                 } | null;
                 resolvedLeadId = match?.id ?? null;
+                recoveryReviewHeld = match?.stage_id === "e8580859-9374-42fe-b3ea-d4a596d8c6b4"
+                  && match?.custom_data?.recovery_review_required === true;
                 if (resolvedLeadId && match) {
                   let currentCustom = match.custom_data ?? {};
-                  if (currentCustom.crm_created_dispatched === false) {
+                  if (currentCustom.crm_created_dispatched === false && !recoveryReviewHeld) {
                     const { dispatchCrmLeadCreated } = await import("@/lib/crm-event-dispatch.server");
                     await dispatchCrmLeadCreated(supabaseAdmin as never, {
                       workspaceId: sess.workspace_id,
@@ -684,6 +687,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
                     fromMe: !!msg.key?.fromMe,
                     activityExists: alreadyLogged,
                     dispatchStatus: inboundActivityPayload?.inbound_dispatch_status,
+                    recoveryReviewHeld,
                   });
                 }
                 if (!alreadyLogged) {
@@ -703,7 +707,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
                     mime_type: mediaInfo?.mimeType ?? null,
                     file_name: mediaInfo?.fileName ?? null,
                     duration_seconds: mediaInfo?.durationSeconds ?? null,
-                    ...(!msg.key?.fromMe ? { inbound_dispatch_status: "pending" } : {}),
+                    ...(!msg.key?.fromMe ? { inbound_dispatch_status: recoveryReviewHeld ? "suppressed_recovery_review" : "pending" } : {}),
                   };
                   const { data: insertedActivity, error: activityError } = await supabaseAdmin
                     .from("lead_activities")
@@ -724,6 +728,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
                     fromMe: !!msg.key?.fromMe,
                     activityExists: false,
                     dispatchStatus: null,
+                    recoveryReviewHeld,
                   });
                   await supabaseAdmin
                     .from("leads")
@@ -782,7 +787,7 @@ export const Route = createFileRoute("/api/public/evolution/webhook/$secret")({
 
               // Dispatcher Salesbot, inbound do lead dispara/retoma bots.
               // NUNCA chamar para grupos (o fluxo de grupo já tratou acima).
-              if (resolvedLeadId && !isGroup && !msg.key?.fromMe && freshInboundForLead) {
+              if (resolvedLeadId && !isGroup && !msg.key?.fromMe && freshInboundForLead && !recoveryReviewHeld) {
                 try {
                   const mediaKindMap: Record<string, "audio" | "imagem" | "video" | "documento"> = {
                     audio: "audio",

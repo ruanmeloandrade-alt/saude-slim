@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { shouldDispatchEvolutionInbound, withEvolutionDispatchStatus } from "../evolution-inbound-lifecycle";
 
 describe("Evolution inbound lifecycle", () => {
+  it("does not start automation on recovered history, including provider replay", () => {
+    expect(shouldDispatchEvolutionInbound({ fromMe: false, activityExists: true, dispatchStatus: "suppressed_recovery_review" })).toBe(false);
+    expect(shouldDispatchEvolutionInbound({ fromMe: false, activityExists: false, dispatchStatus: null, recoveryReviewHeld: true })).toBe(false);
+    expect(shouldDispatchEvolutionInbound({ fromMe: false, activityExists: true, dispatchStatus: "error", recoveryReviewHeld: true })).toBe(false);
+  });
   it("dispatches a fresh inbound", () => {
     expect(shouldDispatchEvolutionInbound({ fromMe: false, activityExists: false, dispatchStatus: null })).toBe(true);
   });
