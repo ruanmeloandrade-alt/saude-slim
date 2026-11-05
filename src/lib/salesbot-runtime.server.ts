@@ -1988,7 +1988,10 @@ async function runAiAgentTurn(
   }
 
 
-  const openingMessage = opening ? meta.first_contact_flow?.opening_message?.trim() : undefined;
+  const firstContactOpening = opening && Boolean(meta.first_contact_flow?.opening_message?.trim());
+  const openingMessage = firstContactOpening && !ultimaDoCliente.trim()
+    ? meta.first_contact_flow?.opening_message?.trim()
+    : undefined;
   async function generateAgentReply() {
     const { resolveWorkspaceAiKey } = await import("@/lib/workspace-ai-key.server");
     const aiKey: WorkspaceAiKey = await resolveWorkspaceAiKey(supabaseAdmin as never, workspaceId);
@@ -2023,7 +2026,7 @@ async function runAiAgentTurn(
     const raw = openingMessage || await generateAgentReply();
     
     // Extração automática de dados via marcador [[EXTRACT_DATA:fieldId=valor]]
-    const extractionMatches = Array.from(raw.matchAll(/\[\[EXTRACT_DATA:([^\]=]+)=([^\]]+)\]\]/gi));
+    const extractionMatches = firstContactOpening ? [] : Array.from(raw.matchAll(/\[\[EXTRACT_DATA:([^\]=]+)=([^\]]+)\]\]/gi));
     for (const match of extractionMatches) {
       const fieldId = match[1].trim();
       let valor = match[2].trim();
@@ -2049,7 +2052,7 @@ async function runAiAgentTurn(
 
     // Reação por sentimento: antes de responder, o agente reage na mensagem do
     // lead com um emoji coerente com o tom percebido (vale para prompt e fluxo).
-    if (!openingMessage && shouldReactToSentiment(meta.settings?.allowed_actions)) {
+    if (!firstContactOpening && shouldReactToSentiment(meta.settings?.allowed_actions)) {
       try {
         const alvo = String(mensagemDoTurno || triggerCtx.message || "");
         if (alvo.trim()) {
@@ -2137,7 +2140,9 @@ async function runAiAgentTurn(
     }
 
 
-    if (openingMessage) return { reply, handoff: false };
+    if (firstContactOpening) {
+      return { reply, handoff: false, error: reply ? undefined : "O agente não gerou a abertura contextual." };
+    }
 
     // Regras condicionais (Se X → faça Y): avaliadas no servidor com dados reais
     // do lead e da conversa, não dependem do julgamento do modelo.
