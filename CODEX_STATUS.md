@@ -38,3 +38,7 @@ PR #22 integrado em `e3018aa`; Railway `3a72b423-343e-47f0-8b5e-01e6cf98552b` SU
 
 ## 2026-11-04 — Gestor do CRM com perfis e agenda
 Escopo em docs/tasks/2026-11-04-gestor-crm-agenda.md. Perfis, agenda, fila e movimentação auditada por funil. Testes locais da agenda e do PostgreSQL aprovados. Migration aditiva aplicada no banco Saúde Slim. Publicação e smoke autenticado em andamento.
+
+## 2026-11-05 — Abertura contextual da Fernanda
+
+O executor prioriza o histórico do lead na abertura do primeiro atendimento e mantém a apresentação configurada quando o histórico não contém mensagem do lead. Validação focada local aprovada. Ver escopo em docs/tasks/2026-11-05-slim-abertura-contextual.md. Envio real e recebimento pendentes.
