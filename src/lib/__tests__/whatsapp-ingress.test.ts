@@ -15,6 +15,16 @@ describe('durable commercial ingress',()=>{
   const rows=normalizeEvolutionIngress({event:'MESSAGES_UPSERT',data:[{message:{conversation:'a'}},{message:{conversation:'b'}}]});
   expect(rows[0].identity).not.toBe(rows[1].identity);
  });
+ it('deduplicates a provider identity even when a callback switches from LID to phone JID',()=>{
+  const a=normalizeEvolutionIngress({event:'messages.upsert',data:message()})[0];
+  const b=normalizeEvolutionIngress({event:'messages.upsert',data:{...message(),key:{...message().key,remoteJid:'12345@lid',remoteJidAlt:message().key.remoteJid}}})[0];
+  expect(a.identity).toBe(b.identity);
+ });
+ it('does not let a malformed callback suppress a later corrected message',()=>{
+  const a=normalizeEvolutionIngress({event:'messages.upsert',data:{...message(),messageTimestamp:null}})[0];
+  const b=normalizeEvolutionIngress({event:'messages.upsert',data:message()})[0];
+  expect(a.reviewReason).toBeTruthy();expect(a.identity).not.toBe(b.identity);
+ });
  it('normalizes official flat delivery callbacks',()=>{
   const row=normalizeEvolutionIngress({event:'MESSAGES_UPDATE',data:{keyId:'A',remoteJid:'5511999999999@s.whatsapp.net',status:'DELIVERY_ACK'}})[0];
   expect(row.payload.data.key.id).toBe('A');expect(row.payload.data.status).toBe('delivered');expect(row.reviewReason).toBeNull();

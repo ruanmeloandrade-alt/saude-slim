@@ -30,7 +30,7 @@ export function normalizeEvolutionIngress(input:unknown, now=Date.now()):Ingress
    if(key.fromMe!==true&&key.fromMe!==false)reviewReason='Direcao da mensagem ausente.';
   }
   const clean=slimSanitizeEvolutionMessage({...envelope,event,data:normalized}) as Obj;
-  const identity=JSON.stringify([event==='send.message'?'messages.upsert':event,id,key.fromMe??item.fromMe,jid,event==='messages.update'?normalized.status:null,!id?clean.data:null]);
+  const identity=JSON.stringify([event==='send.message'?'messages.upsert':event,id,event==='messages.update'?null:key.fromMe??item.fromMe,event==='messages.update'?normalized.status:null,reviewReason?clean.data:null]);
   const resolved=whatsappIdentityFromEvolutionJids(jid,key.remoteJidAlt);
   return {event,payload:clean,conversation:resolved?.remoteJid??jid??'unresolved',messageId:id,identity,reviewReason};
  });
