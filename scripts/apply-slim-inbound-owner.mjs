@@ -53,7 +53,7 @@ export function patchInboundOwnership(input){
           .update({ status: "waiting_message", variables: { ...vars0, last_message: params.text, ia_last_turn_error: "O turno de IA não foi concluído. Verifique o agente antes de retomar." } })
           .eq("id", r.id).eq("workspace_id", params.workspaceId).eq("status", "running").is("stopped_at", null);
         if (restored.error) throw new Error("Não foi possível registrar a interrupção do turno de IA.");
-        continue;
+        throw new Error("O turno de IA falhou; revisar a mensagem antes de retomar.");
       }
       const shouldHandoff = turn.handoff || (maxTurnos > 0 && usedNow >= maxTurnos);`);
   part=once(part,'        const kept = { ...vars0, last_message: params.text, ia_turns_used: usedNow };','        const kept: Record<string, unknown> = { ...vars0, last_message: params.text, ia_turns_used: usedNow };\n        delete kept.ia_last_turn_error;');

@@ -78,6 +78,7 @@ export async function routeInboundAgentOwnership(
   if (before.active_conversation_agent_id && !before.ai_paused) {
     const owner = { id: before.active_conversation_agent_id, phone: before.phone ?? '', version: versionOf(before) };
     const turn = await dependencies.turn(owner);
+    if (turn.error) throw new Error('O atendimento de IA falhou; mensagem retida para revisao.');
     // An error is not permission to detach the agent or transfer to global bots.
     if (turn.handoff && !turn.error) {
       const saved = await db.from('leads').update({
