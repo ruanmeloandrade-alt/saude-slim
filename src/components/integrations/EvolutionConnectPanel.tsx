@@ -13,6 +13,7 @@ import {
   listEvolutionSessions,
   getWhatsappQuota,
   recreateEvolutionInstance,
+  repairEvolutionInbound,
 } from "@/lib/evolution.functions";
 
 interface Props {
@@ -73,6 +74,7 @@ export function EvolutionConnectPanel({ open, onOpenChange }: Props) {
   const list = useServerFn(listEvolutionSessions);
   const quotaFn = useServerFn(getWhatsappQuota);
   const recreate = useServerFn(recreateEvolutionInstance);
+  const repairInbound = useServerFn(repairEvolutionInbound);
 
   const callbackUrl =
     webhookSecret && typeof window !== "undefined"
@@ -140,7 +142,7 @@ export function EvolutionConnectPanel({ open, onOpenChange }: Props) {
             !session.last_connected_at,
         );
 
-        if (pending) {
+        if (pending && !loadedSessions.some((session) => session.status === "conectado")) {
           await resumePendingSession(pending, true);
         }
       } catch (e) {
@@ -334,6 +336,24 @@ export function EvolutionConnectPanel({ open, onOpenChange }: Props) {
     }, 3000);
   }
 
+  async function handleRepairInbound(session: Session) {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const result = await repairInbound({ data: { sessionId: session.id } });
+      const lastInbound = result.lastInboundAt
+        ? new Date(result.lastInboundAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })
+        : null;
+      setMsg({ tone: "success", text: lastInbound
+        ? "Webhook confirmado. Ultima entrada na Evolution: " + lastInbound + " (Brasilia)."
+        : "Webhook confirmado. A Evolution nao informou o horario da ultima entrada." });
+    } catch (error) {
+      setMsg({ tone: "error", text: error instanceof Error ? error.message : "Falha no reparo do recebimento." });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleReconnect(session: Session) {
     const allowRecovery = !session.phone_number && !session.last_connected_at;
     await resumePendingSession(session, allowRecovery);
@@ -409,6 +429,11 @@ export function EvolutionConnectPanel({ open, onOpenChange }: Props) {
                   </div>
                 </div>
                 <div className="flex gap-2 shrink-0">
+                  {session.status === "conectado" && (
+                    <Button size="sm" variant="outline" onClick={() => void handleRepairInbound(session)} disabled={busy}>
+                      Reparar recebimento
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline" onClick={() => handleReconnect(session)} disabled={busy}>
                     {session.status === "conectado" ? "Ver" : "Gerar QR"}
                   </Button>

@@ -619,6 +619,48 @@ export const fetchEvolutionStatus = createServerFn({ method: "POST" })
     };
   });
 
+export const repairEvolutionInbound = createServerFn({ method: "POST" })
+  .middleware([attachSupabaseAuth, requireSupabaseAuth])
+  .inputValidator((input: unknown) => SessionSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const creds = await loadCreds(context.supabase as unknown as SbRpc, data.sessionId);
+    const { assertSlimOperator } = await import("@/lib/slim-workspace-operator.server");
+    await assertSlimOperator(context.supabase, creds.workspace_id, context.userId);
+    if (!creds.phone_number || !creds.webhook_secret) throw new Error("Sessao sem pareamento confirmado.");
+    const instance = encodeURIComponent(creds.instance_name);
+    const auth = { apiKey: creds.api_key };
+    const state = await evoFetch(`/instance/connectionState/${instance}`, auth);
+    if (!state.ok || extractConnectionState(state.json) !== "open") {
+      throw new Error("A Evolution nao confirmou a sessao aberta.");
+    }
+    const configured = await evoFetch(`/webhook/find/${instance}`, auth);
+    if (!configured.ok) throw new Error("Nao foi possivel conferir o webhook da Evolution.");
+    type Webhook = { enabled?: boolean; url?: string; webhookByEvents?: boolean; webhookBase64?: boolean; events?: string[] };
+    const payload = configured.json as (Webhook & { webhook?: Webhook }) | null;
+    const current = payload?.webhook ?? payload;
+    const url = `${publicBaseUrl()}/api/public/evolution/webhook/${creds.webhook_secret}`;
+    const body = webhookPayload(url);
+    const currentEvents = Array.isArray(current?.events) ? current.events.filter((event) => typeof event === "string") : [];
+    body.webhook.events = [...new Set([...currentEvents, ...EVOLUTION_EVENTS])];
+    const repair = await evoFetch(`/webhook/set/${instance}`, { ...auth, method: "POST", body });
+    if (!repair.ok) throw new Error("A Evolution recusou a configuracao de recebimento.");
+    const verified = await evoFetch(`/webhook/find/${instance}`, auth);
+    const result = verified.json as (Webhook & { webhook?: Webhook }) | null;
+    const webhook = result?.webhook ?? result;
+    if (!verified.ok || webhook?.enabled !== true || webhook.url !== url || !webhook.events?.includes("MESSAGES_UPSERT")) {
+      throw new Error("A configuracao foi enviada, mas a Evolution nao confirmou o evento de mensagens.");
+    }
+    const recent = await evoFetch(`/chat/findMessages/${instance}`, {
+      ...auth, method: "POST", body: { where: { key: { fromMe: false } }, offset: 20, page: 1 },
+    }).catch(() => null);
+    const rows = recent?.json as { messages?: { records?: Array<{ key?: { fromMe?: boolean }; messageTimestamp?: number }> } } | null;
+    const lastInboundSeconds = Math.max(0, ...(rows?.messages?.records ?? [])
+      .filter((message) => message.key?.fromMe === false)
+      .map((message) => Number(message.messageTimestamp))
+      .filter((timestamp) => Number.isFinite(timestamp) && timestamp <= Date.now() / 1000));
+    return { ok: true, lastInboundAt: lastInboundSeconds > 0 ? new Date(lastInboundSeconds * 1000).toISOString() : null };
+  });
+
 // ---------- Desconectar / apagar inst-ncia ----------
 export const disconnectEvolution = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
