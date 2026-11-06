@@ -112,9 +112,10 @@
   ];
   const first = {id:'goal',title:'O que mais incomoda você no seu peso hoje?',help:'Marque o que mais faz você querer mudar essa situação.',options:Object.entries(goals).map(([id,g])=>[id,g.label])};
   function questions(answers={}) {
-    const goal=goals[answers.goal]||goals.comfort;
+    const goalKey=Object.hasOwn(goals,answers.goal)?answers.goal:'comfort';
+    const goal=goals[goalKey];
     const detail=goal.details.find(d=>d[0]===answers.pain)||goal.details[0];
-    const barrier=barriers[answers.history]||barriers.planning;
+    const barrier=Object.hasOwn(barriers,answers.history)?barriers[answers.history]:barriers.planning;
     const situation=barrier.options.find(d=>d[0]===answers.context)||barrier.options[0];
     const support=supportChoices.find(d=>d[0]===answers.doubt)||supportChoices[0];
     const supportHelp={steps:'Vamos apresentar as condições para começar com as etapas explicadas.',followup:'Veja as condições para conhecer o protocolo e conversar sobre o acompanhamento.',routine:'Conheça as condições e esclareça com a equipe como o cuidado pode entrar na sua rotina.',pdf:'Os materiais de apoio fazem parte da conversa sobre o protocolo e o acompanhamento. Veja as condições para começar.',talk:'Veja as condições iniciais. Na próxima tela, você pode escolher falar com um vendedor ou entrar no grupo.'};
@@ -122,7 +123,7 @@
     return [
       first,
       {id:'pain',title:goal.title,help:'Escolha a situação que melhor representa o que você quer mudar.',options:goal.details.map(d=>[d[0],d[1]])},
-      {id:'history',title:detail[3],help:goal.support,options:Object.entries(barriers).map(([id,b],i)=>[id,barrierLabels[answers.goal||'comfort'][i]])},
+      {id:'history',title:detail[3],help:goal.support,options:Object.entries(barriers).map(([id,b],i)=>[id,barrierLabels[goalKey][i]])},
       {id:'context',title:`Para ${detail[2]}, ${barrier.question}`,help:barrier.help,options:barrier.options.map(d=>[d[0],d[1]])},
       {id:'doubt',title:`${situation[2]}, que apoio ajudaria você a ${detail[2]}?`,help:goal.pdf,options:supportChoices.map(([id,label])=>[id,label])},
       {id:'offer',title:'Qual opção você quer conhecer melhor?',help:supportHelp[support[0]],options:[['initial','1 ampola · R$250,00 no Pix'],['complete','Caixa com 4 ampolas · R$850,00 no Pix'],['questions','Quero entender as condições antes de escolher']]},
