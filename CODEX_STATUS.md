@@ -59,3 +59,8 @@ Branch fix/slim-recent-first-20261106. Ordenação visual por data mais recente 
 ## 2026-11-06 — Vistoria WhatsApp, pausa de IA e relógio
 
 Escopo: docs/tasks/2026-11-06-whatsapp-audit-ai-isolation.md. Produção: seis IAs pausadas, duas atribuições removidas e 40 saídas em 13 bots encaminhadas a humanos. Conferência paginada: 1086 blocos, zero chamadas IA; 38 alterações diretas preservam IDs, posição e conexões; 1048 blocos intactos. Etapa humana criada no Pós-vendas. Sem envio a clientes ou novo pareamento. Evolution registra erros de stream recorrentes; zero mensagens CRM hoje, última entrada ontem 23h37 Brasília. Causa detalhada do stream ainda não isolada. Relógio do card passa a lastInboundAt, com estado Sem mensagens recebidas. Prebuild e build cliente/SSR/Nitro aprovados; publicação/conferência visual pendentes. Sem novas dependências. Falha de âncora CRLF do prebuild contornada por normalização temporária do checkout, sem alterar os scripts.
+
+## 2026-11-06 — Confirmação de status no conector WhatsApp
+
+Autorizado aplicar a correção identificada na vistoria. Patch aditivo CB:status na Evolution 2.3.7/Baileys rc.9, com ACK positivo pelo helper existente e passagem pela fila offline. Preserva o patch anterior, sessão, volume, versão e credenciais. 16 testes aprovados contra fonte upstream real, CLI idempotente e sintaxe ESM conferida. Sem novas dependências ou envio artificial a clientes. Baseline 13h29 Brasília: zero mensagens CRM hoje, sessão open e todas as IAs pausadas. Publicação do conector e janela operacional >50 minutos pendentes. Escopo e arquivos: docs/tasks/2026-11-06-whatsapp-status-ack.md.
+

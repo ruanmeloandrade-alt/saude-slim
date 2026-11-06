@@ -11,4 +11,9 @@ FROM evoapicloud/evolution-api:v2.3.7
 COPY services/whatsapp-connector/patch-offline-queue.cjs /tmp/patch-offline-queue.cjs
 RUN node /tmp/patch-offline-queue.cjs
 
+# Confirm top-level status stanzas through the existing live/offline dispatcher.
+# Keep the same protocol helper, sessions and dependency versions.
+COPY services/whatsapp-connector/patch-status-ack.cjs /tmp/patch-status-ack.cjs
+RUN node /tmp/patch-status-ack.cjs
+
 EXPOSE 8080
