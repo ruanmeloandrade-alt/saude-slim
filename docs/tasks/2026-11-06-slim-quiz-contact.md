@@ -11,3 +11,5 @@ Ajuste adicional: remover revisão das respostas e frase do rodapé; privacidade
 Mobile: ocultar cabeçalho durante as perguntas; começar pelo indicador e percentual. Fotos sem recorte, altura máxima 310px no mobile.
 
 Validação: node --check aprovado; percurso das sete perguntas no navegador interno; links das duas ofertas e opção dúvidas conferidos sem envio; cinco imagens carregadas; resultado sem resumo/revisão; mobile sem cabeçalho e sem overflow. Verificador local aprovou mensagens, imagens, paridade dos dois HTML e ordem dos CTAs. Build completo em execução. Número de destino segue o final 9669 identificado no contrato de roteamento existente e confirmado pelo usuário como destino.
+
+Ajuste: etapas sem foto em card centralizado, altura natural sem min-height herdado; espaçamento compacto e rodapé próximo em desktop/mobile.

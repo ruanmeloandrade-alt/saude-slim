@@ -43,3 +43,6 @@ dialog{background:#101726;color:var(--ink);border:1px solid var(--line)}.dialog-
 .site-footer{grid-template-columns:1fr auto;align-items:center}.site-footer .text-link{font-size:9px;opacity:.65}.result-simple{margin-bottom:55px}
 
 @media(max-width:760px){body:has(.quiz-wrap) .site-header{display:none}.quiz-wrap{margin-top:18px}.question-photo img{max-height:310px;object-fit:contain}}
+
+/* Etapas sem foto acompanham a altura real do conteúdo. */
+.quiz-wrap.text-only{min-height:0;margin-top:22px;margin-bottom:30px;padding:28px 32px;border:1px solid var(--line);border-radius:18px;background:#101726}.text-only .question-title{max-width:none}.text-only .question-bottom{margin-top:20px}.text-only .treatment-support{background:#0b1220}.text-only .question-help{margin-bottom:20px}body:has(.text-only) .site-footer{max-width:720px;margin-top:24px}@media(max-width:760px){.quiz-wrap.text-only{min-height:0;margin:16px 16px 22px;padding:20px 18px;border-radius:14px}.text-only .progress{margin-bottom:22px}.text-only .question-title{font-size:26px}.text-only .treatment-support{padding:14px;margin-bottom:17px}.text-only .treatment-support h2{font-size:16px}.text-only .treatment-support p{font-size:12px;line-height:1.55}.text-only .option{min-height:60px;padding:14px 12px}body:has(.text-only) .site-footer{margin-top:18px}}
