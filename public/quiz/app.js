@@ -89,7 +89,6 @@ function animateGroupButton(event) {
   setTimeout(()=>{ripple.remove();button.classList.remove('cta-activated');},650);
 }
 document.querySelector('[data-home]').onclick=event=>{event.preventDefault();navigate('intro');};
-document.querySelector('[data-privacy]').onclick=()=>showDialog('<h2 id="dialog-title">Sua privacidade</h2><p>Suas escolhas ajudam a organizar seu objetivo e as opções que você quer conhecer. As respostas ficam apenas nesta aba do navegador e não são enviadas a um servidor por este questionário.</p><p>Não solicitamos nome, telefone ou dados de pagamento nesta etapa.</p><button class="primary" data-close>Entendi</button>');
 document.querySelector('.dialog-close').onclick=()=>dialog.close();
 dialog.addEventListener('click',event=>{if(event.target===dialog){const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)dialog.close();}});
 window.addEventListener('popstate',event=>{clearTimeout(state.timer);const view=event.state?.view||'intro';const requested=event.state?.step||0;if(view==='quiz'){const firstMissing=questions().findIndex(q=>!state.answers[q.id]);state.step=firstMissing<0?requested:Math.min(requested,firstMissing);}state.view=view;state.busy=false;saveProgress();render();focusTitle();});

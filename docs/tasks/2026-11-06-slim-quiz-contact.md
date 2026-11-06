@@ -13,3 +13,5 @@ Mobile: ocultar cabeçalho durante as perguntas; começar pelo indicador e perce
 Validação: node --check aprovado; percurso das sete perguntas no navegador interno; links das duas ofertas e opção dúvidas conferidos sem envio; cinco imagens carregadas; resultado sem resumo/revisão; mobile sem cabeçalho e sem overflow. Verificador local aprovou mensagens, imagens, paridade dos dois HTML e ordem dos CTAs. Build completo em execução. Número de destino segue o final 9669 identificado no contrato de roteamento existente e confirmado pelo usuário como destino.
 
 Ajuste: etapas sem foto em card centralizado, altura natural sem min-height herdado; espaçamento compacto e rodapé próximo em desktop/mobile.
+
+Correção final do usuário: remover rodapé inteiro do quiz (copyright e privacidade), sem reposicioná-lo. Listener do botão removido para evitar erro de inicialização.
