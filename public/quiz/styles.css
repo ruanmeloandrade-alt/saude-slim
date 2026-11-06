@@ -49,3 +49,6 @@ dialog{background:#101726;color:var(--ink);border:1px solid var(--line)}.dialog-
 
 /* Todas as etapas usam espaço conforme seu conteúdo, sem áreas reservadas. */
 .quiz-wrap{min-height:0}.quiz-wrap.has-photo{padding:28px 32px;border:1px solid var(--line);border-radius:18px;background:#101726;margin-top:22px;margin-bottom:30px}.has-photo .quiz-aside{padding-top:0}.has-photo .aside-image{max-width:300px}.result-simple{margin-top:22px;margin-bottom:24px}@media(max-width:760px){.quiz-wrap.has-photo{min-height:0;margin:16px 16px 22px;padding:20px 18px;border-radius:14px}.has-photo .progress{margin-bottom:22px}.has-photo .question-title{font-size:26px}.has-photo .question-photo{margin-bottom:18px}.has-photo .question-photo img{max-height:240px}.has-photo .option{min-height:60px;padding:14px 12px}.has-photo .question-bottom{margin-top:20px}body:has(.result-simple) .site-header{display:none}.result-simple{margin:16px}.result-simple .next-step{padding:24px 20px}}
+
+/* Abertura aprovada sem logo ou nome no topo. */
+body:has(.intro-simple) .site-header{display:none}.intro-simple{margin-top:24px;margin-bottom:32px}@media(max-width:760px){.intro-simple{margin-top:18px;margin-bottom:24px}}
