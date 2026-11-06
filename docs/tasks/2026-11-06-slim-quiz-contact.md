@@ -15,3 +15,5 @@ Validação: node --check aprovado; percurso das sete perguntas no navegador int
 Ajuste: etapas sem foto em card centralizado, altura natural sem min-height herdado; espaçamento compacto e rodapé próximo em desktop/mobile.
 
 Correção final do usuário: remover rodapé inteiro do quiz (copyright e privacidade), sem reposicioná-lo. Listener do botão removido para evitar erro de inicialização.
+
+Revisão de todas as etapas: min-height removido, cards consistentes com/sem foto, espaçamentos menores; fotos móveis até 240px; resultado móvel sem cabeçalho grande.
