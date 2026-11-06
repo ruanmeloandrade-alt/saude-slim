@@ -3644,9 +3644,9 @@ function LeadCard({
     )}
 
     <div className="mt-2 flex items-center justify-between text-[10px] text-muted-foreground">
-     <div className="flex items-center gap-1.5">
+     <div className="flex items-center gap-1.5" title="Tempo desde a última mensagem recebida deste lead">
       <Clock className="w-3 h-3" />
-      {timeAgo(lead.lastMessageAt ?? lead.createdAt)}
+      {lead.lastInboundAt ? timeAgo(lead.lastInboundAt) : "Sem mensagens recebidas"}
       {waiting && lead.unreadCount ? (
        <span className="ml-1 px-1.5 py-0.5 rounded-full bg-success text-success-foreground font-bold">
         {lead.unreadCount}
