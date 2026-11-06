@@ -55,3 +55,7 @@ Validation: full build passed; 25 targeted Vitest checks, 23 real PostgreSQL che
 ## 2026-11-06 — Mais recentes primeiro
 
 Branch fix/slim-recent-first-20261106. Ordenação visual por data mais recente disponível em cada coluna do funil e na lista filtrada do Inbox, cobrindo cache e realtime. Datas inválidas no fim, empate determinístico, sem mutar listas originais. Arquivos: src/lib/slim-recent-first.ts, src/legacy/crm.funis-de-venda.legacy.tsx e src/components/inbox/InboxPage.legacy.tsx. Bots, mensagens, dados e regras preservados. Ver docs/tasks/2026-11-06-recent-first.md.
+
+## 2026-11-06 — Vistoria WhatsApp, pausa de IA e relógio
+
+Escopo: docs/tasks/2026-11-06-whatsapp-audit-ai-isolation.md. Produção: seis IAs pausadas, duas atribuições removidas e 40 saídas em 13 bots encaminhadas a humanos. Conferência paginada: 1086 blocos, zero chamadas IA; 38 alterações diretas preservam IDs, posição e conexões; 1048 blocos intactos. Etapa humana criada no Pós-vendas. Sem envio a clientes ou novo pareamento. Evolution registra erros de stream recorrentes; zero mensagens CRM hoje, última entrada ontem 23h37 Brasília. Causa detalhada do stream ainda não isolada. Relógio do card passa a lastInboundAt, com estado Sem mensagens recebidas. Prebuild e build cliente/SSR/Nitro aprovados; publicação/conferência visual pendentes. Sem novas dependências. Falha de âncora CRLF do prebuild contornada por normalização temporária do checkout, sem alterar os scripts.
