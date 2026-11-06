@@ -55,3 +55,9 @@ body:has(.intro-simple) .site-header{display:none}.intro-simple{margin-top:24px;
 
 /* Aviso de independência, discreto e no fim da página. */
 body.slim-quiz{display:flex;flex-direction:column;min-height:100vh;min-height:100svh}.slim-quiz>main{flex:1}.platform-notice{width:100%;max-width:940px;margin:auto auto 0;padding:18px 22px 20px;color:#fff;font-size:10px;line-height:1.6;text-align:center}.platform-notice p{margin:0}
+
+/* Preferência do usuário: botões sem setas, com frase centralizada. */
+.primary{text-align:center;justify-content:center}.primary span:not(.ripple){text-align:center}.group-cta>span:not(.ripple),.seller-cta>span:not(.ripple){flex:initial}.option{text-align:center;position:relative;justify-content:center}.option-number{position:absolute;left:14px}.option-title{padding:0 31px;text-align:center}.intro-simple .primary{padding-left:20px;padding-right:20px}
+
+/* Abertura centralizada verticalmente, com aviso no fim da tela. */
+body:has(.intro-simple)>main{display:flex;align-items:center;justify-content:center;width:100%}.intro-simple{width:100%;margin:24px auto}@media(max-width:760px){.intro-simple{margin:20px auto}}
