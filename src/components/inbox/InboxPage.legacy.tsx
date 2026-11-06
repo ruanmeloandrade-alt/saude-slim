@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef, useEffect } from "react";
+import { recentFirst } from "@/lib/slim-recent-first";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Search,
@@ -579,6 +580,8 @@ export function InboxPage({ channel, selectedId }: InboxPageProps) {
       const realtimeKey = "lead:" + (isInsert ? "insert:" : "update:") + realtimeId;
       if (realtimeId && !acceptRealtimeEvent(realtimeKey)) return;
       const type = String(record.type ?? "");
+      // Internal CRM notes do not change the age or preview of a conversation.
+      if (type !== "message_in" && type !== "message_out" && type !== "conversation_read") return;
       const payload =
         record.payload && typeof record.payload === "object"
           ? (record.payload as Record<string, unknown>)
@@ -594,7 +597,9 @@ export function InboxPage({ channel, selectedId }: InboxPageProps) {
           const conversations = (page.conversations ?? []).filter((conversation: any) => {
             if (conversation.id !== leadId) return true;
             found = true;
-            const isMessage = type === "message_in" || type === "message_out" || type === "note";
+            const isMessage = (type === "message_in" || type === "message_out") &&
+              (!Number.isFinite(Date.parse(conversation.lastMessageAt)) ||
+                Date.parse(occurredAt) >= Date.parse(conversation.lastMessageAt));
             patched = {
               ...conversation,
               ...(isMessage
@@ -1099,7 +1104,7 @@ export function InboxPage({ channel, selectedId }: InboxPageProps) {
       if (tab === "Produtos" && (!activeProduct || !(c.productIds ?? []).includes(activeProduct)))
         return false;
       return true;
-    });
+    }).sort(recentFirst);
   }, [enrichedConversations, query, tab, channel, activeLabel, activeCompany, activeProduct]);
 
   const hasMoreConversations =
