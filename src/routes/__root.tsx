@@ -78,7 +78,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "stylesheet", href: "/brand/saude-slim.css?v=20261103-inbox2" },
-      { rel: "icon", type: "image/jpeg", href: "/brand/saude-slim-logo.jpg?v=20261030" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/brand/saude-slim-favicon.png?v=20261106icon1" },
+      { rel: "shortcut icon", href: "/favicon.ico?v=20261106icon1" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/brand/saude-slim-apple-touch.png?v=20261106icon1" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" },

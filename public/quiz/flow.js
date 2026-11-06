@@ -138,14 +138,7 @@
     senior:{label:'60 anos ou mais',intro:'Vamos conversar sobre seus objetivos, seu bem-estar e os cuidados que você procura.',support:'As etapas e o acompanhamento serão apresentados com clareza para você decidir.',continuity:'A equipe pode esclarecer suas dúvidas sobre os cuidados e o acompanhamento.'}
   };
   function cleanName(value){const name=String(value??'').normalize('NFC').trim().replace(/\s+/g,' ');return name.length<=40&&/^[\p{L}\p{M}][\p{L}\p{M}'’ -]*$/u.test(name)?name:'';}
-  function numberValue(value){const n=Number(String(value??'').trim().replace(',','.'));return Number.isFinite(n)?n:NaN;}
-  function normalized(id,value){
-    if(id==='name')return cleanName(value);
-    if(id==='height'){let n=numberValue(value);if(n>0&&n<3)n*=100;return n>=50&&n<=260?Math.round(n):null;}
-    if(id==='weight'){const n=numberValue(value);return n>=10&&n<=500?Math.round(n*10)/10:null;}
-    if(id==='target'){const n=numberValue(value);return n>0&&n<=100?Math.round(n*10)/10:null;}
-    return value;
-  }
+  function normalized(id,value){return id==='name'?cleanName(value):value;}
   function questions(answers={}){
     const female=answers.gender==='female';const age=ages[answers.age]||ages.adult;
     const name=cleanName(answers.name);const person=female?'acompanhada':'acompanhado';
@@ -170,9 +163,9 @@
     return [
       {id:'gender',title:'Você é homem ou mulher?',help:'Vamos adaptar a conversa para você.',options:[['female','Sou mulher'],['male','Sou homem']]},
       {id:'age',title:'Qual é a sua faixa etária?',help:female?'Assim, vamos conversar considerando o seu momento de vida.':'Isso ajuda a adaptar a conversa ao seu momento de vida.',options:Object.entries(ages).map(([id,a])=>[id,a.label])},
-      {id:'height',type:'input',title:'Qual é a sua altura aproximada?',help:'Uma estimativa é suficiente. Informe em metros ou centímetros.',fieldLabel:'Sua altura',placeholder:'Ex.: 1,75 ou 175',inputMode:'decimal',error:'Informe uma altura válida, como 1,75 ou 175.',options:[]},
-      {id:'weight',type:'input',title:'Quanto você está pesando hoje, aproximadamente?',help:'Informe seu peso aproximado em quilos.',fieldLabel:'Seu peso atual em kg',placeholder:'Ex.: 85',inputMode:'decimal',error:'Informe um peso aproximado válido em quilos.',options:[]},
-      {id:'target',type:'input',title:'Quantos quilos você gostaria de perder nos próximos 27 dias?',help:'Conte seu objetivo. A equipe avaliará uma meta adequada para você.',fieldLabel:'Sua meta desejada em kg',placeholder:'Ex.: 3',inputMode:'decimal',error:'Informe sua meta desejada em quilos.',options:[]},
+      {id:'height',title:'Qual é a sua altura aproximada?',help:'Escolha a faixa que mais se aproxima da sua altura.',options:[['h_under160','Até 1,59 m'],['h160','De 1,60 a 1,69 m'],['h170','De 1,70 a 1,79 m'],['h180','De 1,80 a 1,89 m'],['h190','1,90 m ou mais']]},
+      {id:'weight',title:'Quanto você está pesando hoje, aproximadamente?',help:'Escolha a faixa que mais se aproxima do seu peso atual.',options:[['w_under60','Até 59 kg'],['w60','De 60 a 74 kg'],['w75','De 75 a 89 kg'],['w90','De 90 a 104 kg'],['w105','105 kg ou mais']]},
+      {id:'target',title:'Quantos quilos você gostaria de perder nos próximos 27 dias?',help:'Conte seu objetivo. A equipe avaliará uma meta adequada para você.',options:[['t2','Até 2 kg'],['t4','De 2 a 4 kg'],['t6','De 4 a 6 kg'],['t_more6','Mais de 6 kg'],['t_guidance','Quero orientação para definir uma meta']]},
       {id:'name',type:'input',title:'Qual é o seu primeiro nome?',help:female?'Como você prefere ser chamada nesta conversa?':'Como você prefere ser chamado nesta conversa?',fieldLabel:'Seu primeiro nome',placeholder:'Digite seu primeiro nome',inputMode:'text',error:'Digite seu primeiro nome usando letras.',options:[]},
       {id:'confirm',title:name?'Posso confirmar seu nome como '+name+'?':'Posso confirmar seu primeiro nome?',help:'Se precisar corrigir, você pode digitar novamente antes de continuar.',options:[['yes','Sim, pode continuar'],['edit','Não, quero corrigir meu nome']]},
       ...core
