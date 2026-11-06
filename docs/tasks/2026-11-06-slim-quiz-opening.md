@@ -5,3 +5,5 @@ Escopo autorizado: apenas chamada, subtítulo e botão da abertura. Chamada apro
 Prévia renderizada no navegador interno e enviada ao usuário. JavaScript sem erros de sintaxe; verificador das ofertas, imagens, HTML e CTAs aprovado. Alteração restrita à abertura e versão dos assets, sem mudanças no fluxo.
 
 Aprovação recebida da prévia. Ajuste final: ocultar logo e nome no topo da abertura; aproximar conteúdo do topo, preservando demais telas.
+
+Rodapé solicitado: aviso curto de independência de Meta, Google e plataformas, em branco e 10px, posicionado no final da página por layout flexível. Não declara isenção legal total nem promete aprovação de anúncios.

@@ -52,3 +52,6 @@ dialog{background:#101726;color:var(--ink);border:1px solid var(--line)}.dialog-
 
 /* Abertura aprovada sem logo ou nome no topo. */
 body:has(.intro-simple) .site-header{display:none}.intro-simple{margin-top:24px;margin-bottom:32px}@media(max-width:760px){.intro-simple{margin-top:18px;margin-bottom:24px}}
+
+/* Aviso de independência, discreto e no fim da página. */
+body.slim-quiz{display:flex;flex-direction:column;min-height:100vh;min-height:100svh}.slim-quiz>main{flex:1}.platform-notice{width:100%;max-width:940px;margin:auto auto 0;padding:18px 22px 20px;color:#fff;font-size:10px;line-height:1.6;text-align:center}.platform-notice p{margin:0}
