@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Fragment } from "react";
+import { recentFirst } from "@/lib/slim-recent-first";
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { listSlimSources, listSlimFunnels, listSlimUsers, moveSlimLead, bulkMoveSlimLeads, updateSlimStage, createSlimStage, renameSlimPipeline, createSlimLead, createSlimFunnel, setDefaultSlimSource, reorderSlimStages } from "@/lib/saude-slim-funnel-client";
@@ -589,7 +590,7 @@ function CrmFunisPage() {
             if (onlyUnread && !(l.unreadCount && l.unreadCount > 0)) return false;
             if (!Number.isNaN(minV) && l.value < minV) return false;
             return true;
-          }),
+          }).sort(recentFirst),
         })),
       };
     }, [funnel, query, sourceFilters, tagFilters, onlyWaiting, onlyWithValue, onlyUnread, minValue, hideEntry]);
