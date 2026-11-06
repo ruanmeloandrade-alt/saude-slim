@@ -19,13 +19,13 @@ const coreQuestions = [
   { id: 'doubt', label: 'O QUE FALTA PARA DECIDIR', title: 'O que ainda impede você de decidir pelo tratamento?', help: 'Marque o ponto que precisa ser resolvido antes da compra.', options: [
     ['support', 'Ainda não sei como funciona o tratamento e o acompanhamento'], ['safety', 'Preciso entender as opções e como funciona a avaliação'], ['cost', 'Quero saber o preço e tudo o que está incluído'], ['routine', 'Preciso saber como encaixar o tratamento na minha rotina'], ['trust', 'Tenho receio de gastar e me frustrar de novo'] ] },
   { id: 'readiness', label: 'VAMOS DAR O PRÓXIMO PASSO', title: 'Agora que você conhece os valores, qual é a sua decisão?', help: 'Escolha como você quer seguir com a Saúde Slim.', options: [
-    ['now', 'Quero começar e entender como fechar meu tratamento'], ['soon', 'Quero me organizar para começar nas próximas semanas'], ['research', 'Quero esclarecer algumas dúvidas antes de decidir'] ] }
+    ['now', 'Quero começar meu tratamento agora'], ['support', 'Quero entender como funciona o acompanhamento'], ['soon', 'Quero me organizar para começar nas próximas semanas'], ['conditions', 'Quero esclarecer as condições da oferta'], ['research', 'Quero tirar minhas dúvidas com um vendedor'] ] }
 ];
-const offerQuestion = { id:'offer', label:'AGORA, VAMOS FALAR DO TRATAMENTO', title:'Qual opção você quer conhecer melhor?', help:'Conheça as condições iniciais e escolha o que faz sentido para o seu planejamento.', options:[['initial','1 ampola · R$299,99 no Pix'],['complete','Caixa com 4 ampolas · R$899,99 no Pix'],['questions','Quero entender as condições antes de escolher']] };
-const offers = { initial:{name:'1 ampola',price:'R$299,99'},complete:{name:'Caixa com 4 ampolas',price:'R$899,99'},questions:{name:'Opções da oferta',price:'R$299,99'} };
+const offerQuestion = { id:'offer', label:'AGORA, VAMOS FALAR DO TRATAMENTO', title:'Qual opção você quer conhecer melhor?', help:'Conheça as condições iniciais e escolha o que faz sentido para o seu planejamento.', options:[['initial','1 ampola · R$250,00 no Pix'],['complete','Caixa com 4 ampolas · R$850,00 no Pix'],['questions','Quero entender as condições antes de escolher']] };
+const offers = { initial:{name:'1 ampola',price:'R$250,00'},complete:{name:'Caixa com 4 ampolas',price:'R$850,00'},questions:{name:'Opções da oferta',price:'R$250,00'} };
 const stepImages = {
+  offer:{src:'oferta-saude-slim.jpg',alt:'Oferta Saúde Slim: uma ampola por R$250,00 ou caixa com quatro por R$850,00 no Pix'},
   goal:{src:'transformacao-corporal.png',alt:'Comparação corporal enviada para o quiz Saúde Slim'},
-  pain:{src:'rotina-alimentacao.jpg',alt:'Mulher à mesa com alimentos'},
   history:{src:'transformacao-praia.png',alt:'Comparação antes e depois na praia'},
   doubt:{src:'transformacao-comparacao.png',alt:'Comparação corporal com rostos desfocados'},
   readiness:{src:'progresso-fitness.png',alt:'Registro de progresso corporal em quatro meses'}
@@ -77,7 +77,7 @@ function showSummaryTransition() {
 }
 function renderResult() {
   if(!questions().every(q=>state.answers[q.id])) { const missing=questions().findIndex(q=>!state.answers[q.id]);navigate('quiz',Math.max(0,missing),true);return; }
-  main.innerHTML=`<section class="result result-simple"><article class="next-step"><p class="step-label">Saúde Slim</p><h1>Como você quer continuar?</h1><p>Entre no grupo para acompanhar as informações ou converse diretamente com um vendedor.</p><a class="primary group-cta" data-group href="${escapeHtml(WHATSAPP_GROUP_URL)}" target="_blank" rel="noopener noreferrer">${waIcon}<span>Quero entrar no grupo Saúde Slim</span>${arrow}</a><a class="primary seller-cta" data-seller href="${escapeHtml(sellerUrl())}" target="_blank" rel="noopener noreferrer">${waIcon}<span>Falar Agora com Vendedor Online</span>${arrow}</a></article></section>`;
+  main.innerHTML=`<section class="result result-simple"><article class="next-step"><div class="result-content"><div class="result-offer"><img src="assets/oferta-saude-slim.jpg" alt="Oferta Saúde Slim de uma ampola ou caixa com quatro ampolas" width="1122" height="1402"></div><div class="result-actions"><h1>Como você quer continuar?</h1><p>Entre no grupo para acompanhar as informações ou converse diretamente com um vendedor.</p><a class="primary group-cta" data-group href="${escapeHtml(WHATSAPP_GROUP_URL)}" target="_blank" rel="noopener noreferrer">${waIcon}<span>Quero entrar no grupo Saúde Slim</span>${arrow}</a><a class="primary seller-cta" data-seller href="${escapeHtml(sellerUrl())}" target="_blank" rel="noopener noreferrer">${waIcon}<span>Falar Agora com Vendedor Online</span>${arrow}</a><div class="result-proof result-gallery"><img src="assets/transformacao-corporal.png" alt="Comparação corporal"><img src="assets/transformacao-praia.png" alt="Antes e depois na praia"><img src="assets/transformacao-comparacao.png" alt="Comparação com rostos desfocados"><img src="assets/progresso-fitness.png" alt="Registro de progresso em quatro meses"></div></div></div></article></section>`;
 
   main.querySelector('[data-group]').onclick=animateGroupButton;
 }
