@@ -51,7 +51,7 @@ function saveProgress(){try{sessionStorage.setItem(STORAGE_KEY,JSON.stringify({v
 function navigate(view,step=0,replace=false) { clearTimeout(state.timer);state.view=view;state.step=step;state.busy=false;saveProgress();const hash=view==='intro'?'#inicio':view==='result'?'#resultado':`#pergunta-${step+1}`;history[replace?'replaceState':'pushState']({view,step},'',hash);render();window.scrollTo({top:0,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});focusTitle(); }
 function render() { if(state.view==='quiz') renderQuestion(); else if(state.view==='result') renderResult(); else renderIntro(); }
 function renderIntro() {
-  main.innerHTML=`<section class="intro-simple enter"><div class="intro-simple-panel"><h1>Cansou de tentar e<br><em>começar tudo de novo?</em></h1><p>Responda 7 perguntas e conheça as opções de tratamento da Saúde Slim.</p><button class="primary" data-start>Começar ${arrow}</button></div></section>`;
+  main.innerHTML=`<section class="intro-simple enter"><div class="intro-simple-panel"><h1>Quer emagrecer e<br><em>voltar a se sentir bem com seu corpo?</em></h1><p>Responda 7 perguntas para dar o primeiro passo no seu protocolo de emagrecimento saudável.</p><button class="primary" data-start>Acessar meu protocolo agora ${arrow}</button></div></section>`;
   main.querySelector('[data-start]').onclick=()=>navigate('quiz');
 }
 function renderQuestion() {
