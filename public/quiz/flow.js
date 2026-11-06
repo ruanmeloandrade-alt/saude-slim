@@ -1,7 +1,7 @@
 'use strict';
 // Perguntas locais: cada escolha seleciona a continuação correspondente.
 (() => {
-  const ids = ['goal','pain','history','context','doubt','offer','readiness'];
+  const ids = ['gender','age','height','weight','target','name','confirm','goal','pain','history','context','doubt','offer','readiness'];
   const goals = {
     comfort: {
       label:'Não me sinto bem quando visto minhas roupas', focus:'voltar a se sentir bem com suas roupas',
@@ -111,7 +111,7 @@
     ['talk','Conversar com a equipe e entender tudo antes de decidir']
   ];
   const first = {id:'goal',title:'O que mais incomoda você no seu peso hoje?',help:'Marque o que mais faz você querer mudar essa situação.',options:Object.entries(goals).map(([id,g])=>[id,g.label])};
-  function questions(answers={}) {
+  function baseQuestions(answers={}) {
     const goalKey=Object.hasOwn(goals,answers.goal)?answers.goal:'comfort';
     const goal=goals[goalKey];
     const detail=goal.details.find(d=>d[0]===answers.pain)||goal.details[0];
@@ -130,16 +130,71 @@
       {id:'readiness',title:`Agora que você conhece as condições para ${offerName}, como quer seguir?`,help:'Escolha o seu próximo passo. Depois, você decide entre o grupo e o contato direto com um vendedor.',options:[['now','Quero começar meu tratamento agora'],['support','Quero entender como funciona o acompanhamento'],['soon','Quero me organizar para começar nas próximas semanas'],['conditions','Quero esclarecer as condições da oferta'],['research','Quero tirar minhas dúvidas com um vendedor']]}
     ];
   }
+
+  const ages={
+    young:{label:'18 a 29 anos',intro:'Vamos pensar no que você deseja mudar e no que cabe nos seus horários.',support:'Nesta fase da vida, seus planos e sua rotina entram na conversa.',continuity:'A ideia é construir um começo que faça sentido para você.'},
+    adult:{label:'30 a 44 anos',intro:'Vamos considerar suas prioridades atuais e o espaço para cuidar de você.',support:'Seu cuidado precisa caber nas responsabilidades e prioridades que você tem hoje.',continuity:'Você pode conversar com a equipe sobre como encaixar os cuidados no dia a dia.'},
+    mature:{label:'45 a 59 anos',intro:'Vamos entender seus objetivos e os cuidados que você deseja priorizar agora.',support:'Vamos considerar seu momento de vida, sua rotina e o apoio que você procura.',continuity:'Continuidade e orientação podem entrar na conversa sobre seus próximos passos.'},
+    senior:{label:'60 anos ou mais',intro:'Vamos conversar sobre seus objetivos, seu bem-estar e os cuidados que você procura.',support:'As etapas e o acompanhamento serão apresentados com clareza para você decidir.',continuity:'A equipe pode esclarecer suas dúvidas sobre os cuidados e o acompanhamento.'}
+  };
+  function cleanName(value){const name=String(value??'').normalize('NFC').trim().replace(/\s+/g,' ');return name.length<=40&&/^[\p{L}\p{M}][\p{L}\p{M}'’ -]*$/u.test(name)?name:'';}
+  function numberValue(value){const n=Number(String(value??'').trim().replace(',','.'));return Number.isFinite(n)?n:NaN;}
+  function normalized(id,value){
+    if(id==='name')return cleanName(value);
+    if(id==='height'){let n=numberValue(value);if(n>0&&n<3)n*=100;return n>=50&&n<=260?Math.round(n):null;}
+    if(id==='weight'){const n=numberValue(value);return n>=10&&n<=500?Math.round(n*10)/10:null;}
+    if(id==='target'){const n=numberValue(value);return n>0&&n<=100?Math.round(n*10)/10:null;}
+    return value;
+  }
+  function questions(answers={}){
+    const female=answers.gender==='female';const age=ages[answers.age]||ages.adult;
+    const name=cleanName(answers.name);const person=female?'acompanhada':'acompanhado';
+    const genderTitles={
+      comfort:female?'Qual situação com suas roupas mais mexe com você hoje?':'Em que situação o peso mais atrapalha você ao se vestir?',
+      health:female?'Qual cuidado com você tem ficado para depois?':'Qual cuidado com sua saúde você quer retomar primeiro?',
+      energy:female?'Em qual momento você mais gostaria de ter disposição?':'Em qual atividade a falta de disposição mais atrapalha você?',
+      regain:female?'O que costuma fazer você perder a constância depois de emagrecer?':'O que geralmente interrompe sua rotina antes de recuperar o peso?',
+      confidence:female?'Em que momento você mais gostaria de se sentir confiante?':'Em qual situação você quer se sentir mais confiante com seu corpo?'
+    };
+    const core=baseQuestions(answers).map((question,index)=>{
+      const q={...question,options:question.options.map(o=>[...o])};
+      if(index===0){q.title=female?'O que você mais gostaria de mudar para se sentir bem com seu corpo?':'Qual mudança no seu peso faria mais diferença hoje?';q.help=age.intro+' '+question.help;}
+      if(index===1){q.title=genderTitles[answers.goal]||genderTitles.comfort;q.help=age.support;}
+      if(index===2)q.help=age.support+' '+q.help;
+      if(index===4){q.help=q.help+' '+age.continuity;q.options=q.options.map(([id,label])=>[id,id==='steps'?(female?'Quero entender os passos do protocolo e me sentir segura':'Quero os passos do protocolo explicados de forma objetiva'):id==='followup'?'Quero esclarecer dúvidas e me sentir '+person:label]);}
+      if(index===6)q.options=q.options.map(([id,label])=>[id,id==='support'?'Quero entender como vou ser '+person:label]);
+      if(female){q.title=q.title.replace(/\bsozinho\b/g,'sozinha');q.help=q.help.replace(/\bsozinho\b/g,'sozinha');q.options=q.options.map(([id,label])=>[id,label.replace(/\bsozinho\b/g,'sozinha')]);}
+      if(name&&[0,2,4,6].includes(index))q.title=name+', '+q.title.charAt(0).toLocaleLowerCase('pt-BR')+q.title.slice(1);
+      return q;
+    });
+    return [
+      {id:'gender',title:'Você é homem ou mulher?',help:'Vamos adaptar a conversa para você.',options:[['female','Sou mulher'],['male','Sou homem']]},
+      {id:'age',title:'Qual é a sua faixa etária?',help:female?'Assim, vamos conversar considerando o seu momento de vida.':'Isso ajuda a adaptar a conversa ao seu momento de vida.',options:Object.entries(ages).map(([id,a])=>[id,a.label])},
+      {id:'height',type:'input',title:'Qual é a sua altura aproximada?',help:'Uma estimativa é suficiente. Informe em metros ou centímetros.',fieldLabel:'Sua altura',placeholder:'Ex.: 1,75 ou 175',inputMode:'decimal',error:'Informe uma altura válida, como 1,75 ou 175.',options:[]},
+      {id:'weight',type:'input',title:'Quanto você está pesando hoje, aproximadamente?',help:'Informe seu peso aproximado em quilos.',fieldLabel:'Seu peso atual em kg',placeholder:'Ex.: 85',inputMode:'decimal',error:'Informe um peso aproximado válido em quilos.',options:[]},
+      {id:'target',type:'input',title:'Quantos quilos você gostaria de perder nos próximos 27 dias?',help:'Conte seu objetivo. A equipe avaliará uma meta adequada para você.',fieldLabel:'Sua meta desejada em kg',placeholder:'Ex.: 3',inputMode:'decimal',error:'Informe sua meta desejada em quilos.',options:[]},
+      {id:'name',type:'input',title:'Qual é o seu primeiro nome?',help:female?'Como você prefere ser chamada nesta conversa?':'Como você prefere ser chamado nesta conversa?',fieldLabel:'Seu primeiro nome',placeholder:'Digite seu primeiro nome',inputMode:'text',error:'Digite seu primeiro nome usando letras.',options:[]},
+      {id:'confirm',title:name?'Posso confirmar seu nome como '+name+'?':'Posso confirmar seu primeiro nome?',help:'Se precisar corrigir, você pode digitar novamente antes de continuar.',options:[['yes','Sim, pode continuar'],['edit','Não, quero corrigir meu nome']]},
+      ...core
+    ];
+  }
+  function isAnswered(answers,q){
+    if(q.type==='input'){const value=normalized(q.id,answers[q.id]);return value!==null&&value!==''&&value!==undefined;}
+    if(q.id==='confirm')return answers.confirm==='yes';
+    return q.options.some(o=>o[0]===answers[q.id]);
+  }
+  function firstMissing(answers){return questions(answers).findIndex(q=>!isAnswered(answers,q));}
   function choose(answers,id,value){
-    const index=ids.indexOf(id);const q=questions(answers)[index];
-    if(!q?.options.some(o=>o[0]===value))return false;
-    if(answers[id]!==value){for(const next of ids.slice(index+1))delete answers[next];}
-    answers[id]=value;return true;
+    const index=ids.indexOf(id);const q=questions(answers)[index];if(!q)return false;
+    const result=normalized(id,value);
+    if(q.type==='input'){if(result===null||result===''||result===undefined)return false;}else if(!q.options.some(o=>o[0]===value))return false;
+    if(answers[id]!==result){for(const next of ids.slice(index+1))delete answers[next];}
+    answers[id]=result;return true;
   }
   function restore(raw){
     const answers={};if(!raw||typeof raw!=='object')return answers;
-    for(const id of ids){const q=questions(answers).find(q=>q.id===id);if(!q.options.some(o=>o[0]===raw[id]))break;answers[id]=raw[id];}
+    for(const id of ids){const q=questions(answers).find(q=>q.id===id);const value=normalized(id,raw[id]);const candidate={...answers,[id]:value};if(!isAnswered(candidate,q))break;answers[id]=value;}
     return answers;
   }
-  globalThis.SlimQuizFlow=Object.freeze({ids,questions,choose,restore});
+  globalThis.SlimQuizFlow=Object.freeze({ids,questions,choose,restore,firstMissing});
 })();
