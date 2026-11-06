@@ -4,7 +4,7 @@ Escopo: substituir imagens geradas por arquivos enviados pelo usuário em etapas
 Fora: CRM, backend, automações, banco, autenticação e alterações globais. Sem dependências novas.
 Base: origin/migrate/saude-slim-owner-20261030 (75ef92c), branch isolada.
 Aceite: ambas as ofertas geram mensagem correta; opção de dúvidas não inventa oferta; fotos completas e responsivas; grupo preservado; resultado sem resumo pessoal.
-Pendente: número do vendedor solicitado ao usuário; validação local e publicação.
+Destino confirmado pelo usuário: WhatsApp Saúde Slim final 9669. Pendente: conclusão do build e publicação.
 
 Ajuste adicional: remover revisão das respostas e frase do rodapé; privacidade discreta no rodapé.
 
