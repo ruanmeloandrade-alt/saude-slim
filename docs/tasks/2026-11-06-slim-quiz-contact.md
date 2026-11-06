@@ -23,3 +23,5 @@ Validação final: npm run build e build final Vite aprovados. Nova conferência
 Ajuste adicional: remover texto auxiliar ao lado de Voltar; manter apenas orientação imediatamente abaixo da pergunta. Legendas inferiores das fotos já estavam removidas.
 
 Limpeza final: remover título/rótulo da foto e rótulo decorativo da pergunta; uma pergunta principal com orientação curta e alternativas.
+
+Publicado: PRs #51/#52 integradas; commit 55aaf0fa114082f0b0a4cc9649bed6e102e7edd5; Railway 56e04190-69a7-4ea1-8af6-9c49c7fcdf4a SUCCESS. Pós-publicação: sete perguntas, duas mensagens por oferta, layout desktop/mobile e fotos conferidos; HTML/JS/CSS e cinco imagens HTTP 200 com SHA-256 igual ao local. Sem envio de mensagens. Aba original atualizada preservando respostas do usuário. Registro final documental, sem novo deploy.
