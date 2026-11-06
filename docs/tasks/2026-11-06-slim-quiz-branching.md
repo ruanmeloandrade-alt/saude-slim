@@ -21,3 +21,5 @@ Refino final: arte nova quadrada; reduzir antes/depois desktop para 220px e comp
 Galeria final solicitada: quatro imagens antes/depois, pequenas no alto à direita; texto e contatos abaixo, último botão alinhado à base da oferta. Layout estreito: oferta, chamada/contatos, galeria de imagens inteiras. Publicação autorizada.
 
 Checkpoint visual: galeria 4/4, arte atualizada, R$250/R$850, cinco decisões finais, foto de comida removida, arte também na etapa seis. Navegador confirmou bases do vendedor e imagem da oferta coincidentes. Ramificações novas seguem em implementação separada.
+
+Revisão posterior: galeria desktop 2x2 compacta em vez de faixa horizontal; card final centralizado verticalmente. Mobile: oferta, título/descrição/contatos, quatro antes/depois um abaixo do outro, inteiros.
