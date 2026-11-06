@@ -36,3 +36,10 @@ dialog{background:#101726;color:var(--ink);border:1px solid var(--line)}.dialog-
 .selected-offer strong{color:var(--green)}.selected-offer strong small{color:var(--muted)}
 
 .slim-quiz{min-height:100vh}.question-photo:not(.product-image) img{object-position:center 10%}
+
+/* Quiz: fotos fornecidas e contato direto. */
+.quiz-wrap.text-only{display:block;max-width:720px}.aside-image{height:auto;border-radius:14px}.aside-image img{width:100%;height:auto;object-fit:contain}.treatment-support{padding:18px;border:1px solid var(--line);border-radius:13px;background:#101726;margin:0 0 22px}.treatment-support h2{font-size:18px;margin:0 0 12px}.treatment-support p{font-size:13px;line-height:1.65;color:var(--muted);margin:10px 0}.treatment-support strong{color:var(--ink)}.result-simple{max-width:650px}.result-simple h1{font-size:34px;line-height:1.2;margin:6px 0 18px}.result-simple .group-cta{margin-top:5px}.seller-cta{width:100%;margin-top:14px;gap:10px;background:#112b36;color:#f3f6ff;border:1px solid var(--green)}.seller-cta:hover{background:#173c49}.seller-cta span:not(.arrow){flex:1}@media(max-width:760px){.question-photo{height:auto}.question-photo img{height:auto;object-fit:contain}.result-simple h1{font-size:29px}.seller-cta{font-size:12px;padding:17px}.result-simple .next-step{padding:26px 20px}}
+
+.site-footer{grid-template-columns:1fr auto;align-items:center}.site-footer .text-link{font-size:9px;opacity:.65}.result-simple{margin-bottom:55px}
+
+@media(max-width:760px){body:has(.quiz-wrap) .site-header{display:none}.quiz-wrap{margin-top:18px}.question-photo img{max-height:310px;object-fit:contain}}
