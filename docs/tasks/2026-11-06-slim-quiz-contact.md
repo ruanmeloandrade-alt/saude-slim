@@ -19,3 +19,7 @@ Correção final do usuário: remover rodapé inteiro do quiz (copyright e priva
 Revisão de todas as etapas: min-height removido, cards consistentes com/sem foto, espaçamentos menores; fotos móveis até 240px; resultado móvel sem cabeçalho grande.
 
 Validação final: npm run build e build final Vite aprovados. Nova conferência móvel com fotos/sem fotos, ausência de rodapé, cabeçalho oculto e zero overflow lateral. Verificador das três mensagens e paridade HTML aprovado. Arquivos gerados incidentalmente pelo prebuild restaurados; somente dez arquivos do escopo integram a PR #51. Publicação em andamento.
+
+Ajuste adicional: remover texto auxiliar ao lado de Voltar; manter apenas orientação imediatamente abaixo da pergunta. Legendas inferiores das fotos já estavam removidas.
+
+Limpeza final: remover título/rótulo da foto e rótulo decorativo da pergunta; uma pergunta principal com orientação curta e alternativas.
