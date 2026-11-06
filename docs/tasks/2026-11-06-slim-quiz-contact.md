@@ -17,3 +17,5 @@ Ajuste: etapas sem foto em card centralizado, altura natural sem min-height herd
 Correção final do usuário: remover rodapé inteiro do quiz (copyright e privacidade), sem reposicioná-lo. Listener do botão removido para evitar erro de inicialização.
 
 Revisão de todas as etapas: min-height removido, cards consistentes com/sem foto, espaçamentos menores; fotos móveis até 240px; resultado móvel sem cabeçalho grande.
+
+Validação final: npm run build e build final Vite aprovados. Nova conferência móvel com fotos/sem fotos, ausência de rodapé, cabeçalho oculto e zero overflow lateral. Verificador das três mensagens e paridade HTML aprovado. Arquivos gerados incidentalmente pelo prebuild restaurados; somente dez arquivos do escopo integram a PR #51. Publicação em andamento.
