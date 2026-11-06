@@ -2,7 +2,7 @@
 
 // Respostas locais; o contato externo ocorre somente pela escolha do visitante.
 const STORAGE_KEY = 'slim-saude-quiz:v5';
-const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/K8tkGBnE5IYKzHVfK6XXBc?s=cl&p=i&mlu=4&ilr=4&iam=2';
+const WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/Ljdolac5oHt22iqBIRlR2A?s=cl&p=i&mlu=4&ilr=4&iam=2';
 const state = { view: 'intro', step: 0, answers: {}, busy: false };
 const main = document.querySelector('main');
 const dialog = document.querySelector('#info-dialog');
