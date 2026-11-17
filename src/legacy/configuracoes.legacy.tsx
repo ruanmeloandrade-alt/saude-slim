@@ -178,7 +178,6 @@ function ConfigPage() {
           </aside>
 
           <section className="min-w-0 space-y-6">
-            {workspace?.id && <WorkspaceProfiles activeId={workspace.id} activeName={workspace.name} canCreate={isOwner} />}
             <header className="space-y-1">
               <h1 className="text-xl font-semibold tracking-tight">{currentSub.title}</h1>
               <p className="text-sm text-muted-foreground">{currentSub.sub}</p>
@@ -560,6 +559,12 @@ function EquipeTab({ bundle, isOwner, onToast }: { bundle: any; isOwner: boolean
   return (
     <div>
       <SectionHeader title="Usuários e equipe" desc="Adicione usuários da Saúde Slim, defina senha inicial, papéis e permissões sem depender de plano ou assinatura." />
+
+      {bundle.workspace?.id && (
+        <div className="mb-5">
+          <WorkspaceProfiles activeId={bundle.workspace.id} activeName={bundle.workspace.name} canCreate={isOwner} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         {stats.map((s) => (
