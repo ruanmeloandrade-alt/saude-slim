@@ -13,6 +13,7 @@ import {
   ShieldAlert, LogOut, Download, Key,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { WorkspaceProfiles } from "@/components/settings/WorkspaceProfiles";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { ThemeChooser } from "@/components/integrations/ThemeChooser";
 import { cn } from "@/lib/utils";
@@ -84,6 +85,7 @@ const GRUPOS: GroupDef[] = [
     title: "Geral",
     sub: "Equipe, acessos e rotina interna",
     subs: [
+      { id: "empresa", icon: Building2, title: "Empresa", sub: "Dados do workspace" },
       { id: "equipe", icon: Users, title: "Equipe", sub: "Convites e acessos" },
       { id: "expediente", icon: Clock, title: "Expediente", sub: "Horário comercial da conta" },
       { id: "seguranca", icon: Shield, title: "Segurança", sub: "Senha e proteção" },
@@ -176,6 +178,7 @@ function ConfigPage() {
           </aside>
 
           <section className="min-w-0 space-y-6">
+            {workspace?.id && <WorkspaceProfiles activeId={workspace.id} activeName={workspace.name} canCreate={isOwner} />}
             <header className="space-y-1">
               <h1 className="text-xl font-semibold tracking-tight">{currentSub.title}</h1>
               <p className="text-sm text-muted-foreground">{currentSub.sub}</p>
