@@ -13,6 +13,7 @@ import {
   ShieldAlert, LogOut, Download, Key,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { WorkspaceProfiles } from "@/components/settings/WorkspaceProfiles";
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { ThemeChooser } from "@/components/integrations/ThemeChooser";
 import { cn } from "@/lib/utils";
@@ -84,6 +85,7 @@ const GRUPOS: GroupDef[] = [
     title: "Geral",
     sub: "Equipe, acessos e rotina interna",
     subs: [
+      { id: "empresa", icon: Building2, title: "Empresa", sub: "Dados do workspace" },
       { id: "equipe", icon: Users, title: "Equipe", sub: "Convites e acessos" },
       { id: "expediente", icon: Clock, title: "Expediente", sub: "Horário comercial da conta" },
       { id: "seguranca", icon: Shield, title: "Segurança", sub: "Senha e proteção" },
@@ -557,6 +559,12 @@ function EquipeTab({ bundle, isOwner, onToast }: { bundle: any; isOwner: boolean
   return (
     <div>
       <SectionHeader title="Usuários e equipe" desc="Adicione usuários da Saúde Slim, defina senha inicial, papéis e permissões sem depender de plano ou assinatura." />
+
+      {bundle.workspace?.id && (
+        <div className="mb-5">
+          <WorkspaceProfiles activeId={bundle.workspace.id} activeName={bundle.workspace.name} canCreate={isOwner} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         {stats.map((s) => (
