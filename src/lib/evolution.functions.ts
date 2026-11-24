@@ -411,14 +411,36 @@ async function triggerAndPollQr(
   return { qr: null, providerEmptyQr };
 }
 
+// A consulta de status só pode alterar o estado que observou antes da chamada externa.
+async function savePolledSession(
+  db: unknown, sessionId: string, previousStatus: string, values: Record<string, unknown>,
+) {
+  const sb = db as { from(table: string): {
+    update(values: Record<string, unknown>): {
+      eq(column: string, value: string): { eq(column: string, value: string): {
+        select(columns: string): Promise<{ data: { id: string }[] | null; error: { message: string } | null }>
+      } }
+    }
+  } };
+  const { data, error } = await sb.from("whatsapp_web_sessions").update(values)
+    .eq("id", sessionId).eq("status", previousStatus).select("id");
+  if (error) throw new Error(error.message);
+  if (!data?.length) throw new Error("A sessão mudou durante a consulta. Atualize o status.");
+}
+
 export const fetchEvolutionQrCode = createServerFn({ method: "POST" })
   .middleware([attachSupabaseAuth, requireSupabaseAuth])
   .inputValidator((d: unknown) => SessionSchema.parse(d))
   .handler(async ({ data, context }) => {
     const creds = await loadCreds(context.supabase as unknown as SbRpc, data.sessionId);
 
-    const state = await evoFetch(`/instance/connectionState/${encodeURIComponent(creds.instance_name)}`);
+    const state = await evoFetch(`/instance/connectionState/${encodeURIComponent(creds.instance_name)}`, { apiKey: creds.api_key });
+    if (!state.ok) throw new Error(`A Evolution não confirmou o estado da sessão (HTTP ${state.status}).`);
     if (extractConnectionState(state.json) === "open") {
+      await savePolledSession(context.supabase, data.sessionId, creds.status, {
+        status: "conectado", last_qr: null,
+        ...(creds.status !== "conectado" ? { last_connected_at: new Date().toISOString() } : {}),
+      });
       return { connected: true, qr: null as string | null };
     }
 
@@ -560,11 +582,14 @@ export const fetchEvolutionStatus = createServerFn({ method: "POST" })
     const sb = context.supabase as unknown as SbRpc;
     const creds = await loadCreds(sb, data.sessionId);
 
-    const state = await evoFetch(`/instance/connectionState/${encodeURIComponent(creds.instance_name)}`);
+    const state = await evoFetch(`/instance/connectionState/${encodeURIComponent(creds.instance_name)}`, { apiKey: creds.api_key });
     const currentState = extractConnectionState(state.json);
+    if (!state.ok || !currentState || !["open", "close", "connecting"].includes(currentState)) {
+      throw new Error("A Evolution não confirmou o estado da sessão. Tente atualizar novamente.");
+    }
     const connected = currentState === "open";
 
-    let phone: string | null = null;
+    let phone = creds.phone_number;
     if (connected) {
       const info = await evoFetch(`/instance/fetchInstances?instanceName=${encodeURIComponent(creds.instance_name)}`, {
         apiKey: globalKey(),
@@ -576,10 +601,9 @@ export const fetchEvolutionStatus = createServerFn({ method: "POST" })
       const first = arr[0] ?? {};
       const inst = first.instance ?? first;
       const jid = inst.ownerJid ?? inst.owner ?? inst.wuid ?? null;
-      phone = jid ? jid.replace(/@.*/, "") : null;
+      if (jid) phone = jid.replace(/@.*/, "");
     }
 
-    const sbUpd = context.supabase as unknown as SbUpdate;
     const pairingFailed =
       currentState === "close" &&
       (creds.status === "aguardando_qr" || creds.status === "conectando" || creds.status === "falha_pareamento");
@@ -589,13 +613,12 @@ export const fetchEvolutionStatus = createServerFn({ method: "POST" })
         ? "falha_pareamento"
         : creds.status === "erro_qr"
           ? "erro_qr"
-          : "aguardando_qr";
-    await sbUpd
-      .from("whatsapp_web_sessions")
-      .update({
+          : currentState === "close" ? "desconectado" : "aguardando_qr";
+    await savePolledSession(context.supabase, data.sessionId, creds.status, {
         status: nextStatus,
         phone_number: phone,
-        last_connected_at: connected ? new Date().toISOString() : null,
+        ...(connected ? { last_qr: null } : {}),
+        ...(connected && creds.status !== "conectado" ? { last_connected_at: new Date().toISOString() } : {}),
         ...(pairingFailed
           ? {
               last_qr: null,
@@ -607,8 +630,7 @@ export const fetchEvolutionStatus = createServerFn({ method: "POST" })
               },
             }
           : {}),
-      })
-      .eq("id", data.sessionId);
+    });
 
     return {
       connected,
