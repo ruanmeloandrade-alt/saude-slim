@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, LogIn } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import { supabase } from "@/integrations/supabase/client";
 import {slimAuthFailureMessage} from "@/lib/slim-auth-network.core";
@@ -85,12 +85,8 @@ function LoginPage() {
   return (
     <main className="slim-auth flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
       <section className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm">
-        <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <LogIn className="h-5 w-5" />
-        </div>
-        <img src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="140" height="140" className="slim-login-logo" />
-        <h1 className="text-2xl font-semibold tracking-tight">Entrar na Saúde Slim</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Use os dados da sua conta existente para acessar a plataforma.</p>
+        <img src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="88" height="88" className="mx-auto mb-5 h-[88px] w-[88px] rounded-xl object-contain" />
+        <h1 className="text-center text-xl font-semibold">Entrar</h1>
 
         <form className="mt-5 space-y-3" onSubmit={submit}>
           <input
@@ -99,12 +95,14 @@ function LoginPage() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+            aria-label="E-mail"
             placeholder="E-mail"
           />
           <PasswordInput
             autoComplete="current-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            aria-label="Senha"
             placeholder="Senha"
             className="w-full"
           />
