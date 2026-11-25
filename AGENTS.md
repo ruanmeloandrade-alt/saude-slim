@@ -151,3 +151,7 @@ Aplica-se às chaves `MKTON-TELEGRAM-MCP-*`.
 12. F5 é a única dona da integração global e do verde final.
 13. Lovable chat/agente permanece proibido. Cora permanece congelado.
 14. Não declarar “pronto” sem testes da frente; não declarar o ciclo pronto sem E2E, deploy e smoke final da F5.
+
+## Saúde Slim e Lobo Paraguaio
+
+Os dois perfis utilizam a mesma aplicação em produção. Implemente correções no fluxo compartilhado, use o workspace ativo nas consultas e gravações e valide o caso corrigido nos dois perfis. Preserve a separação dos dados, estoques e sessões de WhatsApp. Para atribuir uma ação a uma pessoa, use a identidade autenticada da conta que a executou.

@@ -26,7 +26,7 @@ import {
 import { syncWorkspaceCurrencyCache } from "@/lib/workspace-currency-cache";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getSettingsBundle, listSlimProfiles, switchSlimProfile, updateProfile, updateWorkspace, updateNotificationPrefs, uploadWorkspaceLogo,
+  getSettingsBundle, recentSlimProfileActivity, listSlimProfiles, switchSlimProfile, updateProfile, updateWorkspace, updateNotificationPrefs, uploadWorkspaceLogo,
   removeMember, updateMemberRole, createEmployee,
   updateBusinessHours,
 } from "@/lib/settings.functions";
@@ -3134,6 +3134,8 @@ function PasskeyRow({
 
 
 function SlimProfileSwitcher({current}:{current:string}) {
+  const history = useServerFn(recentSlimProfileActivity);
+  const activity = useQuery({queryKey:["slim-profile-activity",current],queryFn:()=>history()});
   const list = useServerFn(listSlimProfiles);
   const change = useServerFn(switchSlimProfile);
   const profiles = useQuery({queryKey:["slim-settings-profiles",current],queryFn:()=>list()});
@@ -3148,6 +3150,14 @@ function SlimProfileSwitcher({current}:{current:string}) {
     {profiles.data?.map(w=><div key={w.id} className="flex items-center justify-between gap-4 rounded-lg border p-3">
       <div><strong>{w.name}</strong>{profiles.data.some(other=>other.id!==w.id && other.name===w.name) && <small className="block text-muted-foreground">{w.slug}</small>}</div>
       {w.id===current ? <span>Perfil atual</span> : <GhostBtn type="button" disabled={select.isPending} onClick={()=>select.mutate(w.id)}>Acessar {w.name}</GhostBtn>}
+    </div>)}
+    <h3 className="pt-4 font-semibold">Histórico do perfil atual</h3>
+    {activity.isLoading && <p>Carregando histórico…</p>}
+    {activity.error && <p role="alert">{activity.error.message}</p>}
+    {activity.data?.length === 0 && <p>Ainda não há alterações registradas neste histórico.</p>}
+    {activity.data?.map(event => <div key={event.id} className="border-b py-2 text-sm">
+      <strong>{event.actor_name}</strong> · {event.action} · {event.entity}
+      <small className="block text-muted-foreground">{new Date(event.created_at).toLocaleString("pt-BR",{timeZone:"America/Sao_Paulo"})} · {event.record_id}</small>
     </div>)}
   </section>;
 }

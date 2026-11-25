@@ -498,15 +498,18 @@ export const acceptInvitation = acceptSlimInvitation;
 async function accessibleProfiles(sb: AnySb, actorId: string) {
   const [members, owned] = await Promise.all([
     sb.from("workspace_members").select("workspace_id,access_expires_at").eq("user_id",actorId),
-    sb.from("workspaces").select("id,name,slug").eq("owner_id",actorId),
+    sb.from("workspaces").select("id,name,slug,feature_flags").eq("owner_id",actorId),
   ]);
   if (members.error || owned.error) throw new Error("Não foi possível carregar seus perfis.");
   const ids = (members.data ?? []).filter((m: {access_expires_at: string | null}) =>
     !m.access_expires_at || Date.parse(m.access_expires_at)>Date.now()).map((m: {workspace_id:string})=>m.workspace_id);
-  const linked = ids.length ? await sb.from("workspaces").select("id,name,slug").in("id",ids) : { data:[] };
+  const linked = ids.length ? await sb.from("workspaces").select("id,name,slug,feature_flags").in("id",ids) : { data:[] };
   if (linked.error) throw new Error("Não foi possível carregar os perfis vinculados.");
   const profiles = new Map<string,{id:string;name:string;slug:string}>();
-  for (const w of [...(owned.data ?? []),...(linked.data ?? [])]) profiles.set(w.id,w);
+  for (const w of [...(owned.data ?? []),...(linked.data ?? [])]) {
+    if (w.feature_flags?.slim_personal_workspace === true) continue;
+    profiles.set(w.id,{id:w.id,name:w.name,slug:w.slug});
+  }
   return [...profiles.values()].sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
 }
 
@@ -525,4 +528,15 @@ export const switchSlimProfile = createServerFn({ method:"POST" })
       .eq("id",context.userId).eq("current_workspace_id",data.current).select("current_workspace_id").maybeSingle();
     if (changed.error || changed.data?.current_workspace_id!==data.id) throw new Error("O perfil mudou. Atualize a página e tente novamente.");
     return {id:data.id};
+  });
+
+export const recentSlimProfileActivity = createServerFn({ method:"GET" })
+  .middleware([attachSupabaseAuth,requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const sb = context.supabase as unknown as AnySb;
+    const workspace = await activeWorkspace(sb,context.userId);
+    const result = await sb.from("slim_profile_activity").select("id,actor_name,action,entity,record_id,created_at")
+      .eq("workspace_id",workspace).order("id",{ascending:false}).limit(30);
+    if (result.error) throw new Error("Não foi possível carregar o histórico.");
+    return (result.data ?? []) as Array<{id:number;actor_name:string;action:string;entity:string;record_id:string;created_at:string}>;
   });
