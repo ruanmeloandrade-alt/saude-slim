@@ -84,11 +84,11 @@ function LoginPage() {
 
   return (
     <main className="slim-auth flex min-h-screen items-center justify-center bg-background px-4 text-foreground">
-      <section className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-sm">
-        <img src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="88" height="88" className="mx-auto mb-5 h-[88px] w-[88px] rounded-xl object-contain" />
-        <h1 className="text-center text-xl font-semibold">Entrar</h1>
+      <section className="w-full max-w-[320px] rounded-xl border border-border bg-card p-4 shadow-sm">
+        <img src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="56" height="56" className="mx-auto h-14 w-14 rounded-lg object-contain" />
+        <h1 className="sr-only">Entrar</h1>
 
-        <form className="mt-5 space-y-3" onSubmit={submit}>
+        <form className="mt-3 space-y-2.5" onSubmit={submit}>
           <input
             type="email"
             autoComplete="email"
@@ -119,7 +119,7 @@ function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-4 flex items-center justify-between gap-3 text-xs">
+        <div className="mt-3 flex items-center justify-between gap-3 text-xs">
           <Link to="/auth" search={{ mode: "forgot" }} className="font-medium text-primary hover:underline">
             Esqueci minha senha
           </Link>
