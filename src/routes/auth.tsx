@@ -431,8 +431,8 @@ function AuthPage() {
 
   return (
     <main className="slim-auth grid min-h-screen place-items-center px-4 py-8">
-      <section className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
-        <img src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="88" height="88" className="mx-auto mb-5 h-[88px] w-[88px] rounded-xl object-contain" />
+      <section className="w-full max-w-[320px] rounded-xl border border-border bg-card p-4 shadow-sm">
+        <img src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="56" height="56" className="mx-auto h-14 w-14 rounded-lg object-contain" />
         {mode === "forgot" ? (
           <>
             <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Redefinir acesso</p>
@@ -443,7 +443,7 @@ function AuthPage() {
             ) : (
               <div className="mt-7 space-y-4">
                 <FieldShell icon={<Mail className="h-4 w-4" />} label="E-mail">
-                  <Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm" type="email" placeholder="voce@empresa.com.br" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                  <Input className="h-10 rounded-lg border-slate-200 bg-[#fbfcfe] pl-10 text-sm" type="email" placeholder="voce@empresa.com.br" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
                 </FieldShell>
                 {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{error}</div>}
                 <Button type="button" disabled={loading} onClick={sendRecoveryEmail} className="h-12 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700">{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Enviar link de redefinição</Button>
@@ -453,21 +453,21 @@ function AuthPage() {
           </>
         ) : (
           <>
-            <h1 className="text-center text-xl font-semibold">{mode === "signup" ? "Criar conta" : "Entrar"}</h1>
+            <h1 className={mode === "signup" ? "mt-2 text-center text-lg font-semibold" : "sr-only"}>{mode === "signup" ? "Criar conta" : "Entrar"}</h1>
 
-            <form className="mt-7 space-y-4" onSubmit={submit}>
+            <form className="mt-3 space-y-2.5" onSubmit={submit}>
               {mode === "signup" && (
                 <>
-                  <FieldShell icon={<UserRound className="h-4 w-4" />} label="Nome do responsável"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="Nome do responsável" value={responsibleName} onChange={(e) => setResponsibleName(e.target.value)} required autoComplete="name" /></FieldShell>
+                  <FieldShell icon={<UserRound className="h-4 w-4" />} label="Nome do responsável"><Input className="h-10 rounded-lg border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="Nome do responsável" value={responsibleName} onChange={(e) => setResponsibleName(e.target.value)} required autoComplete="name" /></FieldShell>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <FieldShell icon={<Phone className="h-4 w-4" />} label="WhatsApp (opcional)"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" type="tel" inputMode="tel" placeholder="(22) 99999-9999" value={whatsapp} onChange={(e) => setWhatsapp(formatWhatsApp(e.target.value))} autoComplete="tel" /></FieldShell>
-                    <FieldShell icon={<Instagram className="h-4 w-4" />} label="Instagram (opcional)"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="@seuperfil" value={instagram} onChange={(e) => setInstagram(e.target.value)} autoComplete="off" /></FieldShell>
+                    <FieldShell icon={<Phone className="h-4 w-4" />} label="WhatsApp (opcional)"><Input className="h-10 rounded-lg border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" type="tel" inputMode="tel" placeholder="(22) 99999-9999" value={whatsapp} onChange={(e) => setWhatsapp(formatWhatsApp(e.target.value))} autoComplete="tel" /></FieldShell>
+                    <FieldShell icon={<Instagram className="h-4 w-4" />} label="Instagram (opcional)"><Input className="h-10 rounded-lg border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="@seuperfil" value={instagram} onChange={(e) => setInstagram(e.target.value)} autoComplete="off" /></FieldShell>
                   </div>
                 </>
               )}
 
-              <FieldShell icon={<Mail className="h-4 w-4" />} label="E-mail"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" type="email" placeholder="voce@empresa.com.br" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" /></FieldShell>
-              <FieldShell icon={<LockKeyhole className="h-4 w-4" />} label="Senha"><PasswordInput className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder={mode === "signup" ? "Mínimo de 6 caracteres" : "Sua senha"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} /></FieldShell>
+              <FieldShell icon={<Mail className="h-4 w-4" />} label="E-mail"><Input className="h-10 rounded-lg border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" type="email" placeholder="voce@empresa.com.br" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" /></FieldShell>
+              <FieldShell icon={<LockKeyhole className="h-4 w-4" />} label="Senha"><PasswordInput className="h-10 rounded-lg border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder={mode === "signup" ? "Mínimo de 6 caracteres" : "Sua senha"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} /></FieldShell>
 
               {mode === "login" && <button type="button" onClick={() => { setError(null); setMode("forgot"); }} className="-mt-1 block w-full text-right text-xs font-semibold text-emerald-700 hover:underline">Esqueci minha senha</button>}
 
@@ -478,7 +478,7 @@ function AuthPage() {
                 </p>
               )}
 
-              <Button type="submit" disabled={loading} className="group h-12 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-[0_14px_32px_rgba(5,150,105,.18)] hover:bg-emerald-700">
+              <Button type="submit" disabled={loading} className="h-10 w-full rounded-lg bg-emerald-600 text-sm font-bold text-white shadow-[0_14px_32px_rgba(5,150,105,.18)] hover:bg-emerald-700">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {loading ? "Aguarde…" : mode === "signup" ? "Criar conta" : "Entrar"}
               </Button>
