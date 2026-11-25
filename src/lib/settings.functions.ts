@@ -493,3 +493,36 @@ export const updateMemberRole = createServerFn({ method: "POST" })
 export const previewInvitation = previewSlimInvitation;
 
 export const acceptInvitation = acceptSlimInvitation;
+
+
+async function accessibleProfiles(sb: AnySb, actorId: string) {
+  const [members, owned] = await Promise.all([
+    sb.from("workspace_members").select("workspace_id,access_expires_at").eq("user_id",actorId),
+    sb.from("workspaces").select("id,name,slug").eq("owner_id",actorId),
+  ]);
+  if (members.error || owned.error) throw new Error("Não foi possível carregar seus perfis.");
+  const ids = (members.data ?? []).filter((m: {access_expires_at: string | null}) =>
+    !m.access_expires_at || Date.parse(m.access_expires_at)>Date.now()).map((m: {workspace_id:string})=>m.workspace_id);
+  const linked = ids.length ? await sb.from("workspaces").select("id,name,slug").in("id",ids) : { data:[] };
+  if (linked.error) throw new Error("Não foi possível carregar os perfis vinculados.");
+  const profiles = new Map<string,{id:string;name:string;slug:string}>();
+  for (const w of [...(owned.data ?? []),...(linked.data ?? [])]) profiles.set(w.id,w);
+  return [...profiles.values()].sort((a,b)=>a.name.localeCompare(b.name,"pt-BR"));
+}
+
+export const listSlimProfiles = createServerFn({ method:"GET" })
+  .middleware([attachSupabaseAuth,requireSupabaseAuth])
+  .handler(({context})=>accessibleProfiles(context.supabase as unknown as AnySb,context.userId));
+
+export const switchSlimProfile = createServerFn({ method:"POST" })
+  .middleware([attachSupabaseAuth,requireSupabaseAuth])
+  .inputValidator((v:unknown)=>z.object({id:z.string().uuid(),current:z.string().uuid()}).parse(v))
+  .handler(async ({context,data})=>{
+    const sb=context.supabase as unknown as AnySb;
+    const profiles=await accessibleProfiles(sb,context.userId);
+    if (!profiles.some(w=>w.id===data.id)) throw new Error("Você não tem acesso a este perfil.");
+    const changed=await sb.from("profiles").update({current_workspace_id:data.id})
+      .eq("id",context.userId).eq("current_workspace_id",data.current).select("current_workspace_id").maybeSingle();
+    if (changed.error || changed.data?.current_workspace_id!==data.id) throw new Error("O perfil mudou. Atualize a página e tente novamente.");
+    return {id:data.id};
+  });

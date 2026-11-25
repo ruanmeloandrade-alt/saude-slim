@@ -26,7 +26,7 @@ import {
 import { syncWorkspaceCurrencyCache } from "@/lib/workspace-currency-cache";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getSettingsBundle, updateProfile, updateWorkspace, updateNotificationPrefs, uploadWorkspaceLogo,
+  getSettingsBundle, listSlimProfiles, switchSlimProfile, updateProfile, updateWorkspace, updateNotificationPrefs, uploadWorkspaceLogo,
   removeMember, updateMemberRole, createEmployee,
   updateBusinessHours,
 } from "@/lib/settings.functions";
@@ -62,7 +62,7 @@ export const Route = createFileRoute("/configuracoes")({
   component: ConfigPage,
 });
 
-type SubId = "perfil" | "empresa" | "equipe" | "expediente" | "faturamento" | "seguranca" | "sessoes" | "notificacoes" | "preferencias";
+type SubId = "perfis" | "perfil" | "empresa" | "equipe" | "expediente" | "faturamento" | "seguranca" | "sessoes" | "notificacoes" | "preferencias";
 type GroupId = "conta" | "sistema";
 
 const PAPEIS = [
@@ -89,6 +89,7 @@ const GRUPOS: GroupDef[] = [
     sub: "Equipe, acessos e rotina interna",
     subs: [
       { id: "equipe", icon: Users, title: "Equipe", sub: "Convites e acessos" },
+      { id: "perfis", icon: ArrowLeftRight, title: "Perfis", sub: "Trocar workspace" },
       { id: "expediente", icon: Clock, title: "Expediente", sub: "Horário comercial da conta" },
       { id: "seguranca", icon: Shield, title: "Segurança", sub: "Senha e proteção" },
       { id: "sessoes", icon: Monitor, title: "Sessões", sub: "Sessão atual" },
@@ -190,6 +191,7 @@ function ConfigPage() {
               {bundleQ.isError && <div className="text-sm text-destructive">Falha ao carregar configurações.</div>}
               {bundleQ.data && (
                 <>
+                  {sub === "perfis" && <SlimProfileSwitcher current={bundleQ.data.workspaceId} />}
                   {sub === "perfil" && <PerfilTab profile={profile} onToast={showToast} />}
                   {sub === "empresa" && <EmpresaTab workspace={workspace} isOwner={isOwner} onToast={showToast} />}
                   {sub === "equipe" && (
@@ -3128,4 +3130,24 @@ function PasskeyRow({
       </div>
     </SecurityRow>
   );
+}
+
+
+function SlimProfileSwitcher({current}:{current:string}) {
+  const list = useServerFn(listSlimProfiles);
+  const change = useServerFn(switchSlimProfile);
+  const profiles = useQuery({queryKey:["slim-settings-profiles",current],queryFn:()=>list()});
+  const select = useMutation({
+    mutationFn:(id:string)=>change({data:{id,current}}),
+    onSuccess:()=>{ localStorage.removeItem("saude-slim.primaryCrmSourceId"); window.location.assign("/configuracoes#perfis"); window.location.reload(); },
+  });
+  return <section className="space-y-3">
+    <SectionHeader title="Perfis de trabalho" desc="Cada perfil tem seus próprios funis, contatos e WhatsApp." />
+    {profiles.isLoading && <p>Carregando perfis…</p>}
+    {(profiles.error || select.error) && <p role="alert">{(profiles.error || select.error)?.message}</p>}
+    {profiles.data?.map(w=><div key={w.id} className="flex items-center justify-between gap-4 rounded-lg border p-3">
+      <div><strong>{w.name}</strong>{profiles.data.some(other=>other.id!==w.id && other.name===w.name) && <small className="block text-muted-foreground">{w.slug}</small>}</div>
+      {w.id===current ? <span>Perfil atual</span> : <GhostBtn type="button" disabled={select.isPending} onClick={()=>select.mutate(w.id)}>Acessar {w.name}</GhostBtn>}
+    </div>)}
+  </section>;
 }
