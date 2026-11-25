@@ -433,60 +433,61 @@ function AuthPage() {
     <main className="slim-auth grid min-h-screen place-items-center px-4 py-8">
       <section className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
         <img src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="88" height="88" className="mx-auto mb-5 h-[88px] w-[88px] rounded-xl object-contain" />
-            {mode === "forgot" ? (
-              <>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Redefinir acesso</p>
-                <h1 className="mt-3 text-[clamp(2rem,8vw,3rem)] font-semibold leading-[1.02] tracking-tight">Esqueceu sua senha?</h1>
-                <p className="mt-3 max-w-lg text-sm leading-6 text-slate-600">Informe seu e-mail e enviaremos um link seguro para você criar uma nova senha.</p>
-                {recoverySent ? (
-                  <div className="mt-7 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm leading-6 text-emerald-800"><strong>E-mail enviado.</strong> Confira sua caixa de entrada e também a pasta de spam.</div>
-                ) : (
-                  <div className="mt-7 space-y-4">
-                    <FieldShell icon={<Mail className="h-4 w-4" />} label="E-mail">
-                      <Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm" type="email" placeholder="voce@empresa.com.br" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-                    </FieldShell>
-                    {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{error}</div>}
-                    <Button type="button" disabled={loading} onClick={sendRecoveryEmail} className="h-12 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700">{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Enviar link de redefinição</Button>
-                  </div>
-                )}
-                <button type="button" onClick={() => { returnToLogin(); setRecoverySent(false); setError(null); }} className="mt-5 w-full text-center text-xs font-semibold text-slate-500 hover:text-emerald-700">Voltar para o login</button>
-              </>
+        {mode === "forgot" ? (
+          <>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Redefinir acesso</p>
+            <h1 className="mt-3 text-[clamp(2rem,8vw,3rem)] font-semibold leading-[1.02] tracking-tight">Esqueceu sua senha?</h1>
+            <p className="mt-3 max-w-lg text-sm leading-6 text-slate-600">Informe seu e-mail e enviaremos um link seguro para você criar uma nova senha.</p>
+            {recoverySent ? (
+              <div className="mt-7 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm leading-6 text-emerald-800"><strong>E-mail enviado.</strong> Confira sua caixa de entrada e também a pasta de spam.</div>
             ) : (
-              <>
-                <h1 className="text-center text-xl font-semibold">{mode === "signup" ? "Criar conta" : "Entrar"}</h1>
-
-                <form className="mt-7 space-y-4" onSubmit={submit}>
-                  {mode === "signup" && (
-                    <>
-                      <FieldShell icon={<UserRound className="h-4 w-4" />} label="Nome do responsável"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="Nome do responsável" value={responsibleName} onChange={(e) => setResponsibleName(e.target.value)} required autoComplete="name" /></FieldShell>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <FieldShell icon={<Phone className="h-4 w-4" />} label="WhatsApp (opcional)"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" type="tel" inputMode="tel" placeholder="(22) 99999-9999" value={whatsapp} onChange={(e) => setWhatsapp(formatWhatsApp(e.target.value))} autoComplete="tel" /></FieldShell>
-                        <FieldShell icon={<Instagram className="h-4 w-4" />} label="Instagram (opcional)"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="@seuperfil" value={instagram} onChange={(e) => setInstagram(e.target.value)} autoComplete="off" /></FieldShell>
-                      </div>
-                    </>
-                  )}
-
-                  <FieldShell icon={<Mail className="h-4 w-4" />} label="E-mail"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" type="email" placeholder="voce@empresa.com.br" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" /></FieldShell>
-                  <FieldShell icon={<LockKeyhole className="h-4 w-4" />} label="Senha"><PasswordInput className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder={mode === "signup" ? "Mínimo de 6 caracteres" : "Sua senha"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} /></FieldShell>
-
-                  {mode === "login" && <button type="button" onClick={() => { setError(null); setMode("forgot"); }} className="-mt-1 block w-full text-right text-xs font-semibold text-emerald-700 hover:underline">Esqueci minha senha</button>}
-
-                  {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs leading-5 text-red-700">{error}</div>}
-                  {mode === 'login' && slowLogin && !error && (
-                    <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
-                      O servidor de login está demorando mais que o normal. Não é necessário clicar novamente; aguardamos uma única resposta.
-                    </p>
-                  )}
-
-                  <Button type="submit" disabled={loading} className="group h-12 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-[0_14px_32px_rgba(5,150,105,.18)] hover:bg-emerald-700">
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {loading ? "Aguarde…" : mode === "signup" ? "Criar conta" : "Entrar"}
-                  </Button>
-                </form>
-
-
-              </>
+              <div className="mt-7 space-y-4">
+                <FieldShell icon={<Mail className="h-4 w-4" />} label="E-mail">
+                  <Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm" type="email" placeholder="voce@empresa.com.br" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+                </FieldShell>
+                {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">{error}</div>}
+                <Button type="button" disabled={loading} onClick={sendRecoveryEmail} className="h-12 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white hover:bg-emerald-700">{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Enviar link de redefinição</Button>
+              </div>
             )}
+            <button type="button" onClick={() => { returnToLogin(); setRecoverySent(false); setError(null); }} className="mt-5 w-full text-center text-xs font-semibold text-slate-500 hover:text-emerald-700">Voltar para o login</button>
+          </>
+        ) : (
+          <>
+            <h1 className="text-center text-xl font-semibold">{mode === "signup" ? "Criar conta" : "Entrar"}</h1>
+
+            <form className="mt-7 space-y-4" onSubmit={submit}>
+              {mode === "signup" && (
+                <>
+                  <FieldShell icon={<UserRound className="h-4 w-4" />} label="Nome do responsável"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="Nome do responsável" value={responsibleName} onChange={(e) => setResponsibleName(e.target.value)} required autoComplete="name" /></FieldShell>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <FieldShell icon={<Phone className="h-4 w-4" />} label="WhatsApp (opcional)"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" type="tel" inputMode="tel" placeholder="(22) 99999-9999" value={whatsapp} onChange={(e) => setWhatsapp(formatWhatsApp(e.target.value))} autoComplete="tel" /></FieldShell>
+                    <FieldShell icon={<Instagram className="h-4 w-4" />} label="Instagram (opcional)"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder="@seuperfil" value={instagram} onChange={(e) => setInstagram(e.target.value)} autoComplete="off" /></FieldShell>
+                  </div>
+                </>
+              )}
+
+              <FieldShell icon={<Mail className="h-4 w-4" />} label="E-mail"><Input className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" type="email" placeholder="voce@empresa.com.br" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" /></FieldShell>
+              <FieldShell icon={<LockKeyhole className="h-4 w-4" />} label="Senha"><PasswordInput className="h-12 rounded-xl border-slate-200 bg-[#fbfcfe] pl-10 text-sm focus-visible:ring-emerald-600" placeholder={mode === "signup" ? "Mínimo de 6 caracteres" : "Sua senha"} value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete={mode === "signup" ? "new-password" : "current-password"} /></FieldShell>
+
+              {mode === "login" && <button type="button" onClick={() => { setError(null); setMode("forgot"); }} className="-mt-1 block w-full text-right text-xs font-semibold text-emerald-700 hover:underline">Esqueci minha senha</button>}
+
+              {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs leading-5 text-red-700">{error}</div>}
+              {mode === 'login' && slowLogin && !error && (
+                <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-900">
+                  O servidor de login está demorando mais que o normal. Não é necessário clicar novamente; aguardamos uma única resposta.
+                </p>
+              )}
+
+              <Button type="submit" disabled={loading} className="group h-12 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-[0_14px_32px_rgba(5,150,105,.18)] hover:bg-emerald-700">
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {loading ? "Aguarde…" : mode === "signup" ? "Criar conta" : "Entrar"}
+              </Button>
+            </form>
+
+
+          </>
+        )}
       </section>
     </main>
   );
+}
