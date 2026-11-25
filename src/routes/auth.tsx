@@ -2,17 +2,13 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowRight,
-  AtSign,
   CheckCircle2,
   Instagram,
   Loader2,
   LockKeyhole,
-  LogIn,
   Mail,
   Phone,
   ShieldCheck,
-  Sparkles,
   UserRound,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -434,31 +430,9 @@ function AuthPage() {
   }
 
   return (
-    <main className="slim-auth min-h-screen bg-[#ecfdf5] text-slate-950 lg:grid lg:grid-cols-[minmax(0,.88fr)_minmax(560px,1.12fr)]">
-      <aside className="relative hidden overflow-hidden bg-[#052e2b] px-10 py-12 text-white lg:flex lg:min-h-screen lg:flex-col lg:justify-between xl:px-16 xl:py-16">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/15 via-transparent to-emerald-900/20" />
-          <div className="absolute inset-0 opacity-[.08] [background-image:linear-gradient(rgba(255,255,255,.2)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.2)_1px,transparent_1px)] [background-size:48px_48px]" />
-        </div>
-        <div className="relative"><Link to="/auth" className="slim-auth-brand inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-slate-950 shadow-sm"><img className="slim-auth-logo" src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="220" height="220" /></Link></div>
-        <div className="relative max-w-[560px]">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200/20 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-emerald-100"><Sparkles className="h-3.5 w-3.5" />Sistema interno Saúde Slim</div>
-          <h2 className="mt-6 text-[clamp(2.8rem,4.3vw,5.3rem)] font-semibold leading-[.98] tracking-tight">Sua rotina comercial em forma de cuidado.</h2>
-          <p className="mt-6 max-w-lg text-base leading-8 text-emerald-50/75">Acompanhe pedidos, estoque, clientes e recuperação de vendas em um ambiente interno feito para a operação da Saúde Slim.</p>
-          <div className="mt-9 grid gap-3 sm:grid-cols-2">
-            {[["Histórico de vendas", "Pedidos e clientes sempre fáceis de consultar"], ["Estoque saudável", "Produtos e fornecedores com mais controle"], ["Gestão integrada", "Vendas, pedidos e produtos no mesmo painel"], ["Acesso seguro", "Entrada restrita ao time autorizado"]].map(([title, text]) => (
-              <div key={title} className="rounded-2xl border border-emerald-200/15 bg-white/[.07] p-4 backdrop-blur-sm"><div className="flex items-center gap-2 text-xs font-bold"><CheckCircle2 className="h-4 w-4 text-emerald-300" />{title}</div><p className="mt-2 text-[11px] leading-5 text-emerald-50/65">{text}</p></div>
-            ))}
-          </div>
-        </div>
-        <div className="relative flex items-center gap-2 text-[11px] text-emerald-50/60"><ShieldCheck className="h-4 w-4" />Acesso protegido para uso interno da empresa.</div>
-      </aside>
-
-      <section className="flex min-h-screen items-center justify-center px-4 py-20 sm:px-6 lg:px-10 xl:px-16">
-        <div className="w-full max-w-[650px]">
-          <div className="mb-8 flex items-center justify-between lg:hidden"><Link to="/auth" className="slim-auth-brand inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-950 shadow-sm"><img className="slim-auth-logo" src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="220" height="220" /></Link><span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest text-emerald-700">Sistema interno</span></div>
-
-          <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_32px_100px_rgba(15,23,42,.10)] sm:p-8 md:p-10">
+    <main className="slim-auth grid min-h-screen place-items-center px-4 py-8">
+      <section className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+        <img src="/brand/saude-slim-logo.jpg" alt="Saúde Slim" width="88" height="88" className="mx-auto mb-5 h-[88px] w-[88px] rounded-xl object-contain" />
             {mode === "forgot" ? (
               <>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Redefinir acesso</p>
@@ -479,14 +453,7 @@ function AuthPage() {
               </>
             ) : (
               <>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">Acesso interno</p>
-                    <h1 className="mt-3 text-[clamp(2rem,8vw,3rem)] font-semibold leading-[1.02] tracking-tight text-slate-950">Bem-vindo à Saúde Slim.</h1>
-                    <p className="mt-3 max-w-lg text-sm leading-6 text-slate-600">Entre com o e-mail e a senha autorizados para cuidar das vendas, pedidos e clientes da operação.</p>
-                  </div>
-                  <div className="hidden h-11 w-11 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700 sm:grid">{mode === "signup" ? <UserRound className="h-5 w-5" /> : <LogIn className="h-5 w-5" />}</div>
-                </div>
+                <h1 className="text-center text-xl font-semibold">{mode === "signup" ? "Criar conta" : "Entrar"}</h1>
 
                 <form className="mt-7 space-y-4" onSubmit={submit}>
                   {mode === "signup" && (
@@ -512,19 +479,14 @@ function AuthPage() {
                   )}
 
                   <Button type="submit" disabled={loading} className="group h-12 w-full rounded-xl bg-emerald-600 text-sm font-bold text-white shadow-[0_14px_32px_rgba(5,150,105,.18)] hover:bg-emerald-700">
-                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : mode === "signup" ? <AtSign className="mr-2 h-4 w-4" /> : <LogIn className="mr-2 h-4 w-4" />}
-                    Continuar
-                    {!loading && <ArrowRight className="ml-2 h-4 w-4 transition group-hover:translate-x-0.5" />}
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {loading ? "Aguarde…" : mode === "signup" ? "Criar conta" : "Entrar"}
                   </Button>
                 </form>
 
-                <div className="mt-4 flex items-center justify-center gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-[10px] font-semibold text-emerald-800"><ShieldCheck className="h-3.5 w-3.5 text-emerald-700" />Apenas usuários autorizados pela Saúde Slim devem acessar.</div>
 
               </>
             )}
-          </div>
-        </div>
       </section>
     </main>
   );
-}
