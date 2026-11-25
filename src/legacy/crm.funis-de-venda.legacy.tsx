@@ -2231,8 +2231,8 @@ function CrmManagerSettings({
     <>
       <Button type="button" variant="outline" size="sm" aria-disabled={busy || working}
         className="h-8 gap-1.5 text-xs"
-        title="Clique para executar a varredura padrão. Clique direito para configurar."
-        onClick={() => { if (!working) void operate("run"); }}
+        title="Configurar e executar o Gestor do CRM"
+        onClick={() => { setOpen(true); void operate("read"); }}
         onContextMenu={(event) => {
           event.preventDefault();
           setOpen(true);
@@ -2251,7 +2251,7 @@ function CrmManagerSettings({
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Varreduras do Gestor do CRM</DialogTitle>
-            <DialogDescription>{funnel.name}. O clique esquerdo no Gestor executa a varredura padrão deste funil.</DialogDescription>
+            <DialogDescription>{funnel.name}. Configure o prompt e escolha quando executar cada perfil.</DialogDescription>
           </DialogHeader>
           {job && <section className="grid gap-2 rounded-md border p-3 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2338,10 +2338,23 @@ function CrmManagerSettings({
                 <input className={field} required maxLength={80} value={draft.name}
                   onChange={(event) => setDraft({ ...draft, name: event.target.value })} />
               </label>
-              <label className="grid gap-1">Regras de triagem e movimentação
+              <label className="grid gap-1">Prompt do Gestor CRM
                 <textarea className={`${field} min-h-24`} required maxLength={12000} value={draft.rules}
                   onChange={(event) => setDraft({ ...draft, rules: event.target.value })} />
               </label>
+              <fieldset className="grid gap-2">
+                <legend>Ações permitidas pelo prompt</legend>
+                {([["transcribeAudio", "Transcrever áudios da conversa"], ["allowBots", "Iniciar Salesbot individual ativo"], ["allowFields", "Atualizar campos personalizados do funil"]] as const).map(([key, label]) => (
+                  <label key={key} className="flex gap-2">
+                    <input type="checkbox" checked={draft[key] === true} onChange={event => setDraft({ ...draft, [key]: event.target.checked })} />
+                    {label}
+                  </label>
+                ))}
+                <label className="grid gap-1">Tags que o gestor pode adicionar ou remover
+                  <input className={field} maxLength={2000} value={draft.allowedTags ?? ""} placeholder="Separe as tags por vírgula"
+                    onChange={event => setDraft({ ...draft, allowedTags: event.target.value })} />
+                </label>
+              </fieldset>
               <fieldset className="grid gap-1">
                 <legend>Etapas que serão analisadas</legend>
                 <p className="text-xs text-muted-foreground">Sem seleção, analisa o funil inteiro.</p>
