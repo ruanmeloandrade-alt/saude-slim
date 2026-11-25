@@ -798,7 +798,7 @@ export const listEvolutionSessions = createServerFn({ method: "POST" })
       metadata?: { deleted?: boolean } | null;
     };
     const visible = ((rows as unknown as Row[]) ?? []).filter(
-      (row) => row.metadata?.deleted !== true && row.status !== "desconectado",
+      (row) => row.metadata?.deleted !== true,
     );
     return { sessions: visible as Row[] };
   });
